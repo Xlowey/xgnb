@@ -1,0 +1,365 @@
+:root {
+  color-scheme: dark;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  --ink: #f2eee4;
+  --muted: #c8c0b3;
+  --line: rgba(235, 218, 184, .34);
+  --panel: rgba(12, 18, 22, .82);
+  --panel-strong: rgba(10, 14, 17, .94);
+  --accent: #e5c49a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: #0b1013;
+  color: var(--ink);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+button:focus-visible {
+  outline: 2px solid #cbe4df;
+  outline-offset: 3px;
+}
+
+.novel-page {
+  min-height: 100vh;
+  overflow: hidden;
+  background: #0b1013;
+}
+
+.novel-stage {
+  position: relative;
+  min-height: 100vh;
+  isolation: isolate;
+}
+
+.novel-background {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: linear-gradient(180deg, rgba(3, 7, 9, .76), rgba(7, 12, 15, .46) 45%, rgba(4, 8, 10, .92)), url("../assets/images/title-dorm-bg.png") center / cover no-repeat, #0b1013;
+  filter: saturate(.72) contrast(1.05);
+}
+
+.novel-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 34%, rgba(0, 0, 0, .54) 100%);
+}
+
+.novel-toolbar {
+  position: absolute;
+  z-index: 4;
+  inset: 20px 28px auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+}
+
+.novel-location {
+  min-width: 0;
+  color: var(--accent);
+  letter-spacing: .13em;
+  font-size: clamp(13px, 1.35vw, 17px);
+  text-shadow: 0 2px 8px #000;
+}
+
+.novel-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.novel-tool {
+  border: 1px solid var(--line);
+  background: rgba(8, 13, 16, .64);
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background .2s, border-color .2s;
+}
+
+.novel-tool:hover {
+  background: rgba(47, 63, 68, .84);
+  border-color: rgba(242, 225, 190, .72);
+}
+
+.novel-content {
+  min-height: 100vh;
+  width: min(1240px, 100%);
+  margin: 0 auto;
+  padding: clamp(92px, 13vh, 150px) 28px 270px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.novel-title {
+  align-self: flex-start;
+  max-width: 820px;
+  margin: 0 0 28px;
+  font-size: clamp(30px, 4.3vw, 64px);
+  line-height: 1.15;
+  letter-spacing: .08em;
+  text-shadow: 0 3px 16px #000;
+}
+
+.novel-subtitle {
+  align-self: flex-start;
+  margin: -16px 0 32px;
+  color: var(--muted);
+  font-size: clamp(15px, 1.8vw, 22px);
+}
+
+.novel-choices {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  width: min(680px, 92%);
+  margin: auto 0 38px;
+}
+
+.novel-choice {
+  border: 1px solid rgba(236, 214, 175, .55);
+  background: rgba(20, 28, 31, .86);
+  padding: 15px 22px;
+  text-align: center;
+  cursor: pointer;
+  letter-spacing: .08em;
+  transition: transform .2s, background .2s, border-color .2s;
+}
+
+.novel-choice:hover {
+  transform: translateY(-2px);
+  background: rgba(86, 65, 49, .86);
+  border-color: var(--accent);
+}
+
+.novel-choice[disabled] {
+  opacity: .55;
+  cursor: default;
+  transform: none;
+}
+
+.novel-dialogue {
+  position: fixed;
+  z-index: 5;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  width: min(1120px, calc(100% - 42px));
+  padding: 22px 28px 20px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(15, 22, 25, .83), var(--panel-strong));
+  box-shadow: 0 12px 50px rgba(0,0,0,.45);
+  cursor: pointer;
+}
+
+.novel-dialogue::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid rgba(232, 202, 153, .12);
+  pointer-events: none;
+}
+
+.novel-speaker {
+  position: relative;
+  margin-bottom: 8px;
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: .14em;
+  font-size: clamp(14px, 1.5vw, 19px);
+}
+
+.novel-text {
+  position: relative;
+  min-height: 3.2em;
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(18px, 2vw, 26px);
+  line-height: 1.8;
+  letter-spacing: .07em;
+  white-space: pre-wrap;
+}
+
+.novel-next {
+  position: absolute;
+  right: 24px;
+  bottom: 13px;
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: .1em;
+}
+
+.novel-progress {
+  position: fixed;
+  z-index: 6;
+  left: 30px;
+  bottom: 34px;
+  color: rgba(237, 224, 200, .7);
+  font-size: 13px;
+}
+
+.novel-end {
+  position: fixed;
+  z-index: 7;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(4, 8, 10, .72);
+}
+
+.novel-end[hidden], .novel-review[hidden], [hidden] {
+  display: none !important;
+}
+
+.novel-end-card, .novel-review-card {
+  width: min(620px, 100%);
+  padding: 34px;
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+  box-shadow: 0 18px 70px rgba(0,0,0,.6);
+}
+
+.novel-end-card h2 {
+  margin: 0 0 14px;
+  font-size: clamp(28px, 4vw, 48px);
+}
+
+.novel-end-card p {
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.novel-end-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.novel-end-actions button {
+  border: 1px solid var(--line);
+  background: #27343a;
+  padding: 12px 18px;
+  cursor: pointer;
+}
+
+.novel-end-actions button:first-child {
+  background: #9dbeb9;
+  color: #102126;
+}
+
+.novel-review {
+  position: fixed;
+  z-index: 8;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(3, 7, 9, .72);
+}
+
+.novel-review-card {
+  max-height: min(720px, 88vh);
+  overflow: auto;
+}
+
+.novel-review-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 14px;
+}
+
+.novel-review-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.novel-review-item {
+  border-left: 2px solid rgba(229, 196, 154, .55);
+  padding-left: 13px;
+}
+
+.novel-review-item strong {
+  color: var(--accent);
+}
+
+.novel-review-item small {
+  display: block;
+  color: #8e9b9d;
+  margin-top: 4px;
+}
+
+.novel-review-item p {
+  margin: 5px 0 0;
+  line-height: 1.6;
+}
+
+.novel-toast {
+  position: fixed;
+  z-index: 9;
+  top: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 9px 16px;
+  border: 1px solid var(--line);
+  background: rgba(9, 15, 18, .94);
+  color: var(--ink);
+}
+
+@media (max-width: 700px) {
+  .novel-toolbar {
+    inset: 15px 16px auto;
+    align-items: flex-start;
+  }
+
+  .novel-toolbar-actions {
+    max-width: 62%;
+  }
+
+  .novel-tool {
+    padding: 7px 9px;
+    font-size: 13px;
+  }
+
+  .novel-content {
+    padding: 100px 16px 260px;
+  }
+
+  .novel-dialogue {
+    bottom: 14px;
+    width: calc(100% - 24px);
+    padding: 17px 18px 18px;
+  }
+
+  .novel-text {
+    line-height: 1.65;
+  }
+
+  .novel-progress {
+    left: 18px;
+    bottom: 21px;
+    font-size: 11px;
+  }
+
+}

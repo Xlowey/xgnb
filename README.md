@@ -15,10 +15,12 @@ xgnb/
 │  ├─ help.html           操作与玩法说明页面
 │  ├─ story.html          世界观与当前故事页面
 │  ├─ novel.html          独立视觉小说播放页面
-│  ├─ novel.css           视觉小说页面布局与可读性样式
 │  └─ team.html           小组介绍与成员页面入口
 ├─ team/                  小组成员个人介绍页与成员素材
-├─ css/style.css          公共样式与响应式布局
+├─ css/                    CSS 样式文件
+│  ├─ style.css            公共样式与响应式布局
+│  ├─ novel.css            视觉小说页面布局与可读性样式
+│  └─ battle.css           战斗页面样式
 ├─ js/                    JavaScript 功能模块
 │  ├─ auth.js             本地注册、登录、退出（localStorage）
 │  ├─ login.js            独立登录页面逻辑
@@ -26,8 +28,10 @@ xgnb/
 │  ├─ saves.js            独立存档页面逻辑
 │  ├─ state.js            按用户隔离的自动存档和 20 个手动存档位
 │  ├─ game.js             房间地图、移动碰撞、调查和状态流转
-│  └─ novel.js            剧情播放、选项、回顾、结局和剧情存档
-├─ demos/battle/          独立回合战斗页面，结束后把结果交回主游戏
+│  ├─ novel.js             剧情播放、选项、回顾、结局和剧情存档
+│  └─ battle.js            战斗逻辑与结果回传
+├─ demos/battle/           独立回合战斗页面
+│  └─ index.html           战斗页面入口，结束后把结果交回主游戏
 └─ assets/images/         登录、标题、房间背景和可替换素材
 ```
 
