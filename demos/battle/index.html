@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>无脸保安 · 回合战斗 Demo</title>
+  <link rel="stylesheet" href="battle.css?v=5">
+</head>
+<body>
+  <main class="battle-shell">
+    <header class="demo-header">
+      <a id="return-link" href="../../index.html">← 返回项目入口</a>
+      <span>馆内交涉记录 · 原型</span>
+    </header>
+    <section class="battle-card" aria-labelledby="battle-title">
+      <div class="battle-title-row">
+        <div><p class="eyebrow">规则交涉 · 回合原型</p><h1 id="battle-title">无脸保安</h1></div>
+        <div class="turn-box">回合 <strong id="turn-value">1</strong></div>
+      </div>
+      <div class="combatants">
+        <article class="combatant enemy-panel">
+          <div class="avatar avatar-enemy"><img src="../../assets/images/enemy-faceless-guard.png" alt="无脸保安"></div>
+          <div class="combatant-info">
+            <h2>无脸保安</h2>
+            <div class="hp-line"><span>HP</span><span id="enemy-hp-text">30 / 30</span></div>
+            <div class="hp-track"><span id="enemy-hp-bar" class="hp-bar enemy-bar"></span></div>
+            <p id="enemy-intent" class="intent">正在观察你的表情。</p>
+          </div>
+        </article>
+        <div class="versus" aria-hidden="true">VS</div>
+        <article class="combatant player-panel">
+          <div class="avatar avatar-player" aria-label="玩家">你</div>
+          <div class="combatant-info">
+            <h2>普通天选者</h2>
+            <div class="hp-line"><span>HP</span><span id="player-hp-text">25 / 25</span></div>
+            <div class="hp-track"><span id="player-hp-bar" class="hp-bar player-bar"></span></div>
+            <p id="player-status" class="intent">等待你的行动。</p>
+          </div>
+        </article>
+      </div>
+      <div class="rule-note"><span class="rule-label">当前规则</span><span id="rule-text">面对游客需面带微笑。先观察，才能发现它的弱点。</span></div>
+      <div id="battle-log" class="battle-log" role="log" aria-live="polite" aria-label="战斗记录"></div>
+      <div class="action-area">
+        <p class="action-label">选择行动</p>
+        <div class="action-grid">
+          <button class="action-button" data-action="attack" type="button">攻击<small>造成 4–7 伤害</small></button>
+          <button class="action-button" data-action="defend" type="button">防御<small>本回合减伤</small></button>
+          <button class="action-button" data-action="observe" type="button">观察<small>发现敌人行动</small></button>
+          <button class="action-button" data-action="smile" type="button">保持微笑<small>需要先观察</small></button>
+        </div>
+        <button id="restart-button" class="restart-button" type="button">重新开始</button>
+      </div>
+    </section>
+    <p class="integration-note">结束后点击左上角“返回剧情”，结果会写入当前浏览器并交给正式剧情状态机。</p>
+  </main>
+  <script src="battle.js?v=4"></script>
+</body>
+</html>
