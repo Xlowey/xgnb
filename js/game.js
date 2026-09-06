@@ -87,7 +87,7 @@
   function addItem(id) { addUnique(state.inventory, id); }
   function award(id) { addUnique(state.achievements, id); }
   function showToast(message) { if (!el.toast) return; el.toast.textContent = message; el.toast.classList.add("visible"); window.clearTimeout(showToast.timer); showToast.timer = window.setTimeout(function () { el.toast.classList.remove("visible"); }, 2600); }
-  function save(message) { if (!currentUser || !state) return; MuseumState.save(state, currentUser.id); lastSave = Date.now(); if (message && el.gameMessage) el.gameMessage.textContent = message; refreshContinue(); }
+  function save(message) { if (!currentUser || !state) return; MuseumState.save(state, currentUser.id); lastSave = performance.now(); if (message && el.gameMessage) el.gameMessage.textContent = message; refreshContinue(); }
   function refreshContinue() { if (!el.continueButton) return; var ok = currentUser && MuseumState.hasSave(currentUser.id); el.continueButton.disabled = !ok; el.continueButton.classList.toggle("button-primary", Boolean(ok)); }
   function setAuthMode(mode) { var login = mode === "login"; el.loginForm.hidden = !login; el.registerForm.hidden = login; el.loginTab.classList.toggle("active", login); el.registerTab.classList.toggle("active", !login); el.loginTab.setAttribute("aria-selected", String(login)); el.registerTab.setAttribute("aria-selected", String(!login)); el.authMessage.textContent = ""; }
   function showAuth() { el.auth.hidden = false; el.cover.hidden = true; el.game.hidden = true; el.authMessage.textContent = ""; }

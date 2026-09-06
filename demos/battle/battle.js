@@ -48,6 +48,9 @@
     else if (action === "smile") {
       if (!state.observed) { addLog("你还没有找到正确时机。先使用“观察”。"); updateView(); return; }
       state.ruleSolved=true; addLog("你保持微笑。无脸保安停下了，它无法执行这条规则。");
+      updateView();
+      finish("win","你保持微笑。无脸保安停下了，交涉成功。");
+      return;
     }
     if (state.enemyHp <= 0) { updateView(); finish("win","无脸保安倒下了，你获得线索：无脸面具。"); return; }
     setButtonsDisabled(true);
