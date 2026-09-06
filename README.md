@@ -16,14 +16,14 @@ xgnb/
 │  └─ team.html           小组介绍与成员页面入口
 ├─ team/                  小组成员页和统一填写模板
 ├─ css/style.css          公共样式与响应式布局
-├─ js/auth.js             本地注册、登录、退出（localStorage）
-├─ js/register.js         独立注册页面逻辑
-├─ js/saves.js            独立存档页面逻辑
-├─ js/state.js            按用户隔离的自动存档和 20 个手动存档位
-├─ js/game.js             房间地图、移动碰撞、调查、视觉小说和状态流转
+├─ js/                    JavaScript 功能模块
+│  ├─ auth.js             本地注册、登录、退出（localStorage）
+│  ├─ register.js         独立注册页面逻辑
+│  ├─ saves.js            独立存档页面逻辑
+│  ├─ state.js            按用户隔离的自动存档和 20 个手动存档位
+│  └─ game.js             房间地图、移动碰撞、调查、视觉小说和状态流转
 ├─ demos/battle/          独立回合战斗页面，结束后把结果交回主游戏
-├─ assets/images/         登录、标题和旧版可替换素材
-└─ docs/                  开发记录与小游戏接入约定
+└─ assets/images/         登录、标题和旧版可替换素材
 ```
 
 ## 运行和操作
