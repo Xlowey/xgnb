@@ -4,13 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>存档管理 · 怪谈博物馆</title>
-  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/style.css?v=8">
 </head>
-<body class="public-page-body">
+<body class="public-page-body game-public-body">
   <main class="public-page saves-page">
     <nav class="public-nav" aria-label="页面导航">
-      <a href="../index.html">返回首页</a>
-      <span>本地档案管理</span>
+      <a href="../index.html">返回主菜单</a>
     </nav>
     <header class="public-hero">
       <p class="eyebrow">当前档案 · <span id="save-page-user">未登录</span></p>
@@ -24,15 +23,9 @@
           <p class="card-kicker">自动存档</p>
           <p id="auto-save-summary" class="save-page-summary">尚未开始探索</p>
         </div>
-        <a class="button button-small" href="../index.html">进入游戏</a>
       </div>
       <div id="manual-save-list" class="save-page-list" aria-label="20 个手动存档位"></div>
     </section>
-    <nav class="page-links" aria-label="站点页面">
-      <a href="game.html">游戏入口</a>
-      <a href="help.html">玩法说明</a>
-      <a href="story.html">故事介绍</a>
-    </nav>
   </main>
   <script src="../js/auth.js"></script>
   <script src="../js/state.js"></script>

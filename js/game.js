@@ -16,7 +16,6 @@
   wardrobeImages.open.src = "assets/images/wardrobe-open.png";
   var keys = {};
   var heldTouch = null;
-  var activeDialogue = null;
   var camera = { x: 0, y: 0 };
   var lastFrame = 0;
   var lastSave = 0;
@@ -67,13 +66,10 @@
   };
 
   var el = {
-    auth: document.getElementById("auth-screen"), loginTab: document.getElementById("login-tab"), registerTab: document.getElementById("register-tab"),
-    loginForm: document.getElementById("login-form"), registerForm: document.getElementById("register-form"), authMessage: document.getElementById("auth-message"),
     cover: document.getElementById("cover-screen"), game: document.getElementById("game-screen"), coverMessage: document.getElementById("cover-message"),
     currentUser: document.getElementById("current-user-name"), continueButton: document.getElementById("continue-button"),
     canvas: canvas, roomTitle: document.getElementById("room-title"), roomChapter: document.getElementById("room-chapter"), prompt: document.getElementById("interaction-prompt"), toast: document.getElementById("map-toast"), gameMessage: document.getElementById("game-message"),
     hp: document.getElementById("hp-value"), trust: document.getElementById("trust-value"), clues: document.getElementById("clue-value"), task: document.getElementById("task-value"), rooms: document.getElementById("room-list"), achievements: document.getElementById("achievement-list"), achievementCount: document.getElementById("achievement-count"),
-    vn: document.getElementById("vn-overlay"), vnLocation: document.getElementById("vn-location"), vnProgress: document.getElementById("vn-progress"), vnPortrait: document.getElementById("vn-portrait"), vnSpeaker: document.getElementById("vn-speaker"), vnText: document.getElementById("vn-text"), vnChoices: document.getElementById("vn-choices"), vnNext: document.getElementById("vn-next"),
     rules: document.getElementById("rules-overlay"), rulesOptions: document.getElementById("rules-options"), rulesFeedback: document.getElementById("rules-feedback"),
     logPanel: document.getElementById("log-panel"), logUserName: document.getElementById("log-user-name"), logList: document.getElementById("dialogue-log-list"),
     savePanel: document.getElementById("save-panel"), savePanelTitle: document.getElementById("save-panel-title"), savePanelMessage: document.getElementById("save-panel-message"), saveUserName: document.getElementById("save-user-name"), saveModeButton: document.getElementById("save-mode-button"), loadModeButton: document.getElementById("load-mode-button"), saveSlotList: document.getElementById("save-slot-list")
@@ -89,10 +85,24 @@
   function showToast(message) { if (!el.toast) return; el.toast.textContent = message; el.toast.classList.add("visible"); window.clearTimeout(showToast.timer); showToast.timer = window.setTimeout(function () { el.toast.classList.remove("visible"); }, 2600); }
   function save(message) { if (!currentUser || !state) return; MuseumState.save(state, currentUser.id); lastSave = performance.now(); if (message && el.gameMessage) el.gameMessage.textContent = message; refreshContinue(); }
   function refreshContinue() { if (!el.continueButton) return; var ok = currentUser && MuseumState.hasSave(currentUser.id); el.continueButton.disabled = !ok; el.continueButton.classList.toggle("button-primary", Boolean(ok)); }
-  function setAuthMode(mode) { var login = mode === "login"; el.loginForm.hidden = !login; el.registerForm.hidden = login; el.loginTab.classList.toggle("active", login); el.registerTab.classList.toggle("active", !login); el.loginTab.setAttribute("aria-selected", String(login)); el.registerTab.setAttribute("aria-selected", String(!login)); el.authMessage.textContent = ""; }
-  function showAuth() { el.auth.hidden = false; el.cover.hidden = true; el.game.hidden = true; el.authMessage.textContent = ""; }
-  function showCover() { if (!currentUser) return showAuth(); el.auth.hidden = true; el.cover.hidden = false; el.game.hidden = true; el.currentUser.textContent = currentUser.username; refreshContinue(); }
-  function showGame() { if (!currentUser) return showAuth(); el.auth.hidden = true; el.cover.hidden = true; el.game.hidden = false; }
+  function showAuth(next) {
+    var target = "pages/login.html";
+    if (next) target += "?next=" + encodeURIComponent(next);
+    window.location.href = target;
+  }
+  function showCover() {
+    el.cover.hidden = false;
+    el.game.hidden = true;
+    if (el.currentUser) el.currentUser.textContent = currentUser ? currentUser.username : "未登录";
+    var loginButton = document.getElementById("cover-login-button");
+    if (loginButton) loginButton.textContent = "登录档案";
+    refreshContinue();
+  }
+  function showGame() {
+    if (!currentUser) return showAuth("game");
+    el.cover.hidden = true;
+    el.game.hidden = false;
+  }
   function roomName(id) { return rooms[id] ? rooms[id].title : "未知地点"; }
 
   function blocked(room, x, y, radius) {
@@ -135,37 +145,22 @@
     addUnique(state.unlockedRooms, id); renderAll(); save("已进入" + rooms[id].title + "。");
   }
 
-  function dialogueLines(lines) { return lines.map(function (line) { return typeof line === "string" ? { speaker: "旁白", text: line } : line; }); }
-  function openDialogue(config) {
-    activeDialogue = { location: config.location || currentRoom().title, lines: dialogueLines(config.lines || []), choices: config.choices || [], index: 0, onChoice: config.onChoice || function () {}, onClose: config.onClose || function () {} };
-    state.mode = "dialogue"; el.vn.hidden = false; renderDialogue();
+  function startNovel(sceneId) {
+    if (!currentUser || !state) return;
+    state.returnRoom = state.roomId;
+    state.returnX = state.playerX;
+    state.returnY = state.playerY;
+    state.returnFacing = state.facing;
+    state.mode = "novel";
+    state.narrativeNode = sceneId;
+    state.narrativeIndex = 0;
+    state.narrativeChoice = null;
+    MuseumState.save(state, currentUser.id);
+    window.location.href = "pages/novel.html?scene=" + encodeURIComponent(sceneId);
   }
-  function renderDialogue() {
-    if (!activeDialogue) return;
-    var line = activeDialogue.lines[activeDialogue.index] || { speaker: "旁白", text: "" };
-    if (!activeDialogue.logged) activeDialogue.logged = {};
-    if (!activeDialogue.logged[activeDialogue.index] && line.text) {
-      state.dialogueLog.push({ location: activeDialogue.location, speaker: line.speaker || "旁白", text: line.text, readAt: new Date().toISOString() });
-      if (state.dialogueLog.length > 300) state.dialogueLog.splice(0, state.dialogueLog.length - 300);
-      activeDialogue.logged[activeDialogue.index] = true;
-    }
-    el.vnLocation.textContent = activeDialogue.location; el.vnProgress.textContent = (activeDialogue.index + 1) + " / " + activeDialogue.lines.length; el.vnSpeaker.textContent = line.speaker || "旁白"; el.vnText.textContent = line.text || "";
-    el.vnPortrait.textContent = line.speaker && line.speaker !== "旁白" ? line.speaker.slice(0, 1) : ""; el.vnPortrait.classList.toggle("has-speaker", Boolean(line.speaker && line.speaker !== "旁白"));
-    el.vnChoices.textContent = "";
-    var last = activeDialogue.index >= activeDialogue.lines.length - 1;
-    el.vnNext.hidden = last && activeDialogue.choices.length > 0; el.vnNext.textContent = last ? "关闭　◆" : "继续　◆";
-    if (last && activeDialogue.choices.length) activeDialogue.choices.forEach(function (choice) { var button = document.createElement("button"); button.type = "button"; button.className = "vn-choice"; button.textContent = choice.label; button.addEventListener("click", function () { finishDialogue(choice.id); }); el.vnChoices.appendChild(button); });
-  }
-  function finishDialogue(choiceId) {
-    if (!activeDialogue) return;
-    var finished = activeDialogue; activeDialogue = null; el.vn.hidden = true; state.mode = "explore"; if (choiceId !== undefined) finished.onChoice(choiceId); else finished.onClose(); renderAll(); save();
-  }
-  function advanceDialogue() { if (!activeDialogue) return; if (activeDialogue.index < activeDialogue.lines.length - 1) { activeDialogue.index += 1; renderDialogue(); } else if (!activeDialogue.choices.length) finishDialogue(); }
-
   function openNote() {
     markDiscovered("dorm-note"); award("first-explore");
-    if (state.flags.readNote) { openDialogue({ lines: [{ speaker: "旁白", text: "床边只剩下一道被压平的痕迹。你已经把纸条上的字记在脑中。" }] }); return; }
-    openDialogue({ location: "员工宿舍 · 床边", lines: [{ speaker: "旁白", text: "你在床沿摸到一张折过两次的纸。纸面没有署名，字迹却像刚写下不久。" }, { speaker: "你", text: "我不是杀人魔……那个梦是假的？" }, { speaker: "MOSS", text: "检测到有效线索。建议记住：远离红制服，不要相信馆长，不要观看录像。" }], choices: [{ id: "remember", label: "把规则记下来" }, { id: "leave", label: "先放回原处" }], onChoice: function (id) { if (id === "remember") { state.flags.readNote = true; addClue("blood-note"); state.systemTrust += 3; state.task = "调查衣柜，寻找能打开宿舍门的东西。"; showToast("已记录血字纸条"); } } });
+    startNovel(state.flags.readNote ? "note-repeat" : "note-intro");
   }
   function openWardrobe() {
     markDiscovered("dorm-wardrobe");
@@ -176,18 +171,18 @@
       renderAll();
       return;
     }
-    if (state.flags.cabinetKeyTaken || state.flags.hasKey) { openDialogue({ location: "员工宿舍 · 衣柜", lines: [{ speaker: "旁白", text: "衣柜门敞开着，里面只剩两套制服。藏在黑色制服夹层里的钥匙已经被你取走。" }] }); return; }
-    openDialogue({ location: "员工宿舍 · 衣柜", lines: [{ speaker: "旁白", text: "衣柜里挂着两套尺寸相同的制服。红色那套散发着潮湿的蜡味。" }, { speaker: "MOSS", text: "发现可疑物件。是否取出黑色制服内侧的金属钥匙？" }], choices: [{ id: "take-key", label: "取出钥匙" }, { id: "wait", label: "暂时不动" }], onChoice: function (id) { if (id === "take-key") { state.flags.cabinetKeyTaken = true; state.flags.hasKey = true; addItem("dorm-key"); addClue("wardrobe-key"); state.task = "带着钥匙离开宿舍，去中央大厅。"; showToast("获得：宿舍钥匙"); } } });
+    if (state.flags.cabinetKeyTaken || state.flags.hasKey) { startNovel("wardrobe-repeat"); return; }
+    startNovel("wardrobe-clue");
   }
   function openTerminal() {
     markDiscovered("dorm-terminal");
-    openDialogue({ location: "员工宿舍 · 旧电视", lines: [{ speaker: "旁白", text: "电视没有接通电源，屏幕上却浮出一行蓝色的字：系统已绑定。" }, { speaker: "MOSS", text: "欢迎，天选者。请从最容易理解的地方开始调查。" }] }); state.systemTrust += 2;
+    state.systemTrust += 2; startNovel("terminal");
   }
-  function openMirror() { markDiscovered("dorm-mirror"); openDialogue({ location: "员工宿舍 · 镜子", lines: [{ speaker: "旁白", text: "镜子里的你慢了半拍才抬起头。身后没有人，镜面里却多了一扇门。" }] }); }
+  function openMirror() { markDiscovered("dorm-mirror"); startNovel("mirror"); }
   function openGuard() {
     markDiscovered("hall-guard");
-    if (state.flags.battleDemoCompleted) { openDialogue({ lines: [{ speaker: "无脸保安", text: "你已经证明自己会观察。去蜡像馆吧，那里藏着真正的规则。" }] }); return; }
-    openDialogue({ location: "中央大厅 · 值班台", lines: [{ speaker: "旁白", text: "红制服员工挡住了通往东侧的路。他没有五官，却像在对你微笑。" }, { speaker: "MOSS", text: "建议：观察目标，再决定是否与其交涉。" }], choices: [{ id: "battle", label: "进入规则型回合交涉" }, { id: "avoid", label: "先绕开他" }], onChoice: function (id) { if (id === "battle") goBattle(); } });
+    if (state.flags.battleDemoCompleted) { startNovel("guard-repeat"); return; }
+    startNovel("guard-intro");
   }
   function openRules() {
     if (state.flags.rulesGameCompleted) { showToast("告示上的规则你已经记住了。"); return; }
@@ -196,12 +191,12 @@
   }
   function openContract() {
     markDiscovered("wax-contract");
-    if (state.flags.foundContract) { openDialogue({ lines: [{ speaker: "旁白", text: "展台底部的半张契约已经被你收好。" }] }); return; }
-    openDialogue({ location: "蜡像馆 · 张明诚展台", lines: [{ speaker: "旁白", text: "展台里的蜡像和你的宿舍拥有同一张脸。底座刻着：张明诚，死于 1997 年 7 月 31 日。" }, { speaker: "你", text: "如果他已经死了，赵灵又是谁？" }, { speaker: "MOSS", text: "信息不足。建议前往出口，执行生存率最高的方案。" }], choices: [{ id: "take-contract", label: "取出半张契约" }, { id: "leave", label: "先离开展台" }], onChoice: function (id) { if (id === "take-contract") { state.flags.foundContract = true; state.flags.understoodTruth = true; addClue("contract"); award("battle-clear"); state.task = "前往出口，做出最后的选择。"; showToast("获得线索：契约残页"); } } });
+    if (state.flags.foundContract) { startNovel("contract-repeat"); return; }
+    startNovel("contract");
   }
   function openExit() {
     if (!state.flags.foundContract) { showToast("出口前的雾太浓了，你还缺少关键线索。"); return; }
-    openDialogue({ location: "蜡像馆 · 出口", lines: [{ speaker: "旁白", text: "出口就在前方。赵灵的声音从雾里传来，像一段快要断掉的录音。" }, { speaker: "MOSS", text: "检测到安全路径。离开此处，生存率 99.8%。" }], choices: [{ id: "escape", label: "执行最优解，独自离开" }, { id: "turn-back", label: "拒绝建议，回头寻找赵灵" }, { id: "understand", label: "带着契约，追问真相" }], onChoice: function (id) { state.ending = id; award("humanity"); state.task = "本章结束。可以返回标题或读取其他存档。"; showToast(id === "escape" ? "你选择了离开。" : "你选择了回头。"); } });
+    startNovel("ending-choice");
   }
   function interact(object) {
     if (!object || !state || state.mode !== "explore") return;
@@ -287,8 +282,13 @@
   function saveSummary(saveState) { if (!saveState) return "空存档位"; return roomName(saveState.roomId || saveState.currentNode) + " · 线索 " + ((saveState.clues || []).length); }
   function makeSlotCard(title, entry, index, auto) { var card = document.createElement("article"); card.className = "save-slot" + (entry ? " occupied" : " empty"); var info = document.createElement("div"); info.className = "save-slot-info"; var heading = document.createElement("strong"); heading.textContent = title; var detail = document.createElement("span"); var slotState = auto ? entry : entry && entry.state; detail.textContent = saveSummary(slotState); var time = document.createElement("small"); time.textContent = entry ? formatSaveTime(entry.savedAt) : "—"; info.appendChild(heading); info.appendChild(detail); info.appendChild(time); card.appendChild(info); var actions = document.createElement("div"); actions.className = "save-slot-actions"; var action = document.createElement("button"); action.type = "button"; action.className = "button button-small"; if (auto) { action.textContent = savePanelMode === "save" ? "当前自动档" : "读取"; action.disabled = savePanelMode === "save" || !entry; action.addEventListener("click", function () { loadSelected(MuseumState.load(currentUser.id), "自动存档"); }); } else if (savePanelMode === "save") { action.textContent = entry ? "覆盖" : "保存"; action.addEventListener("click", function () { if (entry && !window.confirm("确定覆盖存档位 " + (index + 1) + " 吗？")) return; MuseumState.saveSlot(state, currentUser.id, index); el.savePanelMessage.textContent = "已保存到存档位 " + (index + 1) + "。"; renderSavePanel(); }); } else { action.textContent = "读取"; action.disabled = !entry; action.addEventListener("click", function () { loadSelected(MuseumState.loadSlot(currentUser.id, index), "存档位 " + (index + 1)); }); } actions.appendChild(action); if (!auto && entry) { var del = document.createElement("button"); del.type = "button"; del.className = "text-button danger-button"; del.textContent = "删除"; del.addEventListener("click", function () { if (!window.confirm("确定删除存档位 " + (index + 1) + " 吗？")) return; MuseumState.deleteSlot(currentUser.id, index); renderSavePanel(); }); actions.appendChild(del); } card.appendChild(actions); return card; }
   function renderSavePanel() { if (!currentUser) return; el.savePanelTitle.textContent = savePanelMode === "save" ? "保存游戏" : "读取存档"; el.saveModeButton.classList.toggle("active", savePanelMode === "save"); el.loadModeButton.classList.toggle("active", savePanelMode === "load"); el.saveModeButton.setAttribute("aria-selected", String(savePanelMode === "save")); el.loadModeButton.setAttribute("aria-selected", String(savePanelMode === "load")); el.saveSlotList.textContent = ""; el.saveSlotList.appendChild(makeSlotCard("自动存档", MuseumState.load(currentUser.id), -1, true)); MuseumState.listSlots(currentUser.id).forEach(function (entry, index) { el.saveSlotList.appendChild(makeSlotCard("存档位 " + (index + 1), entry, index, false)); }); }
-  function openSavePanel(mode) { if (!currentUser) return showAuth(); savePanelMode = mode; if (mode === "save") save(); el.saveUserName.textContent = currentUser.username; el.savePanelMessage.textContent = ""; renderSavePanel(); el.savePanel.hidden = false; }
-  function loadSelected(loaded, label) { if (!loaded) { el.savePanelMessage.textContent = "这个存档无法读取。"; return; } state = loaded; state.mode = "explore"; MuseumState.save(state, currentUser.id); el.savePanel.hidden = true; showGame(); renderAll(); showToast("已读取" + label + "。"); }
+  function openSavePanel(mode) { if (!currentUser) return showAuth("game"); savePanelMode = mode; if (mode === "save") save(); el.saveUserName.textContent = currentUser.username; el.savePanelMessage.textContent = ""; renderSavePanel(); el.savePanel.hidden = false; }
+  function loadSelected(loaded, label) {
+    if (!loaded) { el.savePanelMessage.textContent = "这个存档无法读取。"; return; }
+    state = loaded;
+    if ((state.mode === "novel" || state.mode === "ending") && state.narrativeNode) { MuseumState.save(state, currentUser.id); window.location.href = "pages/novel.html?scene=" + encodeURIComponent(state.narrativeNode); return; }
+    state.mode = "explore"; MuseumState.save(state, currentUser.id); el.savePanel.hidden = true; showGame(); renderAll(); showToast("已读取" + label + "。");
+  }
   function renderLogPanel() {
     if (!currentUser || !el.logList) return;
     el.logUserName.textContent = currentUser.username;
@@ -297,34 +297,97 @@
     state.dialogueLog.forEach(function (entry) { entry = typeof entry === "string" ? { speaker: "旁白", text: entry } : entry; var item = document.createElement("article"); item.className = "log-entry"; var heading = document.createElement("div"); heading.className = "log-entry-heading"; var speaker = document.createElement("strong"); speaker.textContent = entry.speaker || "旁白"; var location = document.createElement("span"); location.textContent = entry.location || "未知地点"; heading.appendChild(speaker); heading.appendChild(location); var text = document.createElement("p"); text.textContent = entry.text || ""; item.appendChild(heading); item.appendChild(text); el.logList.appendChild(item); });
     el.logList.scrollTop = el.logList.scrollHeight;
   }
-  function openLogPanel() { if (!currentUser) return showAuth(); renderLogPanel(); el.logPanel.hidden = false; }
+  function openLogPanel() { if (!currentUser) return showAuth("game"); renderLogPanel(); el.logPanel.hidden = false; }
 
-  function applyBattleResult(result) { if (!result || !state) return; if (result.status === "win") { state.flags.battleDemoCompleted = true; state.flags.waxDoorUnlocked = true; addClue("faceless-mask"); award("battle-clear"); addUnique(state.unlockedRooms, "wax"); var returnRoom = rooms[state.returnRoom] ? state.returnRoom : "hall"; state.roomId = returnRoom; state.currentNode = returnRoom; state.chapter = rooms[returnRoom].chapter; state.playerX = Number(state.returnX) || rooms[returnRoom].spawn.x; state.playerY = Number(state.returnY) || rooms[returnRoom].spawn.y; state.task = tasks[returnRoom]; openDialogue({ location: "中央大厅 · 交涉之后", lines: [{ speaker: "旁白", text: "无脸保安退到阴影里，手中的钥匙落在地上。东侧蜡像馆的门锁随之松开。" }, { speaker: "MOSS", text: "交涉结果已记录。你没有选择最短路径。" }] }); showToast("交涉完成，蜡像馆入口已解锁。"); } else { state.hp = Math.max(0, Number(result.remainingHp) || 0); showToast("交涉失败，生存点已更新。"); } save(); renderAll(); }
+  function applyBattleResult(result) {
+    if (!result || !state) return;
+    if (result.status === "win") {
+      state.flags.battleDemoCompleted = true; state.flags.waxDoorUnlocked = true; addClue("faceless-mask"); award("battle-clear"); addUnique(state.unlockedRooms, "wax");
+      var returnRoom = rooms[state.returnRoom] ? state.returnRoom : "hall";
+      state.roomId = returnRoom; state.currentNode = returnRoom; state.chapter = rooms[returnRoom].chapter; state.playerX = Number(state.returnX) || rooms[returnRoom].spawn.x; state.playerY = Number(state.returnY) || rooms[returnRoom].spawn.y; state.task = tasks[returnRoom];
+      state.mode = "novel"; state.narrativeNode = "guard-after-battle"; state.narrativeIndex = 0; state.narrativeChoice = null; MuseumState.save(state, currentUser.id); window.location.href = "pages/novel.html?scene=guard-after-battle"; return;
+    }
+    state.hp = Math.max(0, Number(result.remainingHp) || 0); state.mode = "explore"; showToast("交涉失败，生存点已更新。"); save(); renderAll();
+  }
   function consumeBattleResult() { var raw = localStorage.getItem(BATTLE_RESULT_KEY); if (!raw) return null; var result; try { result = JSON.parse(raw); } catch (error) { localStorage.removeItem(BATTLE_RESULT_KEY); return null; } if (result && result.userId && currentUser && result.userId !== currentUser.id) return null; localStorage.removeItem(BATTLE_RESULT_KEY); return result; }
 
-  function frame(timestamp) { if (!lastFrame) lastFrame = timestamp; var delta = timestamp - lastFrame; lastFrame = timestamp; var dir = playerDirection(); if (dir.x || dir.y) movePlayer(dir.x, dir.y, delta); if (state && state.mode === "explore") { interactionHint(nearestObject()); drawRoom(currentRoom()); if (timestamp - lastSave > 6000) save(); } window.requestAnimationFrame(frame); }
+  function frame(timestamp) {
+    if (!lastFrame) lastFrame = timestamp;
+    var delta = timestamp - lastFrame;
+    lastFrame = timestamp;
+    var gameVisible = el.game && !el.game.hidden;
+    var overlayOpen = (el.savePanel && !el.savePanel.hidden) || (el.logPanel && !el.logPanel.hidden) || (el.rules && !el.rules.hidden);
+    if (gameVisible && !overlayOpen && state && state.mode === "explore") {
+      var dir = playerDirection();
+      if (dir.x || dir.y) movePlayer(dir.x, dir.y, delta);
+      interactionHint(nearestObject());
+      drawRoom(currentRoom());
+      if (timestamp - lastSave > 6000) save();
+    }
+    window.requestAnimationFrame(frame);
+  }
 
-  el.loginTab.addEventListener("click", function () { setAuthMode("login"); }); el.registerTab.addEventListener("click", function () { setAuthMode("register"); }); document.getElementById("show-register-button").addEventListener("click", function () { setAuthMode("register"); }); document.getElementById("show-login-button").addEventListener("click", function () { setAuthMode("login"); });
-  el.loginForm.addEventListener("submit", function (event) { event.preventDefault(); var result = MuseumAuth.login(document.getElementById("login-username").value, document.getElementById("login-password").value); if (!result.ok) { el.authMessage.textContent = result.message; return; } currentUser = result.user; state = MuseumState.load(currentUser.id) || MuseumState.create(currentUser); el.loginForm.reset(); showCover(); el.coverMessage.textContent = "档案已打开，可以继续上次探索。"; });
-  el.registerForm.addEventListener("submit", function (event) { event.preventDefault(); var password = document.getElementById("register-password").value; if (password !== document.getElementById("register-password-again").value) { el.authMessage.textContent = "两次口令不一致。"; return; } var result = MuseumAuth.register(document.getElementById("register-username").value, password); if (!result.ok) { el.authMessage.textContent = result.message; return; } currentUser = result.user; state = MuseumState.create(currentUser); el.registerForm.reset(); showCover(); el.coverMessage.textContent = "档案已建立，今晚的探索从这里开始。"; });
-  document.getElementById("start-button").addEventListener("click", function () { if (!currentUser) return showAuth(); state = MuseumState.create(currentUser); showGame(); renderAll(); save("已开始探索。"); }); el.continueButton.addEventListener("click", function () { if (!currentUser) return showAuth(); var loaded = MuseumState.load(currentUser.id); if (!loaded) return; state = loaded; showGame(); renderAll(); }); document.getElementById("cover-load-button").addEventListener("click", function () { openSavePanel("load"); }); document.getElementById("save-button").addEventListener("click", function () { openSavePanel("save"); }); document.getElementById("load-button").addEventListener("click", function () { openSavePanel("load"); }); document.getElementById("close-save-panel").addEventListener("click", function () { el.savePanel.hidden = true; }); el.saveModeButton.addEventListener("click", function () { savePanelMode = "save"; renderSavePanel(); }); el.loadModeButton.addEventListener("click", function () { savePanelMode = "load"; renderSavePanel(); }); el.savePanel.addEventListener("click", function (event) { if (event.target === el.savePanel) el.savePanel.hidden = true; });
-  document.getElementById("log-button").addEventListener("click", openLogPanel); document.getElementById("close-log-panel").addEventListener("click", function () { el.logPanel.hidden = true; }); el.logPanel.addEventListener("click", function (event) { if (event.target === el.logPanel) el.logPanel.hidden = true; }); document.getElementById("back-to-cover-button").addEventListener("click", function () { save("已返回标题，进度已保存。"); showCover(); }); document.getElementById("logout-button").addEventListener("click", function () { MuseumAuth.logout(); currentUser = null; state = null; showAuth(); }); document.getElementById("map-toggle-button").addEventListener("click", function () { document.querySelector(".explore-sidebar").classList.toggle("collapsed"); this.textContent = document.querySelector(".explore-sidebar").classList.contains("collapsed") ? "展开" : "收起"; }); document.getElementById("rules-close").addEventListener("click", function () { el.rules.hidden = true; state.mode = "explore"; renderAll(); save(); }); el.vnNext.addEventListener("click", advanceDialogue); el.vn.addEventListener("click", function (event) { if (event.target === el.vn) advanceDialogue(); });
-  document.addEventListener("keydown", function (event) { var key = event.key; keys[key] = true; if ((key === "e" || key === "E") && state && state.mode === "explore") { event.preventDefault(); interact(nearestObject()); } if ((key === "Enter" || key === " ") && state && state.mode === "dialogue") { event.preventDefault(); advanceDialogue(); } if (key === "Escape") { if (!el.savePanel.hidden) el.savePanel.hidden = true; else if (!el.logPanel.hidden) el.logPanel.hidden = true; else if (!el.rules.hidden) { el.rules.hidden = true; if (state) state.mode = "explore"; } } }); document.addEventListener("keyup", function (event) { keys[event.key] = false; });
+  document.getElementById("start-button").addEventListener("click", function () {
+    if (!currentUser) return showAuth("story");
+    window.location.href = "pages/story.html?flow=start";
+  });
+  el.continueButton.addEventListener("click", function () {
+    if (!currentUser) return showAuth("game");
+    var loaded = MuseumState.load(currentUser.id);
+    if (!loaded) return;
+    state = loaded;
+    if ((state.mode === "novel" || state.mode === "ending") && state.narrativeNode) { window.location.href = "pages/novel.html?scene=" + encodeURIComponent(state.narrativeNode); return; }
+    showGame();
+    renderAll();
+  });
+  document.getElementById("cover-load-button").addEventListener("click", function () { openSavePanel("load"); });
+  document.getElementById("save-button").addEventListener("click", function () { openSavePanel("save"); });
+  document.getElementById("load-button").addEventListener("click", function () { openSavePanel("load"); });
+  document.getElementById("close-save-panel").addEventListener("click", function () { el.savePanel.hidden = true; });
+  el.saveModeButton.addEventListener("click", function () { savePanelMode = "save"; renderSavePanel(); });
+  el.loadModeButton.addEventListener("click", function () { savePanelMode = "load"; renderSavePanel(); });
+  el.savePanel.addEventListener("click", function (event) { if (event.target === el.savePanel) el.savePanel.hidden = true; });
+  document.getElementById("log-button").addEventListener("click", openLogPanel);
+  document.getElementById("close-log-panel").addEventListener("click", function () { el.logPanel.hidden = true; });
+  el.logPanel.addEventListener("click", function (event) { if (event.target === el.logPanel) el.logPanel.hidden = true; });
+  document.getElementById("back-to-cover-button").addEventListener("click", function () { save("已返回标题，进度已保存。"); showCover(); });
+  var logoutButton = document.getElementById("logout-button");
+  if (logoutButton) logoutButton.addEventListener("click", function () { MuseumAuth.logout(); currentUser = null; state = null; showCover(); });
+  document.getElementById("map-toggle-button").addEventListener("click", function () { document.querySelector(".explore-sidebar").classList.toggle("collapsed"); this.textContent = document.querySelector(".explore-sidebar").classList.contains("collapsed") ? "展开" : "收起"; });
+  document.getElementById("rules-close").addEventListener("click", function () { el.rules.hidden = true; if (state) state.mode = "explore"; renderAll(); save(); });
+  document.addEventListener("keydown", function (event) { var key = event.key; keys[key] = true; if ((key === "e" || key === "E") && state && state.mode === "explore") { event.preventDefault(); interact(nearestObject()); } if (key === "Escape") { if (!el.savePanel.hidden) el.savePanel.hidden = true; else if (!el.logPanel.hidden) el.logPanel.hidden = true; else if (!el.rules.hidden) { el.rules.hidden = true; if (state) state.mode = "explore"; } } }); document.addEventListener("keyup", function (event) { keys[event.key] = false; });
   el.canvas.addEventListener("click", function (event) { if (!state || state.mode !== "explore") return; var rect = canvas.getBoundingClientRect(); var scaleX = canvas.width / rect.width; var scaleY = canvas.height / rect.height; var x = event.clientX - rect.left; var y = event.clientY - rect.top; var worldX = x * scaleX + camera.x; var worldY = y * scaleY + camera.y; var object = currentRoom().objects.slice().sort(function (a, b) { return Math.hypot(worldX - a.x, worldY - a.y) - Math.hypot(worldX - b.x, worldY - b.y); })[0]; if (!object || Math.hypot(worldX - object.x, worldY - object.y) >= object.r * 1.1) return; var playerDistance = Math.hypot(state.playerX - object.x, state.playerY - object.y); if (playerDistance < object.r) interact(object); else showToast("请先走近「" + object.label + "」再调查。"); });
   document.querySelectorAll("[data-move]").forEach(function (button) { button.addEventListener("pointerdown", function () { heldTouch = button.getAttribute("data-move"); }); button.addEventListener("pointerup", function () { heldTouch = null; }); button.addEventListener("pointerleave", function () { heldTouch = null; }); });
   var pendingResult = currentUser ? consumeBattleResult() : null;
-  var openSavedGame = new URLSearchParams(window.location.search).get("fromSave") === "1";
+  var query = new URLSearchParams(window.location.search);
+  var openSavedGame = query.get("fromSave") === "1";
+  var openNewGame = query.get("newGame") === "1";
+  var openStoryReturn = query.get("fromStory") === "1";
+  var openEndingReturn = query.get("fromEnding") === "1";
   if (currentUser && pendingResult) {
     showGame();
     applyBattleResult(pendingResult);
+  } else if (currentUser && openSavedGame && state && (state.mode === "novel" || state.mode === "ending") && state.narrativeNode) {
+    window.location.href = "pages/novel.html?scene=" + encodeURIComponent(state.narrativeNode);
   } else if (currentUser && openSavedGame && state) {
     showGame();
     renderAll();
     showToast("已载入所选存档。");
-  } else if (currentUser) {
+  } else if (currentUser && openNewGame) {
+    state = MuseumState.create(currentUser);
+    showGame();
+    renderAll();
+    save("已开始探索。");
+  } else if (currentUser && openStoryReturn) {
+    showGame();
+    state.mode = "explore";
+    renderAll();
+    save("剧情结束，回到地图。");
+  } else if (currentUser && openEndingReturn) {
     showCover();
+    showToast("结局已保存。可以开始新的探索或读取其他存档。");
   } else {
-    showAuth();
+    showCover();
   }
   window.requestAnimationFrame(frame);
 }());

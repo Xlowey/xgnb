@@ -4,13 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>无脸保安 · 回合战斗 Demo</title>
-  <link rel="stylesheet" href="battle.css?v=5">
+  <link rel="stylesheet" href="battle.css?v=6">
 </head>
 <body>
   <main class="battle-shell">
     <header class="demo-header">
       <a id="return-link" href="../../index.html">← 返回项目入口</a>
-      <span>馆内交涉记录 · 原型</span>
     </header>
     <section class="battle-card" aria-labelledby="battle-title">
       <div class="battle-title-row">
@@ -19,7 +18,7 @@
       </div>
       <div class="combatants">
         <article class="combatant enemy-panel">
-          <div class="avatar avatar-enemy"><img src="../../assets/images/enemy-faceless-guard.png" alt="无脸保安"></div>
+          <div class="avatar avatar-enemy" aria-label="无脸保安">无脸</div>
           <div class="combatant-info">
             <h2>无脸保安</h2>
             <div class="hp-line"><span>HP</span><span id="enemy-hp-text">30 / 30</span></div>
@@ -51,7 +50,6 @@
         <button id="restart-button" class="restart-button" type="button">重新开始</button>
       </div>
     </section>
-    <p class="integration-note">结束后点击左上角“返回剧情”，结果会写入当前浏览器并交给正式剧情状态机。</p>
   </main>
   <script src="battle.js?v=4"></script>
 </body>

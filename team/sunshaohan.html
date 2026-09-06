@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh‑CN">
+<head>
+<meta charset="UTF‑8">
+<meta name="viewport" content="width=device‑width, initial‑scale=1.0">
+<title>
+  孙绍涵个人简介
+</title>
+<style>
+:root { --bg:#eee9e2; 
+        --panel:#faf8f4;
+        --line:#9b7d70; 
+        --muted:#73584e; }
+* { box-sizing:border-box; }
+
+body { min-width:320px;
+       min-height:100vh;
+       margin:0; 
+       color:#2d2522;
+       background:radial-gradient(ellipse at 14% -8%,rgba(190,143,123,.28) 0,transparent 42%),radial-gradient(ellipse at 98% 108%,rgba(126,158,157,.2) 0,transparent 40%),linear-gradient(135deg, var(--bg), #f3ece3); 
+      }
+
+.page { display:grid;
+        width:min(900px,calc(100% - 32px));
+        min-height:100vh; 
+        margin:0 auto; 
+        place-items:center; 
+        padding:32px 0; 
+      }
+
+.profile-back { position:fixed;
+                top:22px;
+                left:clamp(18px,4vw,48px);
+                z-index:2;
+                padding:9px 14px;
+                border:1px solid var(--line);
+                color:var(--muted);
+                background:rgba(250,248,244,.9);
+                text-decoration:none; }
+
+.profile-back:hover,
+.profile-back:focus-visible { color:#2d2522;
+                              background:#fff;
+                              outline:none; }
+
+.panel { 
+    display:grid;
+    width:100%;
+    min-height:620px;
+    place-items:center;
+    padding:40px;
+    border:1px solid var(--line); 
+    background:rgba(250,248,244,.96);
+    box-shadow:0 18px 50px rgba(71,47,40,.16);
+}
+
+.profile-content { display:grid;
+                   width:min(100%, 620px);
+                   justify-items:center;
+                   gap:14px; text-align:center; 
+                  }
+
+.photo-placeholder { 
+    display:grid; 
+    width:260px;
+    height:260px; 
+    place-items:center; 
+    overflow:hidden;
+    border:1px dashed #a88e83; 
+    border-radius:50%; 
+    color:var(--muted); 
+    text-align:center; 
+    background:repeating-linear-gradient(135deg,rgba(154,117,104,.15),rgba(154,117,104,.15) 8px,transparent 8px,transparent 16px);
+    transition: transform 0.3s ease;
+}
+
+.photo-placeholder:hover {
+    transform: scale(1.05);
+}
+
+.photo-placeholder img{
+    display:block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    border-radius: 50%;
+}
+
+.name-placeholder { margin-top:14px; 
+                    font-size:clamp(2.2rem, 5vw, 3.2rem); 
+                    font-weight:700; 
+                    letter-spacing:.08em;
+                   }
+
+.role-placeholder { color:#6f5147; 
+                    font-size:clamp(1.45rem, 3.4vw, 1.9rem); 
+                    letter-spacing:.12em;
+                   }
+
+.information{color:#846b5f;
+             font-size: clamp(1.1rem, 2vw, 1.3rem);
+             letter-spacing: 0.06em;
+             margin-top:8px;
+            }
+
+.divider { width:100%;
+           height:1px;
+           margin:32px 0 20px; 
+           background:rgba(108,80,70,.4); 
+          }
+
+.intro-placeholder { width:100%;
+                     text-align:left; 
+                    }
+
+.intro-title { margin-bottom:14px;
+               font-size:clamp(1.7rem, 3.8vw, 2.2rem);
+               font-weight:700;
+               letter-spacing:.08em; 
+              }
+
+.intro-placeholder p { margin:0;
+                       color:#4d403a;
+                       font-size:1rem;
+                       line-height:1.9;
+                       }
+
+@media (max-width:650px) { 
+    .page { width:min(100% - 22px,560px); padding:20px 0; } 
+    .panel { min-height:calc(100vh - 40px); padding:24px; } 
+    .photo-placeholder { width:210px; height:210px; } 
+    .profile-content { gap:12px; } 
+    .divider { margin-top:24px; } 
+}
+</style>
+</head>
+<body>
+<main class="page">
+    <a class="profile-back" href="../pages/team.html">← 返回团队成员</a>
+    <section class="panel">
+        <div class="profile-content">
+            <div class="photo-placeholder"><img src="sunshaohan.jpg" alt="孙绍涵头像"></div>
+            <div class="name-placeholder">孙绍涵</div>
+            <div class="role-placeholder">UI设计/美工/视频剪辑</div>
+            <div class="information">专业：数据科学与大数据技术</div>
+            <div class="divider" aria-hidden="true"></div>
+            <div class="intro-placeholder">
+                <div class="intro-title">个人介绍</div>
+                
+                <p>我的编程基础比较差，但对游戏创作抱有浓厚兴趣。在小组的游戏项目中，我主要承担美工与剪辑等方面的工作，负责画面素材、视觉风格与美术资源的整理搭建，尽力为作品塑造贴合故事氛围的视觉表现，为游戏制作贡献自己的一份力量。</p>
+                <p>现阶段代码能力尚浅，不过我愿意持续学习，希望后续可以慢慢熟悉开发流程，在编码环节也能分担一部分工作。</p><hr>
+                <p>生活里我相信理性与感性可以共存，既愿意踏实打磨手上的任务，也珍视想象力带来的乐趣，期待和伙伴一起，把想法一步步落地成为完整的作品。</p>
+            
+            </div>
+        </div>
+    </section>
+</main>
+</body>
+</html>

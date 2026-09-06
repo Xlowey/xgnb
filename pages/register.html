@@ -4,18 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>独立注册 · 怪谈博物馆</title>
-  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/style.css?v=8">
 </head>
-<body class="public-page-body">
-  <main class="public-page auth-page">
-    <nav class="public-nav" aria-label="页面导航">
-      <a href="../index.html">返回登录</a>
-      <span>本地档案登记</span>
-    </nav>
-    <section class="public-panel auth-page-panel">
+<body class="login-page-body game-public-body">
+  <main class="login-page">
+    <a class="login-back" href="login.html">← 返回登录</a>
+    <section class="login-panel">
       <p class="eyebrow">夜班登记 · 新建档案</p>
-      <h1>建立调查档案</h1>
-      <p class="page-lead">账号和进度只保存在当前浏览器，用于课堂原型演示，不连接服务器。</p>
+      <h1>建立档案</h1>
       <form id="register-page-form" class="auth-form">
         <label for="register-page-username">档案名称</label>
         <input id="register-page-username" type="text" required maxlength="16" placeholder="2—16 个字符">
@@ -26,10 +22,6 @@
         <button class="button button-primary" type="submit">建立档案</button>
       </form>
       <p id="register-page-message" class="status-message" role="status" aria-live="polite"></p>
-      <nav class="page-links" aria-label="站点页面">
-        <a href="../index.html">返回登录</a>
-        <a href="help.html">查看玩法说明</a>
-      </nav>
     </section>
   </main>
   <script src="../js/auth.js"></script>

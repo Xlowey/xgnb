@@ -2,9 +2,10 @@
   "use strict";
 
   var SLOT_LIMIT = 20;
-  var AUTO_PREFIX = "museum_save_v3_auto_";
-  var SLOTS_PREFIX = "museum_save_v3_slots_";
-  var LEGACY_PREFIXES = ["museum_save_v2_auto_", "museum_save_v1_"];
+  var AUTO_PREFIX = "museum_save_v4_auto_";
+  var SLOTS_PREFIX = "museum_save_v4_slots_";
+  var LEGACY_PREFIXES = ["museum_save_v3_auto_", "museum_save_v2_auto_", "museum_save_v1_"];
+  var LEGACY_SLOT_PREFIXES = ["museum_save_v3_slots_", "museum_save_v2_slots_", "museum_save_v1_slots_"];
   var DEFAULT_FLAGS = {
     readNote: false,
     hasKey: false,
@@ -18,7 +19,7 @@
     understoodTruth: false
   };
   var DEFAULT_STATE = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     userId: null,
     playerName: "",
     roomId: "dorm",
@@ -28,6 +29,9 @@
     facing: "down",
     mode: "explore",
     narrativeNode: null,
+    narrativeIndex: 0,
+    narrativeChoice: null,
+    narrativeLogKeys: [],
     narrativeText: "",
     narrativeChoices: [],
     chapter: "序章",
@@ -44,7 +48,9 @@
     returnRoom: null,
     returnX: null,
     returnY: null,
+    returnFacing: "down",
     ending: null,
+    endingComplete: false,
     savedAt: null,
     flags: DEFAULT_FLAGS
   };
@@ -61,7 +67,7 @@
     var state = createState({ id: userId, username: loaded.playerName || "" });
     Object.keys(state).forEach(function (key) { if (loaded[key] !== undefined) state[key] = loaded[key]; });
     state.userId = userId;
-    state.schemaVersion = 3;
+    state.schemaVersion = 4;
     state.flags = Object.assign({}, DEFAULT_FLAGS, loaded.flags || {});
     state.clues = Array.isArray(state.clues) ? state.clues : [];
     state.inventory = Array.isArray(state.inventory) ? state.inventory : [];
@@ -69,6 +75,8 @@
     state.unlockedRooms = Array.isArray(state.unlockedRooms) ? state.unlockedRooms : ["dorm"];
     state.achievements = Array.isArray(state.achievements) ? state.achievements : [];
     state.dialogueLog = Array.isArray(state.dialogueLog) ? state.dialogueLog : [];
+    state.narrativeLogKeys = Array.isArray(state.narrativeLogKeys) ? state.narrativeLogKeys : [];
+    if (state.mode === "dialogue" || state.mode === "mini" || state.mode === "battle") state.mode = "explore";
     if (loaded.currentNode && !loaded.roomId) state.roomId = loaded.currentNode;
     if (typeof state.playerX !== "number") state.playerX = state.roomId === "hall" ? 260 : 300;
     if (typeof state.playerY !== "number") state.playerY = state.roomId === "dorm" ? 520 : 460;
@@ -89,12 +97,24 @@
     if (!raw) LEGACY_PREFIXES.some(function (prefix) { raw = localStorage.getItem(userKey(prefix, userId)); return Boolean(raw); });
     return hydrate(parse(raw, null), userId);
   }
-  function readSlots(userId) {
-    var slots = parse(localStorage.getItem(userKey(SLOTS_PREFIX, userId)), []);
+  function normalizeSlots(slots) {
     if (!Array.isArray(slots)) slots = [];
     slots.length = SLOT_LIMIT;
     for (var i = 0; i < SLOT_LIMIT; i += 1) if (slots[i] === undefined) slots[i] = null;
     return slots;
+  }
+  function readSlots(userId) {
+    var raw = localStorage.getItem(userKey(SLOTS_PREFIX, userId));
+    if (!raw) LEGACY_SLOT_PREFIXES.some(function (prefix) {
+      var legacyRaw = localStorage.getItem(userKey(prefix, userId));
+      if (!legacyRaw) return false;
+      var legacySlots = parse(legacyRaw, null);
+      if (!Array.isArray(legacySlots)) return false;
+      raw = JSON.stringify(legacySlots);
+      localStorage.setItem(userKey(SLOTS_PREFIX, userId), raw);
+      return true;
+    });
+    return normalizeSlots(parse(raw, []));
   }
   function saveSlot(state, userId, slotIndex) {
     if (!userId || slotIndex < 0 || slotIndex >= SLOT_LIMIT) return null;
@@ -104,7 +124,7 @@
   function loadSlot(userId, slotIndex) { var entry = userId && slotIndex >= 0 && slotIndex < SLOT_LIMIT ? readSlots(userId)[slotIndex] : null; return entry ? hydrate(entry.state, userId) : null; }
   function deleteSlot(userId, slotIndex) { if (!userId || slotIndex < 0 || slotIndex >= SLOT_LIMIT) return false; var slots = readSlots(userId); if (!slots[slotIndex]) return false; slots[slotIndex] = null; localStorage.setItem(userKey(SLOTS_PREFIX, userId), JSON.stringify(slots)); return true; }
   function listSlots(userId) { return clone(readSlots(userId)); }
-  function clear(userId) { if (!userId) return; localStorage.removeItem(userKey(AUTO_PREFIX, userId)); localStorage.removeItem(userKey(SLOTS_PREFIX, userId)); LEGACY_PREFIXES.forEach(function (prefix) { localStorage.removeItem(userKey(prefix, userId)); }); }
+  function clear(userId) { if (!userId) return; localStorage.removeItem(userKey(AUTO_PREFIX, userId)); localStorage.removeItem(userKey(SLOTS_PREFIX, userId)); LEGACY_PREFIXES.concat(LEGACY_SLOT_PREFIXES).forEach(function (prefix) { localStorage.removeItem(userKey(prefix, userId)); }); }
   function hasSave(userId) { if (!userId) return false; return Boolean(localStorage.getItem(userKey(AUTO_PREFIX, userId)) || LEGACY_PREFIXES.some(function (prefix) { return localStorage.getItem(userKey(prefix, userId)); }) || readSlots(userId).some(Boolean)); }
 
   window.MuseumState = { SLOT_LIMIT: SLOT_LIMIT, create: createState, save: save, load: load, saveSlot: saveSlot, loadSlot: loadSlot, deleteSlot: deleteSlot, listSlots: listSlots, clear: clear, hasSave: hasSave };

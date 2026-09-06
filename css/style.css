@@ -60,13 +60,6 @@ button:disabled {
   min-height: 100vh;
 }
 
-.auth-screen {
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: radial-gradient(circle at 12% 10%, rgba(83, 122, 130, .32), transparent 36%), radial-gradient(circle at 90% 85%, rgba(126, 91, 72, .24), transparent 42%), #0c1217;
-}
-
 .cover-screen {
   display: grid;
   place-items: center;
@@ -77,7 +70,7 @@ button:disabled {
   background-repeat: no-repeat;
 }
 
-.auth-panel, .cover-card {
+.cover-card {
   width: min(460px, 100%);
   padding: clamp(28px, 6vw, 56px);
   border: 1px solid var(--line);
@@ -86,10 +79,13 @@ button:disabled {
 }
 
 .cover-card {
+  width: min(520px, 100%);
+  padding: clamp(30px, 6vw, 58px);
   text-align: center;
-  border-color: rgba(201, 181, 148, .55);
-  background: rgba(15, 22, 20, .84);
+  border-color: rgba(217, 185, 137, .62);
+  background: rgba(15, 22, 20, .78);
   backdrop-filter: blur(2px);
+  box-shadow: 0 26px 70px rgba(0, 0, 0, .45);
 }
 
 .eyebrow {
@@ -115,18 +111,12 @@ h2 {
   letter-spacing: .08em;
 }
 
-.auth-intro, .cover-copy {
-  margin-bottom: 26px;
-  color: var(--muted);
-  line-height: 1.8;
-}
-
-.auth-tabs, .save-mode-tabs {
+.save-mode-tabs {
   display: flex;
   border-bottom: 1px solid var(--line-soft);
 }
 
-.tab-button, .save-mode-button {
+.save-mode-button {
   flex: 1;
   padding: 12px 8px;
   border: 0;
@@ -135,13 +125,7 @@ h2 {
   background: transparent;
 }
 
-.tab-button {
-  display: block;
-  text-align: center;
-  text-decoration: none;
-}
-
-.tab-button.active, .save-mode-button.active {
+.save-mode-button.active {
   border-bottom-color: var(--accent);
   color: var(--text);
 }
@@ -229,13 +213,6 @@ input:focus {
   color: var(--danger);
 }
 
-.auth-switch {
-  margin: 10px 0 0;
-  color: var(--muted);
-  font-size: .9rem;
-  text-align: center;
-}
-
 .status-message {
   min-height: 1.3em;
   margin: 16px 0 0;
@@ -243,32 +220,12 @@ input:focus {
   line-height: 1.6;
 }
 
-.prototype-note {
-  margin: 26px 0 0;
-  color: #758689;
-  font-size: .78rem;
-  line-height: 1.6;
-}
-
-.page-links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 16px;
-  margin-top: 25px;
-}
-
-.page-links a {
-  color: var(--accent);
-  font-size: .88rem;
-}
-
-.page-links a:hover {
-  color: #e3f8f2;
-}
-
 .cover-card h1 {
   margin-bottom: 16px;
+  font-size: clamp(2rem, 7vw, 4rem);
+  letter-spacing: .06em;
+  white-space: nowrap;
+  text-shadow: 0 3px 20px rgba(0, 0, 0, .55);
 }
 
 .signed-in {
@@ -285,11 +242,111 @@ input:focus {
   margin: 28px 0 0;
 }
 
+.cover-card .signed-in {
+  margin: 0;
+  font-size: .98rem;
+}
+
+.cover-actions .button {
+  width: 100%;
+  min-height: 48px;
+  letter-spacing: .08em;
+}
+
+.cover-team-link {
+  display: inline-block;
+  margin-top: 26px;
+  color: var(--accent-strong);
+  font-size: .92rem;
+}
+
+.cover-team-link:hover,
+.cover-team-link:focus-visible {
+  color: var(--text);
+}
+
+.login-page-body {
+  min-height: 100vh;
+  background-image: linear-gradient(90deg, rgba(7, 11, 10, .9), rgba(7, 11, 10, .56) 52%, rgba(7, 11, 10, .84)), url("../assets/images/title-dorm-bg.png");
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.login-page {
+  position: relative;
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 72px 24px 32px;
+}
+
+.login-back {
+  position: absolute;
+  top: 24px;
+  left: clamp(24px, 6vw, 80px);
+  color: var(--accent-strong);
+  text-decoration: none;
+}
+
+.login-back:hover,
+.login-back:focus-visible {
+  color: var(--text);
+}
+
+.login-panel {
+  width: min(470px, 100%);
+  padding: clamp(30px, 6vw, 58px);
+  border: 1px solid rgba(217, 185, 137, .62);
+  background: rgba(15, 22, 20, .86);
+  box-shadow: 0 26px 70px rgba(0, 0, 0, .48);
+}
+
+.login-panel h1 {
+  margin-bottom: 14px;
+  font-size: clamp(2.2rem, 6vw, 3.8rem);
+}
+
+.login-lead {
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.login-switch {
+  margin: 18px 0 0;
+  color: var(--muted);
+  text-align: center;
+}
+
+.login-switch a {
+  color: var(--accent);
+}
+
+.flow-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin: 28px auto 0;
+}
+
+.flow-actions .button {
+  min-width: 190px;
+  text-decoration: none;
+}
+
 /* ===== 地图探索界面 ===== */
 .game-screen {
   overflow: hidden;
   padding: 0 clamp(12px, 3vw, 36px) 28px;
-  background: radial-gradient(circle at 20% 5%, rgba(42, 91, 98, .26), transparent 36%), #0e151a;
+  background-image:
+    linear-gradient(90deg, rgba(7, 11, 10, .92), rgba(7, 11, 10, .64) 50%, rgba(7, 11, 10, .9)),
+    url("../assets/images/title-dorm-bg.png");
+  background-position: center;
+  background-size: cover;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
 }
 
 .game-topbar {
@@ -543,7 +600,7 @@ input:focus {
 }
 
 /* ===== 视觉小说、规则小游戏与弹窗 ===== */
-.vn-overlay, .modal-overlay, .save-panel {
+.modal-overlay, .save-panel {
   position: fixed;
   z-index: 20;
   inset: 0;
@@ -553,24 +610,7 @@ input:focus {
   background: rgba(5, 11, 14, .78);
 }
 
-.vn-backdrop {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at 50% 10%, rgba(68, 119, 123, .26), transparent 48%), linear-gradient(rgba(8, 14, 17, .3), rgba(8, 14, 17, .82));
-}
-
-.vn-panel {
-  position: relative;
-  width: min(980px, 100%);
-  max-height: min(700px, calc(100vh - 36px));
-  overflow: auto;
-  padding: 22px clamp(20px, 4vw, 46px) 28px;
-  border: 1px solid #718788;
-  background: rgba(19, 30, 35, .98);
-  box-shadow: var(--shadow);
-}
-
-.vn-header, .modal-heading {
+.modal-heading {
   display: flex;
   justify-content: space-between;
   gap: 14px;
@@ -579,81 +619,6 @@ input:focus {
   color: var(--accent-strong);
   font-size: .8rem;
   letter-spacing: .1em;
-}
-
-.vn-content {
-  display: grid;
-  grid-template-columns: 102px minmax(0, 1fr);
-  gap: 22px;
-  align-items: center;
-  min-height: 220px;
-  padding: 28px 0 18px;
-}
-
-.vn-portrait {
-  width: 102px;
-  height: 140px;
-  border: 1px solid var(--line);
-  background: linear-gradient(145deg, #273940, #152126);
-}
-
-.vn-portrait.has-speaker::after {
-  display: grid;
-  height: 100%;
-  place-items: center;
-  color: rgba(217, 185, 137, .7);
-  font-size: 3.8rem;
-  font-weight: 700;
-  content: "?";
-}
-
-.vn-speaker {
-  margin-bottom: 12px;
-  color: var(--accent);
-  font-size: 1.05rem;
-  letter-spacing: .08em;
-}
-
-.vn-text {
-  min-height: 96px;
-  margin: 0;
-  color: var(--text);
-  font-size: clamp(1rem, 2vw, 1.18rem);
-  line-height: 2;
-  white-space: pre-line;
-}
-
-.vn-choices {
-  display: grid;
-  gap: 10px;
-}
-
-.vn-choice {
-  padding: 13px 16px;
-  border: 1px solid var(--line);
-  color: var(--text);
-  text-align: left;
-  background: #24363c;
-}
-
-.vn-choice:hover, .vn-choice:focus-visible {
-  border-color: var(--accent);
-  background: #315057;
-  outline: none;
-}
-
-.vn-next {
-  display: block;
-  margin: 16px 0 0 auto;
-  padding: 9px 13px;
-  border: 0;
-  color: var(--accent-strong);
-  background: transparent;
-}
-
-.vn-next:hover, .vn-next:focus-visible {
-  color: var(--text);
-  outline: none;
 }
 
 .modal-card {
@@ -862,6 +827,10 @@ input:focus {
     min-width: 0;
   }
 
+  .team-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .explore-sidebar.collapsed {
     display: grid;
   }
@@ -879,6 +848,16 @@ input:focus {
   radial-gradient(circle at 15% 8%, rgba(83, 122, 130, .25), transparent 34%),
   radial-gradient(circle at 88% 80%, rgba(126, 91, 72, .2), transparent 38%),
   #0c1217;
+}
+
+.public-page-body.game-public-body {
+  background-image:
+    linear-gradient(90deg, rgba(7, 11, 10, .9), rgba(7, 11, 10, .58) 50%, rgba(7, 11, 10, .86)),
+    url("../assets/images/title-dorm-bg.png");
+  background-position: center;
+  background-size: cover;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
 }
 
 .public-page {
@@ -915,7 +894,6 @@ input:focus {
 }
 
 .public-hero h1,
-.auth-page-panel h1,
 .game-entry-panel h1 {
   margin-bottom: 16px;
 }
@@ -932,7 +910,6 @@ input:focus {
   box-shadow: var(--shadow);
 }
 
-.auth-page-panel,
 .game-entry-panel,
 .story-panel {
   max-width: 780px;
@@ -941,6 +918,66 @@ input:focus {
 
 .information-page .public-hero {
   max-width: 840px;
+  margin-right: auto;
+  margin-left: auto;
+  text-align: center;
+}
+
+.information-page .public-hero p:last-child {
+  max-width: 820px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.information-page .story-panel,
+.information-page .info-grid,
+.information-page .flow-actions {
+  width: min(100%, 900px);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.information-page .story-panel {
+  max-width: 780px;
+}
+
+.game-entry-page,
+.saves-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.game-entry-page .public-nav,
+.saves-page .public-nav {
+  align-self: stretch;
+}
+
+.game-entry-panel {
+  width: min(100%, 780px);
+  margin-right: auto;
+  margin-left: auto;
+  text-align: center;
+}
+
+.game-entry-panel .entry-flow {
+  justify-content: center;
+}
+
+.saves-page .public-hero,
+.saves-page > .status-message,
+.saves-page .save-page-panel {
+  width: min(100%, 900px);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.saves-page .public-hero {
+  text-align: center;
+}
+
+.saves-page > .status-message {
+  text-align: center;
 }
 
 .info-grid {
@@ -981,6 +1018,102 @@ input:focus {
 
 .story-panel h2:not(:first-child) {
   margin-top: 32px;
+}
+
+.team-hero {
+  padding: clamp(48px, 8vw, 86px) 0 26px;
+  text-align: center;
+}
+
+.team-hero h1 {
+  margin-bottom: 14px;
+  font-size: clamp(2.4rem, 6vw, 4rem);
+}
+
+.team-hero p:last-child {
+  max-width: 720px;
+  margin: 0 auto;
+  color: var(--muted);
+  line-height: 1.9;
+}
+
+.team-members {
+  padding: 8px 0 0;
+}
+
+.team-members > h2 {
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.team-note {
+  margin: 0 auto 24px;
+  color: var(--muted);
+  line-height: 1.8;
+  text-align: center;
+}
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.member-card {
+  display: flex;
+  min-height: 172px;
+  align-items: center;
+  gap: 18px;
+  padding: 24px;
+  border: 1px solid rgba(217, 185, 137, .36);
+  color: var(--text);
+  background: rgba(24, 35, 43, .78);
+  text-decoration: none;
+  transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.member-card:hover,
+.member-card:focus-visible {
+  transform: translateY(-3px);
+  border-color: var(--accent-strong);
+  background: rgba(38, 56, 64, .9);
+  outline: none;
+}
+
+.member-avatar {
+  display: grid;
+  width: 82px;
+  height: 82px;
+  flex: 0 0 82px;
+  place-items: center;
+  overflow: hidden;
+  border: 3px solid rgba(237, 241, 235, .76);
+  border-radius: 50%;
+  color: var(--accent-strong);
+  background: rgba(15, 21, 27, .9);
+  font-size: 1.2rem;
+}
+
+.member-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.member-card > span:last-child {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.member-card strong {
+  font-size: 1.2rem;
+  letter-spacing: .06em;
+}
+
+.member-card small {
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 .entry-actions {
@@ -1080,13 +1213,6 @@ input:focus {
   gap: 8px;
 }
 
-.page-footer {
-  margin-top: 28px;
-  color: #758689;
-  font-size: .8rem;
-  text-align: center;
-}
-
 @media (max-width: 620px) {
   .public-page {
     width: min(100% - 24px, 1120px);
@@ -1102,6 +1228,10 @@ input:focus {
   }
 
   .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .team-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1123,11 +1253,11 @@ input:focus {
     flex-direction: column;
   }
 
-  .auth-screen, .cover-screen {
+  .cover-screen {
     padding: 12px;
   }
 
-  .auth-panel, .cover-card {
+  .cover-card {
     padding: 26px 20px;
   }
 
@@ -1180,33 +1310,6 @@ input:focus {
     border: 1px solid var(--line);
     color: var(--text);
     background: var(--surface-2);
-  }
-
-  .vn-panel {
-    max-height: calc(100vh - 18px);
-    padding: 17px 16px 20px;
-  }
-
-  .vn-content {
-    grid-template-columns: 1fr;
-    gap: 14px;
-    min-height: 0;
-    padding-top: 20px;
-  }
-
-  .vn-portrait {
-    width: 74px;
-    height: 74px;
-  }
-
-  .vn-portrait.has-speaker::after {
-    font-size: 2rem;
-  }
-
-  .vn-text {
-    min-height: 0;
-    font-size: .98rem;
-    line-height: 1.8;
   }
 
   .save-window-header, .save-help, .save-slot-list {

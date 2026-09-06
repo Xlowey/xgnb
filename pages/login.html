@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录档案 · 怪谈博物馆</title>
+  <link rel="stylesheet" href="../css/style.css?v=8">
+</head>
+<body class="login-page-body game-public-body">
+  <main class="login-page">
+    <a class="login-back" href="../index.html">← 返回主菜单</a>
+    <section class="login-panel" aria-labelledby="login-title">
+      <p class="eyebrow">夜班档案 · 进入馆内</p>
+      <h1 id="login-title">登录档案</h1>
+      <form id="login-page-form" class="auth-form">
+        <label for="login-page-username">档案名称</label>
+        <input id="login-page-username" type="text" required maxlength="16" autocomplete="username" placeholder="输入档案名称">
+        <label for="login-page-password">口令</label>
+        <input id="login-page-password" type="password" required minlength="4" maxlength="32" autocomplete="current-password" placeholder="输入口令">
+        <button class="button button-primary" type="submit">进入游戏</button>
+      </form>
+      <p id="login-page-message" class="status-message" role="status" aria-live="polite"></p>
+      <p class="login-switch">还没有档案？<a id="login-register-link" href="register.html">注册账号</a></p>
+    </section>
+  </main>
+  <script src="../js/auth.js?v=3"></script>
+  <script src="../js/login.js?v=1"></script>
+</body>
+</html>

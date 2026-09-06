@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>怪谈博物馆 · 剧情</title>
+  <link rel="stylesheet" href="novel.css">
+</head>
+<body class="novel-page">
+  <main class="novel-stage">
+    <div class="novel-background" aria-hidden="true"></div>
+    <div class="novel-vignette" aria-hidden="true"></div>
+    <header class="novel-toolbar">
+      <div id="novel-location" class="novel-location">交互故事 · 剧情</div>
+      <nav class="novel-toolbar-actions" aria-label="剧情操作">
+        <button class="novel-tool" id="novel-review-button" type="button">回顾</button>
+        <button class="novel-tool" id="novel-save-button" type="button">保存</button>
+        <button class="novel-tool" id="novel-load-button" type="button">读取</button>
+        <button class="novel-tool" id="novel-menu-button" type="button">菜单</button>
+      </nav>
+    </header>
+    <section class="novel-content" aria-live="polite">
+      <h1 id="novel-title" class="novel-title"></h1>
+      <p id="novel-subtitle" class="novel-subtitle"></p>
+      <div id="novel-choices" class="novel-choices" hidden></div>
+    </section>
+    <section id="novel-dialogue" class="novel-dialogue" role="button" tabindex="0" aria-label="继续剧情">
+      <div id="novel-speaker" class="novel-speaker">旁白</div>
+      <p id="novel-text" class="novel-text"></p>
+      <span id="novel-next" class="novel-next">点击继续　◆</span>
+    </section>
+    <div id="novel-progress" class="novel-progress">1 / 1</div>
+    <section id="novel-end" class="novel-end" hidden>
+      <div class="novel-end-card">
+        <h2 id="novel-end-title">结局</h2>
+        <p id="novel-end-description"></p>
+        <div class="novel-end-actions">
+          <button id="novel-end-save" type="button">保存结局</button>
+          <button id="novel-end-menu" type="button">返回主菜单</button>
+        </div>
+      </div>
+    </section>
+    <section id="novel-review" class="novel-review" hidden>
+      <div class="novel-review-card">
+        <div class="novel-review-head"><h2>剧情回顾</h2><button class="novel-tool" id="novel-review-close" type="button">关闭</button></div>
+        <div id="novel-review-list" class="novel-review-list"></div>
+      </div>
+    </section>
+    <div id="novel-toast" class="novel-toast" hidden></div>
+  </main>
+  <script src="../js/auth.js?v=3"></script>
+  <script src="../js/state.js?v=5"></script>
+  <script src="../js/novel.js?v=1"></script>
+</body>
+</html>

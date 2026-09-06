@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>王宇东 · 个人介绍</title>
+  <style>
+    :root {
+      --bg: #eee9e2;
+      --panel: #faf8f4;
+      --line: #9b7d70;
+      --muted: #73584e;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: #2d2522;
+      background: radial-gradient(ellipse at 14% -8%, rgba(190, 143, 123, .28) 0, transparent 42%), radial-gradient(ellipse at 98% 108%, rgba(126, 158, 157, .2) 0, transparent 40%), linear-gradient(135deg, #faf7f3 0%, #ebe5df 52%, #f5efea 100%);
+    }
+
+    .page {
+      display: grid;
+      width: min(900px, calc(100% - 32px));
+      min-height: 100vh;
+      margin: 0 auto;
+      place-items: center;
+      padding: 32px 0;
+    }
+
+    .profile-back {
+      position: fixed;
+      top: 22px;
+      left: clamp(18px, 4vw, 48px);
+      z-index: 2;
+      padding: 9px 14px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: rgba(250, 248, 244, .9);
+      text-decoration: none;
+    }
+
+    .profile-back:hover,
+    .profile-back:focus-visible {
+      color: #2d2522;
+      background: #fff;
+      outline: none;
+    }
+
+    .panel {
+      display: grid;
+      width: 100%;
+      min-height: 620px;
+      place-items: center;
+      padding: 40px;
+      border: 1px solid var(--line);
+      background: rgba(250, 248, 244, .96);
+      box-shadow: 0 18px 50px rgba(71, 47, 40, .16);
+    }
+
+    .profile-content {
+      display: grid;
+      width: min(100%, 620px);
+      justify-items: center;
+      gap: 14px;
+      text-align: center;
+    }
+
+    .photo {
+      display: grid;
+      width: 260px;
+      height: 260px;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(71, 47, 40, .18);
+    }
+
+    .photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .name-placeholder {
+      margin-top: 14px;
+      font-size: clamp(2.2rem, 5vw, 3.2rem);
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+
+    .role-placeholder {
+      color: #6f5147;
+      font-size: clamp(1.45rem, 3.4vw, 1.9rem);
+      letter-spacing: .12em;
+    }
+
+    .school {
+      color: #8a6d60;
+      font-size: 1rem;
+      letter-spacing: .05em;
+    }
+
+    .motto {
+      color: #6f5147;
+      font-size: .95rem;
+      font-style: italic;
+      letter-spacing: .08em;
+    }
+
+    .divider {
+      width: 100%;
+      height: 1px;
+      margin: 32px 0 20px;
+      background: rgba(108, 80, 70, .4);
+    }
+
+    .intro-placeholder {
+      width: 100%;
+      text-align: left;
+    }
+
+    .intro-title {
+      margin-bottom: 14px;
+      font-size: clamp(1.7rem, 3.8vw, 2.2rem);
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+
+    .intro-placeholder p {
+      margin: 0 0 14px;
+      color: #4d403a;
+      font-size: 1rem;
+      line-height: 1.9;
+    }
+
+    .intro-placeholder p:last-child {
+      margin-bottom: 0;
+    }
+
+    @media (max-width:650px) {
+      .page {
+        width: min(100% - 22px, 560px);
+        padding: 20px 0;
+      }
+
+      .panel {
+        min-height: calc(100vh - 40px);
+        padding: 24px;
+      }
+
+      .photo {
+        width: 210px;
+        height: 210px;
+      }
+
+      .profile-content {
+        gap: 12px;
+      }
+
+      .divider {
+        margin-top: 24px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+    <a class="profile-back" href="../pages/team.html">← 返回团队成员</a>
+    <section class="panel">
+      <div class="profile-content">
+        <div class="photo"><img src="wangyudong.jpg" alt="王宇东头像"></div>
+        <div class="name-placeholder">王宇东</div>
+        <div class="role-placeholder">剧情架构师 · 创意发散者 · 无情的劳动机器</div>
+        <div class="school">北京理工大学 · 计算机科学与技术 · 大二</div>
+        <div class="motto">Wish Youth Dawn · 祝青春黎明</div>
+        <div class="divider" aria-hidden="true"></div>
+        <div class="intro-placeholder">
+          <div class="intro-title">个人介绍</div>
+          <p> 享受游戏，热爱生活。喜欢美食，乐于与人交往。生活既有眼前的苟且，也有诗与远方。作为在计算机这样大佬云集的地方，我可能不是成绩最优秀的，也不是天赋最高的，但我会坚持去做我认为对的事，让美好发生。</p>
+          <p> 记录生活是我最多的业余活动，无论是文字、照片还是视频，自己创作或是二次剪辑、在线生成，我愿意讲述故事、分享见闻。我的业余爱好是思考，往往是宏观而又抽象，虽不直接作用于生活，但总能让人活的通透，天天开心。</p>
+          <p> 这次的项目算是对我自己很多积攒已久想法的实践，祝一切顺利。</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+
+</html>

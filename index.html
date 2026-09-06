@@ -3,68 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>怪谈博物馆 · 交互故事</title>
-  <link rel="stylesheet" href="css/style.css?v=7">
+  <title>怪谈博物馆</title>
+  <link rel="stylesheet" href="css/style.css?v=8">
 </head>
 <body>
   <main class="app-shell">
-    <section id="auth-screen" class="screen auth-screen" aria-labelledby="auth-title">
-      <div class="auth-panel">
-        <p class="eyebrow">本地玩家档案 · 夜班登记</p>
-        <h1 id="auth-title">登记入馆</h1>
-        <p class="auth-intro">账号和进度只保存在当前浏览器，不连接服务器。</p>
-        <div class="auth-tabs" role="tablist" aria-label="账号操作">
-          <button id="login-tab" class="tab-button active" type="button" role="tab" aria-selected="true">登录档案</button>
-          <a id="register-tab" class="tab-button" role="tab" aria-selected="false" href="pages/register.html">独立注册页</a>
-        </div>
-        <form id="login-form" class="auth-form">
-          <label for="login-username">档案名称</label>
-          <input id="login-username" name="username" type="text" autocomplete="username" required maxlength="16" placeholder="例如：夜班调查员">
-          <label for="login-password">口令</label>
-          <input id="login-password" name="password" type="password" autocomplete="current-password" required minlength="4" maxlength="32" placeholder="至少 4 位">
-          <button class="button button-primary" type="submit">打开档案</button>
-          <p class="auth-switch">还没有档案？<a id="show-register-button" class="text-button" href="pages/register.html">登记一个</a></p>
-        </form>
-        <form id="register-form" class="auth-form" hidden>
-          <label for="register-username">档案名称</label>
-          <input id="register-username" name="username" type="text" autocomplete="username" required maxlength="16" placeholder="2—16 个字符">
-          <label for="register-password">设置口令</label>
-          <input id="register-password" name="password" type="password" autocomplete="new-password" required minlength="4" maxlength="32" placeholder="至少 4 位">
-          <label for="register-password-again">再次输入口令</label>
-          <input id="register-password-again" name="passwordAgain" type="password" autocomplete="new-password" required minlength="4" maxlength="32">
-          <button class="button button-primary" type="submit">建立档案</button>
-          <p class="auth-switch">已有档案？<button id="show-login-button" class="text-button" type="button">返回登录</button></p>
-        </form>
-        <p id="auth-message" class="status-message" role="status" aria-live="polite"></p>
-        <p class="prototype-note">课堂原型 · 数据仅保存在本机浏览器</p>
-        <nav class="page-links" aria-label="站点页面">
-          <a href="pages/register.html">独立注册</a>
-          <a href="pages/game.html">游戏入口</a>
-          <a href="pages/saves.html">存档管理</a>
-          <a href="pages/help.html">玩法说明</a>
-          <a href="pages/story.html">故事介绍</a>
-          <a href="pages/team.html">小组介绍</a>
-          <a href="demos/battle/index.html">战斗 Demo</a>
-        </nav>
-      </div>
-    </section>
-
     <section id="cover-screen" class="screen cover-screen" hidden aria-labelledby="game-title">
       <div class="cover-card">
-        <p class="eyebrow">怪谈博物馆 · 交互故事</p>
         <h1 id="game-title">怪谈博物馆</h1>
-        <p class="cover-copy">地图里的每一件物品，都可能把你带进另一段故事。</p>
         <p class="signed-in">当前档案：<strong id="current-user-name">—</strong></p>
-        <div class="cover-actions"><button id="start-button" class="button button-primary" type="button">开始探索</button><button id="continue-button" class="button" type="button">继续探索</button><button id="cover-load-button" class="button" type="button">读取存档</button><button id="logout-button" class="button button-quiet" type="button">切换档案</button></div>
+        <div class="cover-actions">
+          <button id="start-button" class="button button-primary" type="button">开始游戏</button>
+          <button id="continue-button" class="button" type="button">继续游戏</button>
+          <button id="cover-load-button" class="button" type="button">读取存档</button>
+          <a id="cover-login-button" class="button button-quiet" href="pages/login.html">登录档案</a>
+        </div>
         <p id="cover-message" class="status-message" role="status" aria-live="polite"></p>
-        <p class="prototype-note">第一夜 · 先找到能打开门的东西</p>
-        <nav class="page-links" aria-label="站点页面">
-          <a href="pages/game.html">游戏入口</a>
-          <a href="pages/saves.html">存档管理</a>
-          <a href="pages/help.html">玩法说明</a>
-          <a href="pages/story.html">故事介绍</a>
-          <a href="pages/team.html">小组介绍</a>
-        </nav>
+        <a class="cover-team-link" href="pages/team.html">小组介绍</a>
       </div>
     </section>
 
@@ -85,8 +40,6 @@
         </aside>
       </div>
 
-      <section id="vn-overlay" class="vn-overlay" hidden aria-label="视觉小说剧情"><div class="vn-backdrop" aria-hidden="true"></div><div class="vn-panel" role="dialog" aria-modal="true" aria-labelledby="vn-speaker"><div class="vn-header"><span id="vn-location">员工宿舍</span><span id="vn-progress">剧情记录</span></div><div class="vn-content"><div id="vn-portrait" class="vn-portrait" aria-hidden="true"></div><div class="vn-copy"><p id="vn-speaker" class="vn-speaker">旁白</p><p id="vn-text" class="vn-text"></p></div></div><div id="vn-choices" class="vn-choices"></div><button id="vn-next" class="vn-next" type="button">继续　◆</button></div></section>
-
       <section id="rules-overlay" class="modal-overlay" hidden aria-label="规则小游戏"><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="rules-title"><div class="modal-heading"><span>现场记录 · 小游戏</span><button id="rules-close" class="text-button" type="button">返回地图</button></div><h2 id="rules-title">哪一条规则值得相信？</h2><p id="rules-question">血字纸条写着：远离红色制服的工作人员。你在大厅看见了红制服员工，应该怎么做？</p><div id="rules-options" class="modal-options"></div><p id="rules-feedback" class="feedback" role="status" aria-live="polite"></p></div></section>
       <p id="game-message" class="game-message" role="status" aria-live="polite"></p>
     </section>
@@ -96,7 +49,7 @@
     <section id="save-panel" class="save-panel" hidden aria-labelledby="save-panel-title"><div class="save-window" role="dialog" aria-modal="true"><header class="save-window-header"><div><p class="eyebrow">当前档案 · <span id="save-user-name">—</span></p><h2 id="save-panel-title">存档管理</h2></div><button id="close-save-panel" class="button button-small" type="button">关闭</button></header><div class="save-mode-tabs" role="tablist" aria-label="保存或读取"><button id="save-mode-button" class="save-mode-button active" type="button" role="tab" aria-selected="true">保存游戏</button><button id="load-mode-button" class="save-mode-button" type="button" role="tab" aria-selected="false">读取存档</button></div><p class="save-help">自动存档会持续更新；下面的 20 个手动存档位不会被自动覆盖。</p><p id="save-panel-message" class="status-message" role="status" aria-live="polite"></p><div id="save-slot-list" class="save-slot-list" aria-label="手动存档位"></div></div></section>
   </main>
   <script src="js/auth.js?v=3"></script>
-  <script src="js/state.js?v=4"></script>
-  <script src="js/game.js?v=6"></script>
+  <script src="js/state.js?v=5"></script>
+  <script src="js/game.js?v=8"></script>
 </body>
 </html>

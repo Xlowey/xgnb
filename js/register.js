@@ -3,6 +3,8 @@
 
   var form = document.getElementById("register-page-form");
   var message = document.getElementById("register-page-message");
+  var params = new URLSearchParams(window.location.search);
+  var next = params.get("next") === "story" ? "story" : "";
 
   if (!form || !message) return;
 
@@ -21,6 +23,6 @@
       return;
     }
 
-    window.location.href = "../index.html";
+    window.location.href = next === "story" ? "story.html?flow=start" : "../index.html";
   });
 }());
