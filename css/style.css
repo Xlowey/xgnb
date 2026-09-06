@@ -25,9 +25,11 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 
 .app-shell { min-height: 100vh; }
 .screen { min-height: 100vh; }
-.auth-screen, .cover-screen { display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 12% 10%, rgba(83, 122, 130, .32), transparent 36%), radial-gradient(circle at 90% 85%, rgba(126, 91, 72, .24), transparent 42%), #0c1217; }
+.auth-screen { display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 12% 10%, rgba(83, 122, 130, .32), transparent 36%), radial-gradient(circle at 90% 85%, rgba(126, 91, 72, .24), transparent 42%), #0c1217; }
+.cover-screen { display: grid; place-items: center; padding: 24px; background-image: linear-gradient(90deg, rgba(7, 11, 10, .86), rgba(7, 11, 10, .54) 48%, rgba(7, 11, 10, .78)), url("../assets/images/title-dorm-bg.png"); background-position: center; background-size: cover; background-repeat: no-repeat; }
 .auth-panel, .cover-card { width: min(460px, 100%); padding: clamp(28px, 6vw, 56px); border: 1px solid var(--line); background: rgba(20, 31, 38, .96); box-shadow: var(--shadow); }
 .cover-card { text-align: center; }
+.cover-card { border-color: rgba(201, 181, 148, .55); background: rgba(15, 22, 20, .84); backdrop-filter: blur(2px); }
 .eyebrow { margin: 0 0 12px; color: var(--accent-strong); font-size: .82rem; letter-spacing: .15em; }
 h1, h2, p { margin-top: 0; }
 h1 { margin-bottom: 22px; font-size: clamp(2rem, 6vw, 3.4rem); line-height: 1.15; letter-spacing: .1em; }
