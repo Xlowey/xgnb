@@ -12,6 +12,7 @@
   var params = new URLSearchParams(window.location.search);
   var currentSceneId = params.get("scene") || state.narrativeNode || story.fallback;
   var currentScene = getScene(currentSceneId);
+  var currentPages = buildPages(currentScene);
   var lineIndex = Number(state.narrativeIndex) || 0;
   var endingChoice = state.narrativeChoice || state.ending || null;
   var finalChoiceTimer = null;
@@ -39,8 +40,47 @@
     return story.scenes[sceneId] || story.scenes[story.fallback];
   }
 
+  function cleanNarrativeText(value) {
+    return String(value || "")
+      .replace(/^\s*△\s*/, "")
+      .replace(/^（(?:文字特写|画面|CG|设计分支|如果[^）]*)）\s*/, "")
+      .trim();
+  }
+
+  function splitNarrativeText(value) {
+    var text = cleanNarrativeText(value);
+    // Keep each page short enough for both desktop and narrow windows.
+    var maxChars = 64;
+    var pages = [];
+    while (text.length > maxChars) {
+      var cut = -1;
+      var start = Math.max(28, maxChars - 22);
+      for (var i = maxChars - 1; i >= start; i -= 1) {
+        if (/[。！？!?；;，,、]/.test(text.charAt(i))) {
+          cut = i + 1;
+          break;
+        }
+      }
+      if (cut < 1) cut = maxChars;
+      pages.push(text.slice(0, cut).trim());
+      text = text.slice(cut).trim();
+    }
+    if (text) pages.push(text);
+    return pages.length ? pages : ["..."];
+  }
+
+  function buildPages(scene) {
+    var pages = [];
+    (scene.lines || []).forEach(function (line, sourceIndex) {
+      splitNarrativeText(line.text).forEach(function (text) {
+        pages.push({ speaker: line.speaker, text: text, sourceIndex: sourceIndex });
+      });
+    });
+    return pages;
+  }
+
   function currentLine() {
-    return currentScene.lines[lineIndex] || { speaker: "旁白", text: "" };
+    return currentPages[lineIndex] || { speaker: "旁白", text: "" };
   }
 
   function displayText(value) {
@@ -50,7 +90,12 @@
 
   function displaySpeaker(value) {
     var name = state.characterName || state.playerName || "主角";
-    return String(value || "旁白").replace(/^主角/, name);
+    var speaker = String(value || "旁白").replace(/^主角/, name);
+    return /^(画面|舞台说明|场景)/.test(speaker) ? "旁白" : speaker;
+  }
+
+  function displayLocation(value) {
+    return String(value || currentScene.title || "剧情").replace(/第二周剧本\s*[·・]?\s*/g, "").trim();
   }
 
   function showToast(message) {
@@ -173,7 +218,7 @@
 
   function renderChoices() {
     clearChoices();
-    var lastLine = lineIndex >= currentScene.lines.length - 1;
+    var lastLine = lineIndex >= currentPages.length - 1;
     if (!lastLine) return;
     if (currentScene.namePrompt && !state.characterName) {
       renderNamePrompt();
@@ -198,13 +243,13 @@
 
   function render() {
     var line = currentLine();
-    els.location.textContent = currentScene.location || currentScene.title;
+    els.location.textContent = displayLocation(currentScene.location || currentScene.title);
     els.title.textContent = currentScene.title;
     els.subtitle.textContent = currentScene.subtitle || "";
     els.speaker.textContent = displaySpeaker(line.speaker);
     els.text.textContent = displayText(line.text);
-    els.progress.textContent = (lineIndex + 1) + " / " + currentScene.lines.length;
-    els.next.textContent = lineIndex < currentScene.lines.length - 1 ? "点击继续　◆" : (currentScene.choices ? "请选择行动" : "剧情结束");
+    els.progress.textContent = (lineIndex + 1) + " / " + currentPages.length;
+    els.next.textContent = lineIndex < currentPages.length - 1 ? "点击继续　◆" : (currentScene.choices ? "请选择行动" : "剧情结束");
     addLog(line);
     saveNovelState();
     renderChoices();
@@ -237,6 +282,7 @@
   function loadScene(sceneId) {
     currentSceneId = sceneId;
     currentScene = getScene(sceneId);
+    currentPages = buildPages(currentScene);
     lineIndex = 0;
     endingChoice = currentScene.endingId || endingChoice;
     els.end.hidden = true;
@@ -307,7 +353,7 @@
 
   function advance() {
     if (!els.choices.hidden) return;
-    if (lineIndex < currentScene.lines.length - 1) {
+    if (lineIndex < currentPages.length - 1) {
       lineIndex += 1;
       render();
       return;
@@ -359,7 +405,8 @@
     if (state.mode === "novel" || state.mode === "ending") {
       currentSceneId = state.narrativeNode || story.fallback;
       currentScene = getScene(currentSceneId);
-      lineIndex = Math.min(Math.max(Number(state.narrativeIndex) || 0, 0), Math.max(0, currentScene.lines.length - 1));
+      currentPages = buildPages(currentScene);
+      lineIndex = Math.min(Math.max(Number(state.narrativeIndex) || 0, 0), Math.max(0, currentPages.length - 1));
       endingChoice = state.narrativeChoice || state.ending || null;
       render();
       if (state.mode === "ending" && currentScene.ending) showEndingScreen();
@@ -397,7 +444,7 @@
   });
 
   if (state.narrativeNode === currentSceneId && (state.mode === "novel" || state.mode === "ending")) {
-    lineIndex = Math.min(Math.max(lineIndex, 0), Math.max(0, currentScene.lines.length - 1));
+    lineIndex = Math.min(Math.max(lineIndex, 0), Math.max(0, currentPages.length - 1));
   } else {
     lineIndex = 0;
   }
