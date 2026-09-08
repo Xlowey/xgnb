@@ -5,6 +5,7 @@
   var RESULT_KEY = "museum_pending_battle_v1";
   var query = new URLSearchParams(window.location.search);
   var enemyPatterns = ["observe", "attack", "attack", "heavyAttack"];
+  var enemyActionLabels = { observe: "观察", attack: "攻击", heavyAttack: "重击" };
   var state;
   var elements = {
     turn: document.getElementById("turn-value"), enemyHpText: document.getElementById("enemy-hp-text"), playerHpText: document.getElementById("player-hp-text"),
@@ -17,7 +18,8 @@
   function updateView() {
     elements.turn.textContent=state.turn; elements.enemyHpText.textContent=state.enemyHp+" / "+MAX_ENEMY_HP; elements.playerHpText.textContent=state.playerHp+" / "+MAX_PLAYER_HP;
     elements.enemyHpBar.style.width=Math.max(0,state.enemyHp/MAX_ENEMY_HP*100)+"%"; elements.playerHpBar.style.width=Math.max(0,state.playerHp/MAX_PLAYER_HP*100)+"%";
-    elements.enemyIntent.textContent=state.observed ? "已观察：下一次行动是“"+enemyPatterns[state.turn % enemyPatterns.length]+"”。" : "正在观察你的表情。";
+    var nextAction = enemyPatterns[state.turn % enemyPatterns.length];
+    elements.enemyIntent.textContent=state.observed ? "已观察：下一次行动是“"+(enemyActionLabels[nextAction] || "未知行动")+"”。" : "正在观察你的表情。";
     elements.ruleText.textContent=state.ruleSolved ? "规则已破解：保持微笑可以令无脸保安停止行动。" : "面对游客需面带微笑。先观察，才能发现它的弱点。";
   }
   function makeResult(status) { return { status:status, remainingHp:state.playerHp, rewards:status === "win" ? ["faceless_mask"] : [], flags:status === "win" ? ["guard_defeated"] : ["battle_failed"] }; }

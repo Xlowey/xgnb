@@ -125,6 +125,9 @@
     el.cover.hidden = true;
     el.game.hidden = false;
   }
+  function overlaysOpen() {
+    return (el.savePanel && !el.savePanel.hidden) || (el.logPanel && !el.logPanel.hidden) || (el.rules && !el.rules.hidden);
+  }
   function roomName(id) { return rooms[id] ? rooms[id].title : "未知地点"; }
 
   function blocked(room, x, y, radius) {
@@ -332,12 +335,26 @@
   function applyBattleResult(result) {
     if (!result || !state) return;
     if (result.status === "win") {
+      state.hp = Math.max(0, Number(result.remainingHp) || state.hp);
       state.flags.battleDemoCompleted = true; state.flags.waxDoorUnlocked = true; addClue("faceless-mask"); award("battle-clear"); addUnique(state.unlockedRooms, "wax");
       var returnRoom = rooms[state.returnRoom] ? state.returnRoom : "hall";
       state.roomId = returnRoom; state.currentNode = returnRoom; state.chapter = rooms[returnRoom].chapter; state.playerX = Number(state.returnX) || rooms[returnRoom].spawn.x; state.playerY = Number(state.returnY) || rooms[returnRoom].spawn.y; state.task = tasks[returnRoom];
       state.mode = "novel"; state.narrativeNode = state.returnScene || "guard-after-battle"; state.narrativeIndex = 0; state.narrativeChoice = null; var nextScene = state.narrativeNode; state.returnScene = null; MuseumState.save(state, currentUser.id); window.location.href = "pages/novel.html?scene=" + encodeURIComponent(nextScene); return;
     }
-    state.hp = Math.max(0, Number(result.remainingHp) || 0); state.mode = "explore"; showToast("交涉失败，生存点已更新。"); save(); renderAll();
+    state.hp = Math.max(0, Number(result.remainingHp) || 0);
+    if (state.hp <= 0) {
+      state.mode = "novel";
+      state.narrativeNode = "ending-d";
+      state.narrativeIndex = 0;
+      state.narrativeChoice = "ending-d";
+      MuseumState.save(state, currentUser.id);
+      window.location.href = "pages/novel.html?scene=ending-d";
+      return;
+    }
+    state.mode = "explore";
+    showToast("交涉失败，生存点已更新。");
+    save();
+    renderAll();
   }
   function consumeBattleResult() { var raw = localStorage.getItem(BATTLE_RESULT_KEY); if (!raw) return null; var result; try { result = JSON.parse(raw); } catch (error) { localStorage.removeItem(BATTLE_RESULT_KEY); return null; } if (result && result.userId && currentUser && result.userId !== currentUser.id) return null; localStorage.removeItem(BATTLE_RESULT_KEY); return result; }
 
@@ -346,7 +363,7 @@
     var delta = timestamp - lastFrame;
     lastFrame = timestamp;
     var gameVisible = el.game && !el.game.hidden;
-    var overlayOpen = (el.savePanel && !el.savePanel.hidden) || (el.logPanel && !el.logPanel.hidden) || (el.rules && !el.rules.hidden);
+    var overlayOpen = overlaysOpen();
     if (gameVisible && !overlayOpen && state && state.mode === "explore") {
       var dir = playerDirection();
       if (dir.x || dir.y) movePlayer(dir.x, dir.y, delta);
@@ -385,7 +402,28 @@
   if (logoutButton) logoutButton.addEventListener("click", function () { MuseumAuth.logout(); currentUser = null; state = null; showCover(); });
   document.getElementById("map-toggle-button").addEventListener("click", function () { document.querySelector(".explore-sidebar").classList.toggle("collapsed"); this.textContent = document.querySelector(".explore-sidebar").classList.contains("collapsed") ? "展开" : "收起"; });
   document.getElementById("rules-close").addEventListener("click", function () { el.rules.hidden = true; if (state) state.mode = "explore"; renderAll(); save(); });
-  document.addEventListener("keydown", function (event) { var key = event.key; keys[key] = true; if ((key === "e" || key === "E") && state && state.mode === "explore") { event.preventDefault(); interact(nearestObject()); } if (key === "Escape") { if (!el.savePanel.hidden) el.savePanel.hidden = true; else if (!el.logPanel.hidden) el.logPanel.hidden = true; else if (!el.rules.hidden) { el.rules.hidden = true; if (state) state.mode = "explore"; } } }); document.addEventListener("keyup", function (event) { keys[event.key] = false; });
+  document.addEventListener("keydown", function (event) {
+    var key = event.key;
+    if (key === "Escape") {
+      if (el.savePanel && !el.savePanel.hidden) el.savePanel.hidden = true;
+      else if (el.logPanel && !el.logPanel.hidden) el.logPanel.hidden = true;
+      else if (el.rules && !el.rules.hidden) {
+        el.rules.hidden = true;
+        if (state) state.mode = "explore";
+      }
+      return;
+    }
+    if (overlaysOpen()) {
+      keys[key] = false;
+      return;
+    }
+    keys[key] = true;
+    if ((key === "e" || key === "E") && state && state.mode === "explore") {
+      event.preventDefault();
+      interact(nearestObject());
+    }
+  });
+  document.addEventListener("keyup", function (event) { keys[event.key] = false; });
   el.canvas.addEventListener("click", function (event) { if (!state || state.mode !== "explore") return; var rect = canvas.getBoundingClientRect(); var scaleX = canvas.width / rect.width; var scaleY = canvas.height / rect.height; var x = event.clientX - rect.left; var y = event.clientY - rect.top; var worldX = x * scaleX + camera.x; var worldY = y * scaleY + camera.y; var object = currentRoom().objects.slice().sort(function (a, b) { return Math.hypot(worldX - a.x, worldY - a.y) - Math.hypot(worldX - b.x, worldY - b.y); })[0]; if (!object || Math.hypot(worldX - object.x, worldY - object.y) >= object.r * 1.1) return; var playerDistance = Math.hypot(state.playerX - object.x, state.playerY - object.y); if (playerDistance < object.r) interact(object); else showToast("请先走近「" + object.label + "」再调查。"); });
   document.querySelectorAll("[data-move]").forEach(function (button) { button.addEventListener("pointerdown", function () { heldTouch = button.getAttribute("data-move"); }); button.addEventListener("pointerup", function () { heldTouch = null; }); button.addEventListener("pointerleave", function () { heldTouch = null; }); });
   var pendingResult = currentUser ? consumeBattleResult() : null;

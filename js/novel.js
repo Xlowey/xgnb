@@ -66,11 +66,14 @@
 
   function saveNovelState() {
     if (state.mode !== "ending") state.mode = "novel";
-    markSceneRead();
     state.narrativeNode = currentSceneId;
     state.narrativeIndex = lineIndex;
     state.narrativeChoice = endingChoice;
     MuseumState.save(state, user.id);
+  }
+
+  function completeCurrentScene() {
+    if (currentScene.flag) state.flags[currentScene.flag] = true;
   }
 
   function saveEnding() {
@@ -110,7 +113,9 @@
   }
 
   function armFinalChoiceTimer() {
-    if (currentSceneId !== "scene-31" || finalChoiceTimer) return;
+    // The map enters the final decision through the stable alias `ending-choice`.
+    // Keep the source id supported for direct testing and old saves as well.
+    if ((currentSceneId !== "scene-31" && currentSceneId !== "ending-choice") || finalChoiceTimer) return;
     var remaining = finalChoiceSeconds;
     els.next.textContent = "请选择行动 · " + remaining + " 秒";
     finalChoiceTimer = window.setInterval(function () {
@@ -251,6 +256,7 @@
   }
 
   function choose(choice) {
+    completeCurrentScene();
     applyChoice(choice);
     if (choice.action === "battle") {
       startBattle(choice);
@@ -310,6 +316,7 @@
       renderNamePrompt();
       return;
     }
+    completeCurrentScene();
     if (currentScene.nextScene) {
       loadScene(currentScene.nextScene);
       return;
