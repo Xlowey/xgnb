@@ -154,6 +154,32 @@ button:focus-visible {
   transform: none;
 }
 
+.novel-name-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--accent);
+  font-size: 15px;
+  letter-spacing: .08em;
+  text-align: center;
+}
+
+.novel-name-input {
+  display: block;
+  width: 100%;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  background: rgba(6, 11, 14, .88);
+  color: var(--ink);
+  padding: 13px 16px;
+  text-align: center;
+  letter-spacing: .1em;
+}
+
+.novel-name-input:focus {
+  outline: 2px solid rgba(203, 228, 223, .65);
+  outline-offset: 2px;
+}
+
 .novel-dialogue {
   position: fixed;
   z-index: 5;
