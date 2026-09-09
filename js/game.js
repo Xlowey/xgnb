@@ -19,6 +19,7 @@
   var camera = { x: 0, y: 0 };
   var lastFrame = 0;
   var lastSave = 0;
+  var avatarMoving = false, avatarTravelled = 0;
   var savePanelMode = "save";
 
   var rooms = {
@@ -75,12 +76,10 @@
       ]
     }
   };
-  var achievements = [
-    { id: "first-explore", name: "第一次调查" },
-    { id: "rules-master", name: "规则观察者" },
-    { id: "battle-clear", name: "交涉完成" },
-    { id: "humanity", name: "人性的选择" }
-  ];
+  if (window.MuseumMapArt) window.MuseumMapArt(rooms);
+  if (state && rooms[state.roomId] && rooms[state.roomId].art && blocked(rooms[state.roomId], state.playerX, state.playerY, 22)) {
+    state.playerX=rooms[state.roomId].spawn.x;state.playerY=rooms[state.roomId].spawn.y;
+  }
   var tasks = {
     dorm: "调查宿舍，寻找离开的办法。",
     hall: "在大厅寻找进入下一处展厅的线索。",
@@ -91,7 +90,7 @@
     cover: document.getElementById("cover-screen"), game: document.getElementById("game-screen"), coverMessage: document.getElementById("cover-message"),
     currentUser: document.getElementById("current-user-name"), continueButton: document.getElementById("continue-button"),
     canvas: canvas, roomTitle: document.getElementById("room-title"), roomChapter: document.getElementById("room-chapter"), prompt: document.getElementById("interaction-prompt"), toast: document.getElementById("map-toast"), gameMessage: document.getElementById("game-message"),
-    hp: document.getElementById("hp-value"), trust: document.getElementById("trust-value"), clues: document.getElementById("clue-value"), task: document.getElementById("task-value"), rooms: document.getElementById("room-list"), achievements: document.getElementById("achievement-list"), achievementCount: document.getElementById("achievement-count"),
+    hp: document.getElementById("hp-value"), trust: document.getElementById("trust-value"), clues: document.getElementById("clue-value"), task: document.getElementById("task-value"), rooms: document.getElementById("room-list"),
     rules: document.getElementById("rules-overlay"), rulesOptions: document.getElementById("rules-options"), rulesFeedback: document.getElementById("rules-feedback"),
     pause: document.getElementById("pause-overlay"), resumeButton: document.getElementById("resume-button"),
     logPanel: document.getElementById("log-panel"), logUserName: document.getElementById("log-user-name"), logList: document.getElementById("dialogue-log-list"),
@@ -104,7 +103,6 @@
   function markDiscovered(id) { addUnique(state.discovered, id); }
   function addClue(id) { addUnique(state.clues, id); }
   function addItem(id) { addUnique(state.inventory, id); }
-  function award(id) { addUnique(state.achievements, id); }
   function showToast(message) { if (!el.toast) return; el.toast.textContent = message; el.toast.classList.add("visible"); window.clearTimeout(showToast.timer); showToast.timer = window.setTimeout(function () { el.toast.classList.remove("visible"); }, 2600); }
   function save(message) { if (!currentUser || !state) return; MuseumState.save(state, currentUser.id); lastSave = performance.now(); if (message && el.gameMessage) el.gameMessage.textContent = message; refreshContinue(); }
   function refreshContinue() { if (!el.continueButton) return; var ok = currentUser && MuseumState.hasSave(currentUser.id); el.continueButton.disabled = !ok; el.continueButton.classList.toggle("button-primary", Boolean(ok)); }
@@ -147,7 +145,7 @@
     renderAll();
   }
   function overlaysOpen() {
-    return (el.savePanel && !el.savePanel.hidden) || (el.logPanel && !el.logPanel.hidden) || (el.rules && !el.rules.hidden) || (el.pause && !el.pause.hidden);
+    return window.MuseumInventory.isOpen() || window.MuseumAchievements.isOpen() || (el.savePanel && !el.savePanel.hidden) || (el.logPanel && !el.logPanel.hidden) || (el.rules && !el.rules.hidden) || (el.pause && !el.pause.hidden);
   }
   function roomName(id) { return rooms[id] ? rooms[id].title : "未知地点"; }
 
@@ -158,9 +156,12 @@
   function movePlayer(dx, dy, deltaMs) {
     if (!state || state.mode !== "explore") return;
     var room = currentRoom(); var speed = 235; var len = Math.hypot(dx, dy) || 1; var dt = Math.min(Number(deltaMs) || 16, 50) / 1000; dx = dx / len * speed; dy = dy / len * speed;
+    var previousX = state.playerX, previousY = state.playerY;
     var nextX = state.playerX + dx * dt; var nextY = state.playerY + dy * dt;
     if (!blocked(room, nextX, state.playerY, 22)) state.playerX = nextX;
     if (!blocked(room, state.playerX, nextY, 22)) state.playerY = nextY;
+    var distance = Math.hypot(state.playerX - previousX, state.playerY - previousY);
+    avatarMoving = distance > 0; avatarTravelled += distance;
     if (Math.abs(dx) > Math.abs(dy)) state.facing = dx > 0 ? "right" : "left"; else state.facing = dy > 0 ? "down" : "up";
   }
   function playerDirection() {
@@ -206,7 +207,7 @@
     window.location.href = "pages/novel.html?scene=" + encodeURIComponent(sceneId);
   }
   function openNote() {
-    markDiscovered("dorm-note"); award("first-explore");
+    markDiscovered("dorm-note");
     startNovel(state.flags.readNote ? "note-repeat" : "note-intro");
   }
   function openWardrobe() {
@@ -234,7 +235,7 @@
   function openRules() {
     if (state.flags.rulesGameCompleted) { showToast("告示上的规则你已经记住了。"); return; }
     state.mode = "mini"; el.rules.hidden = false; el.rulesFeedback.textContent = ""; el.rulesOptions.textContent = "";
-    [{ id: "red", text: "远离红色制服的工作人员" }, { id: "smile", text: "面对游客时保持微笑" }, { id: "exit", text: "直接询问工作人员出口" }].forEach(function (option) { var button = document.createElement("button"); button.type = "button"; button.className = "modal-option"; button.textContent = option.text; button.addEventListener("click", function () { if (option.id === "red") { state.flags.rulesGameCompleted = true; addClue("rule-red"); award("rules-master"); state.systemTrust += 4; el.rulesFeedback.textContent = "判断正确。红制服员工的规则暂时可信，去观察他吧。"; state.task = "观察大厅里的红制服员工。"; save(); } else { state.hp = Math.max(0, state.hp - 3); el.rulesFeedback.textContent = "这条信息无法解释纸条中的矛盾。生存点 -3。"; save(); } }); el.rulesOptions.appendChild(button); });
+    [{ id: "red", text: "远离红色制服的工作人员" }, { id: "smile", text: "面对游客时保持微笑" }, { id: "exit", text: "直接询问工作人员出口" }].forEach(function (option) { var button = document.createElement("button"); button.type = "button"; button.className = "modal-option"; button.textContent = option.text; button.addEventListener("click", function () { if (option.id === "red") { state.flags.rulesGameCompleted = true; addClue("rule-red"); state.systemTrust += 4; el.rulesFeedback.textContent = "判断正确。红制服员工的规则暂时可信，去观察他吧。"; state.task = "观察大厅里的红制服员工。"; save(); } else { state.hp = Math.max(0, state.hp - 3); el.rulesFeedback.textContent = "这条信息无法解释纸条中的矛盾。生存点 -3。"; save(); } }); el.rulesOptions.appendChild(button); });
   }
   function openContract() {
     markDiscovered("wax-contract");
@@ -247,6 +248,7 @@
   }
   function interact(object) {
     if (!object || !state || state.mode !== "explore") return;
+    if (object.type === "travel") { switchRoom(object.target); return; }
     if (object.type === "note") openNote();
     else if (object.type === "wardrobe") openWardrobe();
     else if (object.type === "terminal") openTerminal();
@@ -263,7 +265,7 @@
     else if (object.type === "guard") openGuard();
     else if (object.type === "rules") openRules();
     else if (object.type === "waxDoor") { if (!state.flags.scene07Seen && !state.flags.battleDemoCompleted) showToast("东侧入口被无形的锁封住了。先完成保安的交涉。"); else { state.flags.waxDoorUnlocked = true; switchRoom("wax"); } }
-    else if (object.type === "returnHall") switchRoom("hall", 1550, 455);
+    else if (object.type === "returnHall") switchRoom("hall", 835, 700);
     else if (object.type === "contract") openContract();
     else if (object.type === "exit") openExit();
   }
@@ -316,6 +318,12 @@
   }
   function drawRoom(room) {
     ctx.clearRect(0, 0, canvas.width, canvas.height); camera.x = Math.max(0, Math.min(room.width - canvas.width, state.playerX - canvas.width / 2)); camera.y = Math.max(0, Math.min(room.height - canvas.height, state.playerY - canvas.height / 2)); ctx.save(); ctx.translate(-camera.x, -camera.y);
+    if (room.art) {
+      if (room.art.complete && room.art.naturalWidth) ctx.drawImage(room.art,0,0,room.width,room.height);
+      var nearby = nearestObject();
+      if (nearby && (!nearby.requiredFlag || state.flags[nearby.requiredFlag])) {ctx.strokeStyle="#e7d390";ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(nearby.x,nearby.y,40,17,0,0,Math.PI*2);ctx.stroke();}
+      drawPlayer();ctx.restore();drawMiniMap(room);return;
+    }
     ctx.fillStyle = room.id === "wax" ? "#aaa7a2" : "#b8c1bd"; ctx.fillRect(0, 0, room.width, room.height);
     ctx.fillStyle = room.id === "hall" ? "#53616a" : "#6a7778"; ctx.fillRect(0, 0, room.width, 100); ctx.fillStyle = "#8e9793"; ctx.fillRect(0, 100, room.width, room.height - 200);
     ctx.strokeStyle = "rgba(34,52,58,.18)"; ctx.lineWidth = 2; for (var gx = 34; gx < room.width - 34; gx += 54) { ctx.beginPath(); ctx.moveTo(gx, 100); ctx.lineTo(gx, room.height - 34); ctx.stroke(); } for (var gy = 100; gy < room.height - 34; gy += 54) { ctx.beginPath(); ctx.moveTo(34, gy); ctx.lineTo(room.width - 34, gy); ctx.stroke(); }
@@ -326,10 +334,12 @@
     room.objects.forEach(function (object) { var nearest = nearestObject(); var nearby = nearest && nearest.id === object.id; ctx.save(); ctx.globalAlpha = nearby ? 1 : .9; if (object.type === "note") { ctx.fillStyle = "#f1e7cd"; ctx.fillRect(object.x - 20, object.y - 15, 40, 30); ctx.strokeStyle = "#765e4c"; ctx.strokeRect(object.x - 20, object.y - 15, 40, 30); } else if (object.type === "wardrobe") { drawWardrobe(object); } else if (object.type === "terminal") { drawFurniture({ x: object.x - 48, y: object.y - 40, w: 96, h: 70 }, "#2b4650", ""); ctx.fillStyle = "#5ba2b8"; ctx.fillRect(object.x - 34, object.y - 28, 68, 40); } else if (object.type === "mirror") { ctx.fillStyle = "#293f48"; ctx.fillRect(object.x - 28, object.y - 55, 56, 110); ctx.strokeStyle = "#d6d2c3"; ctx.lineWidth = 5; ctx.strokeRect(object.x - 28, object.y - 55, 56, 110); } else if (object.type === "door" || object.type === "waxDoor" || object.type === "exit") { var isOpen = object.type === "door" ? state.flags.hasKey : object.type === "waxDoor" ? (state.flags.scene07Seen || state.flags.battleDemoCompleted) : state.flags.scene30Seen; ctx.fillStyle = isOpen ? "#3d6670" : "#5a3f41"; ctx.fillRect(object.x - 32, object.y - 72, 64, 144); ctx.strokeStyle = "#d9c9a9"; ctx.lineWidth = 4; ctx.strokeRect(object.x - 32, object.y - 72, 64, 144); } else if (object.type === "guard") { ctx.fillStyle = "#732f37"; ctx.fillRect(object.x - 25, object.y - 60, 50, 120); ctx.fillStyle = "#e3ded1"; ctx.beginPath(); ctx.arc(object.x, object.y - 82, 28, 0, Math.PI * 2); ctx.fill(); } else if (object.type === "rules") { ctx.fillStyle = "#d7cfbc"; ctx.fillRect(object.x - 50, object.y - 45, 100, 90); ctx.strokeStyle = "#4d5960"; ctx.strokeRect(object.x - 50, object.y - 45, 100, 90); } else if (object.type === "contract") { ctx.fillStyle = "#d8c9aa"; ctx.fillRect(object.x - 40, object.y - 25, 80, 50); ctx.strokeStyle = "#6c4e45"; ctx.strokeRect(object.x - 40, object.y - 25, 80, 50); } else { ctx.fillStyle = object.type === "scene" ? "#9a6c50" : "#405057"; ctx.beginPath(); ctx.arc(object.x, object.y, 24, 0, Math.PI * 2); ctx.fill(); } if (nearby) { ctx.strokeStyle = "#b9e4e0"; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.beginPath(); ctx.arc(object.x, object.y, 52, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); } drawText(object.label, object.x, object.y + object.r * .62, 18, nearby ? "#19363e" : "rgba(34,47,50,.84)", "center"); ctx.restore(); });
     drawPlayer(); ctx.restore(); drawMiniMap(room);
   }
-  function drawPlayer() { var x = state.playerX, y = state.playerY; ctx.save(); ctx.fillStyle = "rgba(20,31,36,.3)"; ctx.beginPath(); ctx.ellipse(x, y + 25, 26, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#253f4a"; ctx.fillRect(x - 17, y - 6, 34, 42); ctx.fillStyle = "#d9c7ae"; ctx.beginPath(); ctx.arc(x, y - 24, 18, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#1e3037"; ctx.beginPath(); ctx.arc(x, y - 29, 19, Math.PI, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#d2c08d"; ctx.fillRect(x - 5, y + 4, 10, 5); ctx.strokeStyle = "#d8e7e0"; ctx.lineWidth = 3; ctx.beginPath(); if (state.facing === "up") { ctx.moveTo(x, y - 45); ctx.lineTo(x, y - 57); } else if (state.facing === "down") { ctx.moveTo(x, y + 40); ctx.lineTo(x, y + 52); } else if (state.facing === "left") { ctx.moveTo(x - 25, y + 10); ctx.lineTo(x - 37, y + 10); } else { ctx.moveTo(x + 25, y + 10); ctx.lineTo(x + 37, y + 10); } ctx.stroke(); ctx.restore(); }
+  function drawPlayer() {
+    window.MuseumPlayerAvatar.draw(ctx, state.playerX, state.playerY, state.facing, avatarMoving && state.mode === "explore" && !overlaysOpen(), avatarTravelled);
+  }
 
   function renderRooms() { el.rooms.textContent = ""; ["dorm", "hall", "wax"].forEach(function (id) { var button = document.createElement("button"); button.type = "button"; var unlocked = has(state.unlockedRooms, id); button.className = "room-button" + (state.roomId === id ? " current" : ""); button.disabled = !unlocked; button.innerHTML = "<strong>" + roomName(id) + "</strong><small>" + (unlocked ? (state.roomId === id ? "当前位置" : "已探索") : "尚未开放") + "</small>"; if (unlocked) button.addEventListener("click", function () { switchRoom(id); }); el.rooms.appendChild(button); }); }
-  function renderStats() { el.hp.textContent = String(state.hp); el.trust.textContent = String(state.systemTrust); el.clues.textContent = String(state.clues.length); el.task.textContent = state.task || tasks[state.roomId] || "继续探索。"; el.achievements.textContent = ""; achievements.forEach(function (item) { var li = document.createElement("li"); li.textContent = item.name; li.className = has(state.achievements, item.id) ? "done" : ""; el.achievements.appendChild(li); }); el.achievementCount.textContent = state.achievements.length + " / " + achievements.length; }
+  function renderStats() { el.hp.textContent = String(state.hp); el.trust.textContent = String(state.systemTrust); el.clues.textContent = String(state.clues.length); el.task.textContent = state.task || tasks[state.roomId] || "继续探索。"; window.MuseumAchievements.refresh(); }
   function renderAll() { if (!state) return; var room = currentRoom(); el.roomTitle.textContent = room.title; el.roomChapter.textContent = room.chapter; renderRooms(); renderStats(); drawRoom(room); interactionHint(nearestObject()); }
 
   function formatSaveTime(value) { if (!value) return "尚未保存"; var date = new Date(value); return Number.isNaN(date.getTime()) ? "时间未知" : date.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }); }
@@ -357,7 +367,7 @@
     if (!result || !state) return;
     if (result.status === "win") {
       state.hp = Math.max(0, Number(result.remainingHp) || state.hp);
-      state.flags.battleDemoCompleted = true; state.flags.waxDoorUnlocked = true; addClue("faceless-mask"); award("battle-clear"); addUnique(state.unlockedRooms, "wax");
+      state.flags.battleDemoCompleted = true; state.flags.waxDoorUnlocked = true; addClue("faceless-mask"); addUnique(state.unlockedRooms, "wax");
       var returnRoom = rooms[state.returnRoom] ? state.returnRoom : "hall";
       state.roomId = returnRoom; state.currentNode = returnRoom; state.chapter = rooms[returnRoom].chapter; state.playerX = Number(state.returnX) || rooms[returnRoom].spawn.x; state.playerY = Number(state.returnY) || rooms[returnRoom].spawn.y; state.task = tasks[returnRoom];
       state.mode = "novel"; state.narrativeNode = state.returnScene || "guard-after-battle"; state.narrativeIndex = 0; state.narrativeChoice = null; var nextScene = state.narrativeNode; state.returnScene = null; MuseumState.save(state, currentUser.id); window.location.href = "pages/novel.html?scene=" + encodeURIComponent(nextScene); return;
@@ -385,6 +395,7 @@
     lastFrame = timestamp;
     var gameVisible = el.game && !el.game.hidden;
     var overlayOpen = overlaysOpen();
+    avatarMoving = false;
     if (gameVisible && !overlayOpen && state && state.mode === "explore") {
       var dir = playerDirection();
       if (dir.x || dir.y) movePlayer(dir.x, dir.y, delta);
@@ -464,6 +475,10 @@
     if (playerDistance < object.r) interact(object); else showToast("请先走近「" + object.label + "」再调查。");
   });
   document.querySelectorAll("[data-move]").forEach(function (button) { button.addEventListener("pointerdown", function () { heldTouch = button.getAttribute("data-move"); }); button.addEventListener("pointerup", function () { heldTouch = null; }); button.addEventListener("pointerleave", function () { heldTouch = null; }); });
+  window.MuseumInventory.bind({getState:function(){return state;},save:save,canOpen:function(){return el.game && !el.game.hidden && !overlaysOpen();},onOpen:function(){keys={};heldTouch=null;avatarMoving=false;drawRoom(currentRoom());},onClose:function(){keys={};heldTouch=null;renderAll();}});
+  document.getElementById("map-bag-button").addEventListener("click",function(){window.MuseumInventory.open();});
+  window.MuseumAchievements.bind({getState:function(){return state;},save:save,canOpen:function(){return el.game && !el.game.hidden && !overlaysOpen();},onOpen:function(){keys={};heldTouch=null;avatarMoving=false;drawRoom(currentRoom());},onClose:function(){keys={};heldTouch=null;renderAll();}});
+  document.getElementById("map-achievements-button").addEventListener("click",function(){window.MuseumAchievements.open();});
   var pendingResult = currentUser ? consumeBattleResult() : null;
   var query = new URLSearchParams(window.location.search);
   var openSavedGame = query.get("fromSave") === "1";

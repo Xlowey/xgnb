@@ -5,29 +5,42 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>怪谈博物馆 · 剧情</title>
   <link rel="stylesheet" href="../css/novel.css?v=2">
+  <link rel="stylesheet" href="../css/novel-stage.css?v=6">
+  <link rel="stylesheet" href="../css/inventory.css?v=1">
+  <link rel="stylesheet" href="../css/achievements.css?v=1">
+  <link rel="stylesheet" href="../css/novel-portraits.css?v=1">
 </head>
 <body class="novel-page">
   <main class="novel-stage">
     <div class="novel-background" aria-hidden="true"></div>
     <div class="novel-vignette" aria-hidden="true"></div>
+    <aside id="novel-briefing" class="novel-briefing" hidden></aside>
+    <figure id="novel-inspection" class="novel-inspection" hidden><img src="../assets/images/wardrobe-open.png" alt="打开的更衣柜"><figcaption>更衣柜</figcaption></figure>
+    <div id="scene-events" class="scene-events" hidden></div>
     <header class="novel-toolbar">
       <div id="novel-location" class="novel-location">交互故事 · 剧情</div>
-      <nav class="novel-toolbar-actions" aria-label="剧情操作">
-        <button class="novel-tool" id="novel-review-button" type="button">回顾</button>
-        <button class="novel-tool" id="novel-save-button" type="button">保存</button>
-        <button class="novel-tool" id="novel-load-button" type="button">读取</button>
-        <button class="novel-tool" id="novel-menu-button" type="button">菜单</button>
-      </nav>
     </header>
     <section class="novel-content" aria-live="polite">
       <h1 id="novel-title" class="novel-title"></h1>
       <p id="novel-subtitle" class="novel-subtitle"></p>
       <div id="novel-choices" class="novel-choices" hidden></div>
     </section>
-    <section id="novel-dialogue" class="novel-dialogue" role="button" tabindex="0" aria-label="继续剧情">
+    <section id="novel-dialogue" class="novel-dialogue" tabindex="0" aria-label="剧情对话框">
       <div id="novel-speaker" class="novel-speaker">旁白</div>
       <p id="novel-text" class="novel-text"></p>
       <span id="novel-next" class="novel-next">点击继续　◆</span>
+      <button id="event-next" class="event-button" type="button" hidden>继续</button>
+      <nav class="novel-toolbar-actions" aria-label="视觉小说操作">
+        <button class="novel-tool" id="novel-back-button" type="button">上一句</button>
+        <button class="novel-tool" id="novel-review-button" type="button">回顾</button>
+        <button class="novel-tool" id="novel-save-button" type="button">保存</button>
+        <button class="novel-tool" id="novel-load-button" type="button">读取</button>
+        <button class="novel-tool" id="novel-auto-button" type="button" aria-pressed="false">自动</button>
+        <button class="novel-tool" id="novel-skip-button" type="button">快进已读</button>
+        <button class="novel-tool" id="novel-bag-button" data-inventory-open type="button">背包</button>
+        <button class="novel-tool" id="novel-achievements-button" data-achievements-open type="button">成就</button>
+        <button class="novel-tool" id="novel-menu-button" type="button">返回</button>
+      </nav>
     </section>
     <div id="novel-progress" class="novel-progress">1 / 1</div>
     <section id="novel-end" class="novel-end" hidden>
@@ -47,11 +60,23 @@
       </div>
     </section>
     <div id="novel-toast" class="novel-toast" hidden></div>
+    <section id="item-modal" class="item-modal" role="dialog" aria-modal="true" aria-label="物品查看" hidden></section>
   </main>
   <script src="../js/auth.js?v=3"></script>
-  <script src="../js/state.js?v=5"></script>
+  <script src="../js/state.js?v=7"></script>
+  <script src="../js/items.js?v=1"></script>
+  <script src="../js/inventory.js?v=1"></script>
+  <script src="../js/achievements-data.js?v=1"></script>
+  <script src="../js/achievements.js?v=1"></script>
   <script src="../js/novel-data.js?v=2"></script>
   <script src="../js/novel-overrides.js?v=2"></script>
-  <script src="../js/novel.js?v=5"></script>
+  <script src="../js/novel-presentation.js?v=3"></script>
+  <script src="../js/novel-prologue.js?v=6"></script>
+  <script src="../js/player-avatar.js?v=2"></script>
+  <script src="../js/dorm-exploration.js?v=2"></script>
+  <script src="../js/novel-stage.js?v=9"></script>
+  <script src="../js/novel-portraits.js?v=1"></script>
+  <script src="../js/novel.js?v=9"></script>
 </body>
 </html>
+

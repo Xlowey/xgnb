@@ -295,7 +295,7 @@ button:disabled {
   display: grid;
   place-items: center;
   padding: 24px;
-  background-image: linear-gradient(90deg, rgba(7, 11, 10, .86), rgba(7, 11, 10, .54) 48%, rgba(7, 11, 10, .78)), url("../assets/images/title-dorm-bg.png");
+  background-image: linear-gradient(90deg, rgba(7, 11, 10, .86), rgba(7, 11, 10, .54) 48%, rgba(7, 11, 10, .78)), url("../assets/images/dorm-map.png");
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
@@ -498,7 +498,7 @@ input:focus {
 
 .login-page-body {
   min-height: 100vh;
-  background-image: linear-gradient(90deg, rgba(7, 11, 10, .9), rgba(7, 11, 10, .56) 52%, rgba(7, 11, 10, .84)), url("../assets/images/title-dorm-bg.png");
+  background-image: linear-gradient(90deg, rgba(7, 11, 10, .9), rgba(7, 11, 10, .56) 52%, rgba(7, 11, 10, .84)), url("../assets/images/dorm-map.png");
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
@@ -573,7 +573,7 @@ input:focus {
   padding: 0 clamp(12px, 3vw, 36px) 28px;
   background-image:
     linear-gradient(90deg, rgba(7, 11, 10, .92), rgba(7, 11, 10, .64) 50%, rgba(7, 11, 10, .9)),
-    url("../assets/images/title-dorm-bg.png");
+    url("../assets/images/dorm-map.png");
   background-position: center;
   background-size: cover;
   background-attachment: fixed;
@@ -1084,7 +1084,7 @@ input:focus {
 .public-page-body.game-public-body {
   background-image:
     linear-gradient(90deg, rgba(7, 11, 10, .9), rgba(7, 11, 10, .58) 50%, rgba(7, 11, 10, .86)),
-    url("../assets/images/title-dorm-bg.png");
+    url("../assets/images/dorm-map.png");
   background-position: center;
   background-size: cover;
   background-attachment: fixed;

@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>怪谈博物馆</title>
   <link rel="stylesheet" href="css/style.css?v=8">
+  <link rel="stylesheet" href="css/inventory.css?v=1">
+  <link rel="stylesheet" href="css/achievements.css?v=1">
 </head>
 <body>
   <main class="app-shell">
@@ -28,6 +30,10 @@
         <div class="map-viewport">
           <canvas id="explore-canvas" width="960" height="540" aria-label="玩家可以移动的房间地图"></canvas>
           <div class="map-room-label" aria-live="polite"><p class="eyebrow">探索记录 · <span id="room-chapter">序章</span></p><h1 id="room-title">员工宿舍</h1></div>
+          <div class="map-quick-actions">
+            <button id="map-bag-button" class="map-bag-button" data-inventory-open type="button">背包 · B</button>
+            <button id="map-achievements-button" class="map-achievements-button" data-achievements-open type="button">成就 · J</button>
+          </div>
           <div id="interaction-prompt" class="interaction-prompt" hidden></div>
           <div id="map-toast" class="map-toast" role="status" aria-live="polite"></div>
         </div>
@@ -49,7 +55,6 @@
             <dl class="stat-list"><div><dt>生存点</dt><dd id="hp-value">25</dd></div><div><dt>系统信任</dt><dd id="trust-value">50</dd></div><div><dt>线索</dt><dd id="clue-value">0</dd></div></dl>
             <p id="task-value" class="task-text">调查宿舍，寻找离开的办法。</p>
             <div class="card-heading pause-section-heading"><span>馆内区域</span></div><div id="room-list" class="room-list"></div>
-            <div class="card-heading pause-section-heading"><span>调查记录</span><span id="achievement-count">0 / 4</span></div><ul id="achievement-list" class="achievement-list"></ul>
           </section>
           <button id="back-to-cover-button" class="button button-quiet" type="button">保存并返回标题</button>
         </div>
@@ -64,7 +69,13 @@
     <section id="save-panel" class="save-panel" hidden aria-labelledby="save-panel-title"><div class="save-window" role="dialog" aria-modal="true"><header class="save-window-header"><div><p class="eyebrow">当前档案 · <span id="save-user-name">—</span></p><h2 id="save-panel-title">存档管理</h2></div><button id="close-save-panel" class="button button-small" type="button">关闭</button></header><div class="save-mode-tabs" role="tablist" aria-label="保存或读取"><button id="save-mode-button" class="save-mode-button active" type="button" role="tab" aria-selected="true">保存游戏</button><button id="load-mode-button" class="save-mode-button" type="button" role="tab" aria-selected="false">读取存档</button></div><p class="save-help">自动存档会持续更新；下面的 20 个手动存档位不会被自动覆盖。</p><p id="save-panel-message" class="status-message" role="status" aria-live="polite"></p><div id="save-slot-list" class="save-slot-list" aria-label="手动存档位"></div></div></section>
   </main>
   <script src="js/auth.js?v=3"></script>
-  <script src="js/state.js?v=5"></script>
-  <script src="js/game.js?v=10"></script>
+  <script src="js/state.js?v=7"></script>
+  <script src="js/items.js?v=1"></script>
+  <script src="js/inventory.js?v=1"></script>
+  <script src="js/achievements-data.js?v=1"></script>
+  <script src="js/achievements.js?v=1"></script>
+  <script src="js/map-art.js?v=4"></script>
+  <script src="js/player-avatar.js?v=2"></script>
+  <script src="js/game.js?v=14"></script>
 </body>
 </html>

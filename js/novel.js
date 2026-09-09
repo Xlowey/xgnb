@@ -1,15 +1,20 @@
 (function () {
   "use strict";
 
-  var user = MuseumAuth.getCurrentUser();
+  var params = new URLSearchParams(window.location.search);
+  var preview = params.get("preview") === "1";
+  var user = preview ? { id: "class-preview", username: "体验者" } : MuseumAuth.getCurrentUser();
   if (!user) {
     window.location.href = "login.html?next=novel";
     return;
   }
 
-  var state = MuseumState.load(user.id) || MuseumState.create(user);
+  var state = preview ? MuseumState.create(user) : (MuseumState.load(user.id) || MuseumState.create(user));
+  function persist() {
+    if (preview) sessionStorage.setItem("museum_class_preview", JSON.stringify(state));
+    else MuseumState.save(state, user.id);
+  }
   var story = window.MuseumStory;
-  var params = new URLSearchParams(window.location.search);
   var currentSceneId = params.get("scene") || state.narrativeNode || story.fallback;
   var currentScene = getScene(currentSceneId);
   var currentPages = buildPages(currentScene);
@@ -17,6 +22,17 @@
   var endingChoice = state.narrativeChoice || state.ending || null;
   var finalChoiceTimer = null;
   var finalChoiceSeconds = 15;
+  var automatic = false, autoTimer = null, eventAdvance = true, seenBeforeRender = false;
+  var stage = window.MuseumStage;
+  var eventNext = document.getElementById("event-next");
+  function pausePlayback() { window.clearTimeout(autoTimer); autoTimer = null; }
+  function schedulePlayback() {
+    pausePlayback();
+    if (!automatic || !els.review.hidden || !els.end.hidden || stage.isOpen() || !els.choices.hidden) return;
+    var line = currentLine();
+    if (line.type && line.type !== "dialogue" && line.type !== "system") return;
+    autoTimer = window.setTimeout(advance, Math.max(2600, (line.text || "").length * 100));
+  }
 
   var els = {
     location: document.getElementById("novel-location"),
@@ -35,6 +51,8 @@
     review: document.getElementById("novel-review"),
     reviewList: document.getElementById("novel-review-list")
   };
+  window.MuseumInventory.bind({getState:function(){return state;},save:persist,canOpen:function(){return els.review.hidden && els.end.hidden && !stage.isOpen();},onOpen:pausePlayback,onClose:function(){schedulePlayback();}});
+  window.MuseumAchievements.bind({getState:function(){return state;},save:persist,canOpen:function(){return els.review.hidden && els.end.hidden && !stage.isOpen();},onOpen:pausePlayback,onClose:function(){schedulePlayback();}});
 
   function getScene(sceneId) {
     return story.scenes[sceneId] || story.scenes[story.fallback];
@@ -71,7 +89,15 @@
 
   function buildPages(scene) {
     var pages = [];
+    if (scene.events) {
+      scene.events.forEach(function (event, index) {
+        if (event.type === "dialogue") splitNarrativeText(event.text).forEach(function (text) { pages.push(Object.assign({},event,{text:text,sourceIndex:index})); });
+        else pages.push(Object.assign({},event,{sourceIndex:index}));
+      });
+      return pages;
+    }
     (scene.lines || []).forEach(function (line, sourceIndex) {
+      if (/^\s*[△▲▼▽]/.test(line.text)) return;
       splitNarrativeText(line.text).forEach(function (text) {
         pages.push({ speaker: line.speaker, text: text, sourceIndex: sourceIndex });
       });
@@ -114,11 +140,13 @@
     state.narrativeNode = currentSceneId;
     state.narrativeIndex = lineIndex;
     state.narrativeChoice = endingChoice;
-    MuseumState.save(state, user.id);
+    state.flags.narrativeTextRevision = story.textRevision;
+    persist();
   }
 
   function completeCurrentScene() {
     if (currentScene.flag) state.flags[currentScene.flag] = true;
+    if (currentSceneId === "scene-03") { state.flags.prologueComplete = true; state.flags.readNote = true;state.task = "开始午夜巡逻。";state.returnRoom="hall";state.returnX=835;state.returnY=700;if(state.unlockedRooms.indexOf("hall")<0)state.unlockedRooms.push("hall"); }
   }
 
   function saveEnding() {
@@ -133,7 +161,7 @@
   }
 
   function addLog(line) {
-    var key = currentSceneId + ":" + lineIndex;
+    var key = story.textRevision + ":" + currentSceneId + ":" + lineIndex;
     var keys = state.narrativeLogKeys || [];
     if (keys.indexOf(key) !== -1) return;
     keys.push(key);
@@ -242,17 +270,65 @@
   }
 
   function render() {
+    pausePlayback();
+    window.MuseumInventory.refresh();
+    window.MuseumAchievements.refresh();
     var line = currentLine();
     els.location.textContent = displayLocation(currentScene.location || currentScene.title);
     els.title.textContent = currentScene.title;
     els.subtitle.textContent = currentScene.subtitle || "";
     els.speaker.textContent = displaySpeaker(line.speaker);
+    els.dialogue.classList.toggle("is-system", /MOSS|系统/.test(line.speaker));
     els.text.textContent = displayText(line.text);
+    document.body.dataset.theme = currentScene.theme || "dorm";
+    var briefing = document.getElementById("novel-briefing");
+    briefing.hidden = !currentScene.briefing;
+    briefing.textContent = currentScene.briefing ? currentScene.briefing.join("\n") : "";
+    var inspection = document.getElementById("novel-inspection");
+    inspection.hidden = !currentScene.inspection;
+    if (currentScene.inspection) {
+      inspection.querySelector("img").src = "../assets/images/wardrobe-" + (state.flags.cabinetOpen ? "open" : "closed") + ".png";
+      inspection.querySelector("img").alt = state.flags.cabinetOpen ? "打开的更衣柜" : "关闭的更衣柜";
+      inspection.querySelector("figcaption").textContent = state.flags.hasKey ? "已取得宿舍钥匙" : "更衣柜";
+    }
+    els.dialogue.hidden = false;
+    els.progress.hidden = currentPages.length === 0;
     els.progress.textContent = (lineIndex + 1) + " / " + currentPages.length;
     els.next.textContent = lineIndex < currentPages.length - 1 ? "点击继续　◆" : (currentScene.choices ? "请选择行动" : "剧情结束");
-    addLog(line);
+    seenBeforeRender = (state.narrativeLogKeys || []).indexOf(story.textRevision + ":" + currentSceneId + ":" + lineIndex) !== -1;
+    if (currentPages.length && (!line.type || line.type === "dialogue")) addLog(line);
     saveNovelState();
     renderChoices();
+    if (currentScene.inspection && !state.flags.cabinetOpen) {
+      els.choices.textContent = ""; els.choices.hidden = false;
+      var open = document.createElement("button");
+      open.type = "button"; open.className = "novel-choice"; open.textContent = "打开更衣柜";
+      open.addEventListener("click", function () { state.flags.cabinetOpen = true; render(); });
+      els.choices.appendChild(open);
+    } else if (currentScene.inspection && state.flags.hasKey) {
+      els.choices.textContent = ""; els.choices.hidden = true;
+    }
+    if (!currentPages.length && els.choices.hidden) {
+      els.choices.hidden = false;
+      var leave = document.createElement("button");
+      leave.type = "button"; leave.className = "novel-choice"; leave.textContent = "继续探索";
+      leave.addEventListener("click", function () { completeCurrentScene(); finishToMap(); });
+      els.choices.appendChild(leave);
+    }
+    eventAdvance = true;
+    var isEvent = line.type && line.type !== "dialogue";
+    eventNext.hidden = !isEvent;
+    eventNext.disabled = false;eventNext.textContent = line.action || "继续";
+    els.speaker.hidden = !!isEvent; els.text.hidden = !!isEvent; els.next.hidden = !!isEvent;
+    stage.render(currentScene.events ? line : null, {
+      state:state, save:persist, advance:advance, pause:pausePlayback, resume:function(){els.dialogue.focus();schedulePlayback();},
+      canExplore:function(){return els.review.hidden && els.end.hidden && !stage.isOpen() && els.choices.hidden;},
+      setAdvance:function(enabled,label){eventAdvance=enabled;eventNext.hidden=!enabled;if(label)eventNext.textContent=label;}
+    });
+    window.MuseumPortraits.render(currentScene,line);
+    if(line.type === "system") els.text.textContent = "";
+    document.getElementById("novel-back-button").disabled = lineIndex === 0;
+    schedulePlayback();
   }
 
   function applyChoice(choice) {
@@ -270,6 +346,10 @@
       if (state.clues.indexOf("wardrobe-key") === -1) state.clues.push("wardrobe-key");
       state.task = "带着钥匙离开宿舍，去中央大厅。";
     }
+    if (/^office-/.test(choice.id)) {
+      state.flags[choice.id] = true;
+      if (state.clues.indexOf("peach-dream") === -1) state.clues.push("peach-dream");
+    }
     if (choice.effect === "find-contract-clue") {
       state.flags.foundContract = true;
       if (state.clues.indexOf("contract") === -1) state.clues.push("contract");
@@ -280,20 +360,21 @@
   }
 
   function loadScene(sceneId) {
+    pausePlayback();clearChoices();
     currentSceneId = sceneId;
     currentScene = getScene(sceneId);
     currentPages = buildPages(currentScene);
     lineIndex = 0;
     endingChoice = currentScene.endingId || endingChoice;
     els.end.hidden = true;
-    window.history.replaceState({}, "", "?scene=" + encodeURIComponent(sceneId));
+    window.history.replaceState({}, "", "?scene=" + encodeURIComponent(sceneId) + (preview ? "&preview=1" : ""));
     render();
   }
 
   function startBattle(choice) {
     state.returnRoom = state.returnRoom || state.roomId;
-    state.returnX = state.returnX || state.playerX;
-    state.returnY = state.returnY || state.playerY;
+    state.returnX = state.returnX == null ? state.playerX : state.returnX;
+    state.returnY = state.returnY == null ? state.playerY : state.returnY;
     state.returnScene = choice.afterBattle || "guard-after-battle";
     state.mode = "battle";
     state.narrativeNode = state.returnScene;
@@ -304,6 +385,7 @@
   function choose(choice) {
     completeCurrentScene();
     applyChoice(choice);
+    if (choice.effect === "take-key") { persist(); render(); showToast("获得物品：宿舍钥匙"); return; }
     if (choice.action === "battle") {
       startBattle(choice);
       return;
@@ -316,6 +398,7 @@
   }
 
   function finishToMap() {
+    if (preview) { window.location.href = "showcase.html"; return; }
     state.mode = "explore";
     state.narrativeNode = null;
     state.narrativeIndex = 0;
@@ -352,6 +435,7 @@
   }
 
   function advance() {
+    if (!els.review.hidden || !els.end.hidden || stage.isOpen() || !eventAdvance) return;
     if (!els.choices.hidden) return;
     if (lineIndex < currentPages.length - 1) {
       lineIndex += 1;
@@ -372,6 +456,7 @@
   }
 
   function showReview() {
+    pausePlayback();
     els.reviewList.textContent = "";
     var log = state.dialogueLog || [];
     if (!log.length) {
@@ -396,9 +481,13 @@
   }
 
   function loadSaved() {
-    var loaded = MuseumState.load(user.id);
+    pausePlayback();
+    var storage = preview ? sessionStorage : localStorage;
+    var loaded;
+    try { loaded = JSON.parse(storage.getItem("museum_novel_quick_" + user.id) || "null"); } catch (_) { loaded = null; }
+    if (!loaded) loaded = preview ? JSON.parse(sessionStorage.getItem("museum_class_preview") || "null") : MuseumState.load(user.id);
     if (!loaded) {
-      showToast("当前没有可读取的自动存档。");
+      showToast("当前没有可读取的剧情存档。");
       return;
     }
     state = loaded;
@@ -408,6 +497,7 @@
       currentPages = buildPages(currentScene);
       lineIndex = Math.min(Math.max(Number(state.narrativeIndex) || 0, 0), Math.max(0, currentPages.length - 1));
       endingChoice = state.narrativeChoice || state.ending || null;
+      window.history.replaceState({}, "", "?scene=" + encodeURIComponent(currentSceneId) + (preview ? "&preview=1" : ""));
       render();
       if (state.mode === "ending" && currentScene.ending) showEndingScreen();
       showToast("已读取剧情存档。");
@@ -417,6 +507,7 @@
   }
 
   function toMenu() {
+    if (preview) { window.location.href = "showcase.html"; return; }
     if (state.mode === "ending") saveEnding();
     else saveNovelState();
     window.location.href = "../index.html?fromMenu=1";
@@ -424,29 +515,65 @@
 
   els.dialogue.addEventListener("click", advance);
   els.dialogue.addEventListener("keydown", function (event) {
+    if (event.target !== els.dialogue) return;
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       advance();
     }
   });
   document.getElementById("novel-review-button").addEventListener("click", showReview);
+  document.querySelector('.novel-toolbar-actions').addEventListener("click",function(e){e.stopPropagation();});
+  eventNext.addEventListener("click",function(e){e.stopPropagation();advance();});
+  document.getElementById("novel-back-button").addEventListener("click",function(){pausePlayback();if(lineIndex>0){lineIndex-=1;render();}});
+  document.getElementById("novel-auto-button").addEventListener("click",function(){automatic=!automatic;this.setAttribute("aria-pressed",String(automatic));this.textContent=automatic?"自动中":"自动";schedulePlayback();});
+  document.getElementById("novel-skip-button").addEventListener("click",function(){
+    pausePlayback();var moved=false;
+    while (lineIndex<currentPages.length-1 && seenBeforeRender && (!currentLine().type || currentLine().type==="dialogue")) {
+      var next=currentPages[lineIndex+1];
+      if(next.type && next.type!=="dialogue")break;
+      if((state.narrativeLogKeys||[]).indexOf(story.textRevision+":"+currentSceneId+":"+(lineIndex+1))<0)break;
+      lineIndex+=1;moved=true;
+    }
+    if(moved)render();else showToast("没有可快进的已读对白。");
+  });
+  document.getElementById("novel-bag-button").addEventListener("click",function(){stage.bag();});
+  document.getElementById("novel-achievements-button").addEventListener("click",function(){window.MuseumAchievements.open();});
   document.getElementById("novel-review-close").addEventListener("click", function () { els.review.hidden = true; });
   els.review.addEventListener("click", function (event) { if (event.target === els.review) els.review.hidden = true; });
-  document.getElementById("novel-save-button").addEventListener("click", function () { saveNovelState(); showToast("剧情已保存。"); });
+  document.getElementById("novel-save-button").addEventListener("click", function () {
+    saveNovelState();
+    (preview ? sessionStorage : localStorage).setItem("museum_novel_quick_" + user.id, JSON.stringify(state));
+    showToast("已保存当前位置，可用“读取”返回。");
+  });
   document.getElementById("novel-load-button").addEventListener("click", loadSaved);
   document.getElementById("novel-menu-button").addEventListener("click", toMenu);
   document.getElementById("novel-end-save").addEventListener("click", function () { saveEnding(); showToast("结局已保存。"); });
   document.getElementById("novel-end-menu").addEventListener("click", function () { saveEnding(); window.location.href = "../index.html?fromEnding=1"; });
   document.addEventListener("keydown", function (event) {
     if (event.key !== "Escape") return;
-    if (!els.review.hidden) els.review.hidden = true;
-    else toMenu();
+    if(stage.isOpen())stage.close();
+    else if (!els.review.hidden) {els.review.hidden = true;schedulePlayback();}
+    else {automatic=false;pausePlayback();document.getElementById("novel-auto-button").textContent="自动";document.getElementById("novel-auto-button").setAttribute("aria-pressed","false");}
   });
+  document.addEventListener("visibilitychange",function(){if(document.hidden)pausePlayback();else schedulePlayback();});
 
   if (state.narrativeNode === currentSceneId && (state.mode === "novel" || state.mode === "ending")) {
     lineIndex = Math.min(Math.max(lineIndex, 0), Math.max(0, currentPages.length - 1));
   } else {
     lineIndex = 0;
+  }
+  if (state.flags.narrativeTextRevision !== story.textRevision) {
+    lineIndex = 0;
+    var removedPages = [];
+    Object.keys(story.productionNotes).forEach(function (id) {
+      story.productionNotes[id].forEach(function (note) {
+        removedPages = removedPages.concat(splitNarrativeText(note.text));
+      });
+    });
+    state.dialogueLog = (state.dialogueLog || []).filter(function (entry) {
+      return !/^\s*[△▲▼▽]/.test(entry.text) && removedPages.indexOf(entry.text) === -1;
+    });
+    state.narrativeLogKeys = [];
   }
   render();
 }());

@@ -1,0 +1,144 @@
+/* Stage and dialogue share the viewport; images always retain their ratio. */
+:root { --dialogue-height: 194px; --stage-bottom: 222px; }
+.novel-background { --scene-background: url('../assets/images/dorm-map.png'); filter: none; }
+body[data-theme="dorm"],body[data-theme="wardrobe"] { --scene-background: url('../assets/images/dorm-map.png'); }
+body[data-theme="patrol"],body[data-theme="nightmare"] { --scene-background: url('../assets/images/corridor-map.png'); }
+body[data-theme="office"] { --scene-background: url('../assets/images/office-map.png'); }
+.novel-toolbar { top: 22px; pointer-events:none; }
+.novel-location { padding: 7px 12px; background:#081014ac; border-left:2px solid #ceb38a; }
+.novel-dialogue { min-height:var(--dialogue-height); max-height:none; padding:24px 30px 63px; border-radius:10px; bottom:18px; background:linear-gradient(105deg,#0c1720ef,#111920ed); }
+.novel-text { max-height:none; min-height:2.7em; overflow:visible; font-size:clamp(17px,1.6vw,24px); line-height:1.7; }
+.novel-next { right:28px; bottom:53px; font-size:12px; pointer-events:none; }
+.novel-toolbar-actions { position:absolute; bottom:10px; right:20px; gap:4px; max-width:none; }
+.novel-tool { border:0; background:transparent; padding:7px 10px; font-size:13px; color:#b3c0c4; border-radius:16px; }
+.novel-tool:hover,.novel-tool[aria-pressed="true"] { background:#47738855; color:#fff; }
+.novel-tool:disabled { opacity:.35; }
+.novel-progress { bottom:34px; left:max(30px,calc((100vw - 1120px)/2 + 30px)); font-size:11px; }
+.novel-choices { bottom:calc(var(--stage-bottom) + 12px); max-height:calc(100dvh - var(--stage-bottom) - 100px); }
+.scene-events { position:fixed; z-index:2; inset:80px 24px var(--stage-bottom); display:grid; place-items:center; }
+.event-button { color:#e4edf1; border:1px solid #8699a575; background:#13242ded; border-radius:5px; padding:10px 20px; cursor:pointer; font:inherit; }
+.event-button:hover { background:#355364; border-color:#a7d3e6; }
+#event-next { position:absolute; left:28px; top:26px; min-width:140px; }
+body[data-event="cg"] .novel-dialogue,body[data-event="system"] .novel-dialogue,
+body[data-event="item"] .novel-dialogue,body[data-event="document"] .novel-dialogue,
+body[data-event="explore"] .novel-dialogue,body[data-event="television"] .novel-dialogue { min-height:118px; height:118px; padding:0; }
+body[data-event="cg"],body[data-event="system"],body[data-event="item"],body[data-event="document"],body[data-event="explore"],body[data-event="television"] { --stage-bottom:155px; }
+.system-message { align-self:start; margin-top:3vh; width:min(840px,92vw); background:linear-gradient(135deg,#064e80ed,#0b263eeb); border:1px solid #69c9ff; border-radius:9px; box-shadow:0 0 40px #147dd04a,inset 0 1px 1px #bcf0ff44; padding:22px 30px; animation:system-in .4s ease-out; }
+.system-message small { font:12px system-ui; letter-spacing:.3em; color:#9ddcff; }
+.system-message p { font:clamp(17px,1.65vw,24px)/1.9 system-ui,sans-serif; white-space:pre-wrap; margin:12px 0 0; color:#e7f7ff; }
+@keyframes system-in { from {opacity:0;transform:translateY(-18px)} to {opacity:1;transform:none} }
+body:has(.dream) .novel-background { animation:dream-push 6s ease-out both; }
+body:has(.dream) .novel-vignette { background:radial-gradient(ellipse, #730b232d, #640717bd); }
+body:has(.wake) .novel-background { animation:wake .8s ease-out both; }
+@keyframes dream-push {from{transform:scale(1);filter:sepia(.15)}to{transform:scale(1.16);filter:sepia(.4)}}
+@keyframes wake {0%{filter:brightness(0)}20%{filter:brightness(1.7)}38%{filter:brightness(.4)}100%{filter:brightness(1)}}
+.item-card { width:min(1180px,100%); height:100%; min-height:0; max-height:100%; display:grid; grid-template-columns:minmax(0,1.4fr) minmax(280px,1fr); grid-template-rows:minmax(0,1fr); gap:24px; align-items:center; }
+.item-image-button { background:transparent; border:0; padding:0; cursor:zoom-in; width:100%; min-height:0; height:100%; display:grid; place-items:center; }
+.item-image-button img { display:block; max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; box-shadow:0 12px 50px #0009; border:1px solid #e6bc6244; }
+.item-details { min-height:0; height:100%; max-height:100%; overflow:hidden; background:#0c161deb; padding:24px; border:1px solid #c6ac7d55; border-radius:7px; display:flex; flex-direction:column; }
+.item-details>h2,.item-details>small,.item-details>.item-description,.item-details>.event-button { flex-shrink:0; }
+.item-kicker { font:11px system-ui; letter-spacing:.2em; color:#baaa88; }
+.item-details h2 { margin:10px 0 12px; font-size:clamp(22px,2.5vw,34px); font-weight:500; color:#e5c89c; }
+.item-description { color:#c7c9c4; font-size:14px; line-height:1.8; margin:0 0 14px; }
+.item-transcript { overflow:auto; min-height:0; white-space:pre-wrap; font-size:17px; line-height:1.95; padding-right:8px; color:#eee5d3; scrollbar-color:#917a55 #182125; }
+.dialogue-prop { height:100%; margin:0; display:grid; place-items:center; }
+.dialogue-prop img { max-width:80vw; max-height:100%; object-fit:contain; box-shadow:0 10px 60px #000a; }
+.item-modal { position:fixed; z-index:30; inset:0; background:#03090fe8; padding:4vh 4vw; display:grid; place-items:center; backdrop-filter:blur(8px); }
+.document-modal { height:100%; width:min(1250px,100%); display:flex; flex-direction:column; gap:16px; }
+.document-modal>.event-button,.zoom-panel>.event-button { align-self:flex-end; }
+.document-modal>.item-card { min-height:0; flex:1; }
+.zoom-panel { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; gap:12px; overflow:auto; }
+.zoom-panel img { flex-shrink:0; width:min(1670px,100%); height:auto; object-fit:contain; }
+.bag-panel,.observation-panel { width:min(560px,100%); padding:35px; background:#101d26; border:1px solid #b69b6655; border-radius:8px; }
+.bag-panel .event-button { margin:8px; }
+.observation-panel p { line-height:1.8; color:#c9d0d3; }
+.television-set { width:min(1050px,100%); height:100%; max-height:560px; padding:18px 45px 24px 18px; border:12px solid #343a3b; border-radius:24px; background:#172025; box-shadow:0 20px 80px #000; }
+.television-screen { position:relative; width:100%; height:100%; background:#050c12; overflow:hidden; border-radius:12px; display:grid; place-items:center; }
+.television-screen img { width:100%; height:100%; object-fit:contain; animation:recording 9s ease-in-out infinite alternate; }
+.television-screen::after { content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,#0003 0 1px,transparent 1px 4px); }
+.recording-light { position:absolute; top:18px; left:20px; font:12px monospace; color:#ec514e; }
+.static { background:repeating-linear-gradient(0deg,#667075 0 1px,#172025 1px 3px); }
+@keyframes recording {0%{transform:scale(1.04) translateX(-1%)}30%{transform:scale(1.08) translateY(.5%)}100%{transform:scale(1.15) translateX(2%)}}
+@media(max-width:700px) {
+ :root {--dialogue-height:230px;--stage-bottom:258px}
+ .novel-toolbar{inset:12px 12px auto}.novel-location{font-size:12px}
+ .novel-dialogue{width:calc(100% - 20px);bottom:10px;padding:18px 18px 80px}
+ .novel-toolbar-actions{left:10px;right:10px;bottom:8px;justify-content:flex-end;gap:1px}
+ .novel-tool{padding:6px 8px;font-size:12px}.novel-next{bottom:78px;right:18px}
+ .novel-progress{left:25px;bottom:20px}.scene-events{inset:63px 12px var(--stage-bottom)}
+ .item-card{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:10px}
+ .item-details{height:100%;padding:12px 16px}.item-details h2{font-size:20px;margin:4px 0 7px}.item-description{font-size:12px;margin-bottom:7px}.item-preview .item-description{font-size:15px}
+ .item-transcript{font-size:15px;line-height:1.7}.item-image-button img{max-height:100%;max-width:100%}
+ .system-message{padding:18px;margin-top:1vh}.system-message p{font-size:16px;line-height:1.8}
+ #event-next{top:14px;left:18px;padding:8px 15px}.television-set{height:auto;aspect-ratio:16/10;padding:8px 20px 12px 8px;border-width:7px}
+ .room-hotspot{font-size:11px}.item-modal{padding:2vh 12px}
+}
+@media(max-height:550px) and (min-width:701px){:root{--dialogue-height:150px;--stage-bottom:172px}.scene-events{top:56px}.novel-dialogue{padding-top:12px}.novel-text{font-size:17px}.item-details{padding:12px}.item-details h2{font-size:22px;margin:5px 0}.item-description{font-size:12px;margin-bottom:5px}.item-transcript{font-size:14px}.system-message{padding:12px;margin-top:0}.system-message p{font-size:16px;line-height:1.6}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* Exploration has one fitted world and a compact control strip. */
+.novel-progress { display:none; }
+body[data-event="explore"] .novel-background,
+body[data-event="explore"] .novel-vignette { display:none; }
+body[data-event="explore"] .scene-events { inset:58px 24px 70px; padding-bottom:38px; }
+body[data-event="explore"] .novel-dialogue { height:48px; min-height:48px; bottom:10px; width:calc(100% - 48px); max-width:1450px; padding:0; border:0; background:#10191ee8; box-shadow:none; }
+body[data-event="explore"] .novel-dialogue::before { content:"WASD / 方向键移动 · E 调查 · 点击地面也可移动"; position:absolute; left:18px; top:17px; right:auto; bottom:auto; border:0; color:#919c9f; font:12px system-ui,sans-serif; }
+body[data-event="explore"] .novel-toolbar-actions { right:12px; bottom:7px; }
+body[data-event="explore"] #novel-back-button,
+body[data-event="explore"] #novel-auto-button,
+body[data-event="explore"] #novel-skip-button { display:none; }
+.investigation-map { position:relative; flex:none; touch-action:manipulation; outline:none; box-shadow:0 14px 45px #0006; }
+.investigation-map:focus-visible { outline:1px solid #c8b18755; outline-offset:4px; }
+.investigation-map>img { display:block; width:100%; height:100%; user-select:none; }
+.exploration-character { position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; pointer-events:none; }
+.investigation-pin { position:absolute; transform:translate(-50%,-50%); width:30px; height:30px; border:0; background:transparent; cursor:pointer; padding:0; }
+.investigation-pin::after { content:""; position:absolute; inset:11px; transform:rotate(45deg); background:#e1c792ba; box-shadow:0 0 0 2px #382b1ca8,0 0 12px #eacd8870; }
+.investigation-pin.is-examined::after { background:#a5b8af66; box-shadow:0 0 0 1px #13251b88; }
+.investigation-pin.is-near::after { background:#fff3c9; box-shadow:0 0 0 2px #604621,0 0 16px #ffe2a5; }
+.nearby-investigation { position:absolute; transform:translateX(-50%); white-space:nowrap; border:1px solid #c4a36980; border-radius:4px; background:#10191eed; color:#f0dbb6; padding:7px 12px; font:13px system-ui,sans-serif; box-shadow:0 4px 16px #0008; cursor:pointer; }
+.investigation-hint { position:absolute; bottom:4px; left:0; right:0; margin:0; text-align:center; color:#c1b496; font-size:13px; line-height:26px; pointer-events:none; }
+.observation-panel { width:min(510px,100%); padding:20px; max-height:100%; overflow:auto; }
+.observation-closeup { position:relative; width:100%; overflow:hidden; border:1px solid #c4a36955; }
+.observation-closeup img { position:absolute; max-width:none; height:auto; }
+.observation-panel h2 { margin:18px 0 8px; font-size:23px; font-weight:500; color:#e5c89c; }
+.observation-panel p { margin:0 0 18px; }
+@media(max-width:850px) {
+ body[data-event="explore"] .novel-dialogue { height:74px; min-height:74px; width:calc(100% - 24px); }
+ body[data-event="explore"] .novel-dialogue::before { content:"方向键 / WASD 移动 · 靠近后调查"; left:0;right:0;top:10px;text-align:center;font-size:11px; }
+ body[data-event="explore"] .novel-toolbar-actions { left:8px;right:8px;bottom:6px;justify-content:center; }
+ body[data-event="explore"] .scene-events { inset:55px 12px 95px; }
+ .nearby-investigation { padding:5px 8px;font-size:11px; }
+}
+
+/* A still of the exploration world stays in exactly the same fitted viewport. */
+.has-room-backdrop .novel-background,.has-room-backdrop .novel-vignette { display:none; }
+.investigation-backdrop { position:fixed;z-index:0;inset:58px 24px 70px;padding-bottom:38px;display:grid;place-items:center;pointer-events:none; }
+.investigation-still { position:relative;filter:brightness(.28) saturate(.65); }
+.investigation-still>img { display:block;width:100%;height:100%; }
+.item-preview { position:relative;width:var(--object-width);height:auto;max-width:100%; }
+.item-focus-button { display:block;width:100%;padding:0;border:0;background:none;cursor:zoom-in; }
+.focused-picture { display:block;position:relative;width:100%;overflow:hidden;box-shadow:0 16px 55px #0009; }
+.focused-picture img { position:absolute;max-width:none;height:auto;border:0;box-shadow:none; }
+.item-caption { position:absolute;left:calc(100% + 26px);top:50%;transform:translateY(-50%);width:200px;color:#d4c9b7;text-shadow:0 2px 6px #000; }
+.item-caption h2 { margin:0 0 10px;font-size:16px;line-height:1.6;font-weight:500;color:#e4c99e; }
+.item-caption p { margin:0;font-size:14px;line-height:1.9; }
+.zoom-panel>.focused-picture { width:min(760px,100%);flex-shrink:0; }
+body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) { --stage-bottom:82px; }
+body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) .novel-dialogue { height:54px;min-height:54px;padding:0;bottom:10px;width:calc(100% - 48px);max-width:1450px;border:0;box-shadow:none;background:#10191ee8; }
+body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) .novel-dialogue::before { display:none; }
+body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) #event-next { left:14px;top:8px;padding:8px 16px;min-width:120px;font-size:14px; }
+@media(max-width:947px) {
+ .item-caption { position:static;transform:none;width:min(520px,100%);margin:16px auto 0;text-align:center; }
+ .item-caption h2 { font-size:15px;margin-bottom:5px; }.item-caption p { font-size:13px;line-height:1.7; }
+ body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) { --stage-bottom:136px; }
+ body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) .novel-dialogue { height:112px;min-height:112px;width:calc(100% - 24px); }
+ body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) .novel-toolbar-actions { left:10px;right:10px;bottom:8px; }
+}
+@media(max-width:850px) { .investigation-backdrop { inset:55px 12px 95px; } }
+@media(max-height:550px) and (min-width:650px) and (max-width:947px) {
+ .item-caption { position:absolute;left:calc(100% + 22px);top:50%;transform:translateY(-50%);width:200px;margin:0;text-align:left; }
+ body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) { --stage-bottom:82px; }
+ body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) .novel-dialogue { height:54px;min-height:54px; }
+ body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) .novel-toolbar-actions { left:auto;right:10px; }
+ body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) .novel-tool { font-size:11px;padding:7px 6px; }
+}

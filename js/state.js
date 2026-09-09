@@ -44,6 +44,7 @@
     discovered: [],
     unlockedRooms: ["dorm"],
     achievements: [],
+    achievementRecords: {},
     dialogueLog: [],
     task: "调查宿舍，寻找离开的办法。",
     returnRoom: null,
@@ -73,9 +74,11 @@
     state.flags = Object.assign({}, DEFAULT_FLAGS, loaded.flags || {});
     state.clues = Array.isArray(state.clues) ? state.clues : [];
     state.inventory = Array.isArray(state.inventory) ? state.inventory : [];
+    if(window.MuseumInventory)window.MuseumInventory.normalize(state);
     state.discovered = Array.isArray(state.discovered) ? state.discovered : [];
     state.unlockedRooms = Array.isArray(state.unlockedRooms) ? state.unlockedRooms : ["dorm"];
     state.achievements = Array.isArray(state.achievements) ? state.achievements : [];
+    if(window.MuseumAchievements)window.MuseumAchievements.normalize(state);
     state.dialogueLog = Array.isArray(state.dialogueLog) ? state.dialogueLog : [];
     state.narrativeLogKeys = Array.isArray(state.narrativeLogKeys) ? state.narrativeLogKeys : [];
     if (state.mode === "dialogue" || state.mode === "mini" || state.mode === "battle" || state.mode === "paused") state.mode = "explore";

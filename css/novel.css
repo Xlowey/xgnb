@@ -46,7 +46,7 @@ button:focus-visible {
   position: absolute;
   inset: 0;
   z-index: -2;
-  background: linear-gradient(180deg, rgba(3, 7, 9, .76), rgba(7, 12, 15, .46) 45%, rgba(4, 8, 10, .92)), url("../assets/images/title-dorm-bg.png") center / cover no-repeat, #0b1013;
+  background: linear-gradient(180deg, rgba(3, 7, 9, .30), rgba(7, 12, 15, .10) 45%, rgba(4, 8, 10, .72)), var(--scene-background, url("../assets/images/title-dorm-bg.png")) center / cover no-repeat, #0b1013;
   filter: saturate(.72) contrast(1.05);
 }
 
@@ -231,13 +231,42 @@ button:focus-visible {
   position: relative;
   min-height: 3em;
   max-height: 5.4em;
-  overflow: hidden;
+  overflow-y: auto;
   margin: 0;
   color: var(--ink);
   font-size: clamp(18px, 2vw, 26px);
   line-height: 1.8;
   letter-spacing: .07em;
   white-space: pre-wrap;
+}
+
+.novel-briefing {
+  position: absolute; top: 18vh; right: 7vw; max-width: 340px;
+  white-space: pre-line; line-height: 2.2; padding: 20px 28px;
+  border-left: 2px solid var(--accent); background: rgba(8, 14, 18, .8);
+  font-family: system-ui, sans-serif; letter-spacing: .1em;
+}
+.novel-inspection {
+  position: absolute; inset: 12vh 0 auto; margin: 0; text-align: center;
+}
+.novel-inspection img { height: 42vh; max-width: 80vw; object-fit: contain; filter: drop-shadow(0 15px 25px #000); }
+.novel-inspection figcaption { color: var(--accent); letter-spacing: .3em; margin-top: 12px; }
+body[data-theme="wardrobe"] .novel-background { filter: brightness(.45) blur(4px); }
+body[data-theme="wardrobe"] .novel-choices { bottom: 6vh; }
+body[data-theme="nightmare"] { --accent: #edaaa0; --line: rgba(213, 110, 100, .4); }
+body[data-theme="nightmare"] .novel-vignette { background: radial-gradient(ellipse, transparent 15%, rgba(56, 0, 0, .75)); }
+@media (max-width: 700px) {
+  .novel-briefing { top: 100px; right: 16px; font-size: 13px; padding: 12px 18px; }
+  .novel-text { max-height: 7em; font-size: 18px; letter-spacing: .03em; }
+  .novel-dialogue { max-height: 280px; padding-bottom: 34px; }
+  .novel-choices { bottom: 285px; max-height: calc(100dvh - 390px); }
+}
+@media (max-height: 550px) and (min-width: 701px) {
+  .novel-dialogue { min-height: 150px; bottom: 12px; padding: 14px 24px 28px; }
+  .novel-text { font-size: 18px; line-height: 1.5; }
+  .novel-choices { bottom: 180px; max-height: calc(100dvh - 260px); gap: 5px; }
+  .novel-choice { padding: 8px 16px; }
+  .novel-briefing { top: 85px; font-size: 12px; padding: 8px 20px; }
 }
 
 .novel-next {
@@ -415,3 +444,15 @@ button:focus-visible {
   }
 
 }
+
+body[data-theme="patrol"] { --scene-background: url("../assets/images/novel-corridor.png"); }
+body[data-theme="office"] { --scene-background: url("../assets/images/novel-office.png"); }
+body[data-theme="canteen"] { --scene-background: url("../assets/images/novel-canteen.png"); }
+body[data-theme="nightmare"] { --scene-background: url("../assets/images/novel-corridor.png"); }
+@media (max-width: 700px) {
+  .novel-dialogue { max-height: 280px; padding-bottom: 34px; }
+  .novel-choices { bottom: 285px; max-height: calc(100dvh - 390px); }
+  body[data-theme="wardrobe"] .novel-choices { bottom: 6vh; max-height: 30vh; }
+}
+.novel-dialogue.is-system { border-color: #81bcb7; background: linear-gradient(120deg, #0c252aee, #081015f5); }
+.novel-dialogue.is-system .novel-speaker { color: #9bddd3; font-family: system-ui, sans-serif; }
