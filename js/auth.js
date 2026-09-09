@@ -40,9 +40,9 @@
   }
 
   function register(username, password) {
+    if (typeof password !== "string" || !password.trim()) return { ok: false, message: "请填写口令。" };
     var name = normalizeName(username);
-    if (name.length < 2 || name.length > 16) return { ok: false, message: "档案名称需要 2—16 个字符。" };
-    if (password.length < 4) return { ok: false, message: "口令至少需要 4 位。" };
+    if (name.length < 1 || name.length > 16) return { ok: false, message: "档案名称需要 1—16 个字符。" };
     var users = readUsers();
     if (findByName(users, name)) return { ok: false, message: "这个档案名称已经存在，请换一个。" };
     var user = { id: makeId(), username: name, passwordHash: textHash(password), createdAt: new Date().toISOString() };
@@ -53,6 +53,7 @@
   }
 
   function login(username, password) {
+    if (typeof password !== "string" || !password.trim()) return { ok: false, message: "请填写口令。" };
     var user = findByName(readUsers(), username);
     if (!user || user.passwordHash !== textHash(password)) return { ok: false, message: "档案名称或口令不正确。" };
     localStorage.setItem(SESSION_KEY, user.id);

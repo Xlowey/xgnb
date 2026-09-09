@@ -295,7 +295,7 @@ button:disabled {
   display: grid;
   place-items: center;
   padding: 24px;
-  background-image: linear-gradient(90deg, rgba(7, 11, 10, .86), rgba(7, 11, 10, .54) 48%, rgba(7, 11, 10, .78)), url("../assets/images/dorm-map.png");
+  background-image: linear-gradient(90deg, rgba(7, 11, 10, .35), rgba(7, 11, 10, .12) 48%, rgba(7, 11, 10, .32)), url("../assets/images/Main Interface Background.jpeg");
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
@@ -498,7 +498,7 @@ input:focus {
 
 .login-page-body {
   min-height: 100vh;
-  background-image: linear-gradient(90deg, rgba(7, 11, 10, .9), rgba(7, 11, 10, .56) 52%, rgba(7, 11, 10, .84)), url("../assets/images/dorm-map.png");
+  background-image: linear-gradient(90deg, rgba(7, 11, 10, .42), rgba(7, 11, 10, .12) 52%, rgba(7, 11, 10, .3)), url("../assets/images/Main Interface Background.jpeg");
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
@@ -573,7 +573,7 @@ input:focus {
   padding: 0 clamp(12px, 3vw, 36px) 28px;
   background-image:
     linear-gradient(90deg, rgba(7, 11, 10, .92), rgba(7, 11, 10, .64) 50%, rgba(7, 11, 10, .9)),
-    url("../assets/images/dorm-map.png");
+    url("../assets/images/Main Interface Background.jpeg");
   background-position: center;
   background-size: cover;
   background-attachment: fixed;
@@ -1083,8 +1083,8 @@ input:focus {
 
 .public-page-body.game-public-body {
   background-image:
-    linear-gradient(90deg, rgba(7, 11, 10, .9), rgba(7, 11, 10, .58) 50%, rgba(7, 11, 10, .86)),
-    url("../assets/images/dorm-map.png");
+    linear-gradient(90deg, rgba(7, 11, 10, .4), rgba(7, 11, 10, .18) 50%, rgba(7, 11, 10, .38)),
+    url("../assets/images/Main Interface Background.jpeg");
   background-position: center;
   background-size: cover;
   background-attachment: fixed;
@@ -1612,4 +1612,21 @@ input:focus {
   .map-controls { right: 12px; bottom: 12px; max-width: calc(100vw - 24px); font-size: .7rem; }
   .pause-overlay { padding: 12px; }
   .pause-card .room-list, .pause-card .achievement-list { grid-template-columns: 1fr 1fr; }
+}
+
+/* Shared account pages: consistent card, typography and controls. */
+.login-page .login-panel {
+  width: min(480px, 100%);
+  min-height: 600px;
+  padding: 36px 40px;
+  display: flex;
+  flex-direction: column;
+}
+.login-page .login-panel h1 { font-size: 48px; line-height: 1.2; }
+.login-page .auth-form input { min-height: 46px; font-size: 16px; }
+.login-page .auth-form label, .login-page .auth-form button { font-size: 16px; }
+.login-page .login-switch { margin-top: auto; padding-top: 18px; font-size: 16px; }
+@media (max-width: 520px) {
+  .login-page .login-panel { padding: 28px 24px; min-height: 570px; }
+  .login-page .login-panel h1 { font-size: 36px; }
 }

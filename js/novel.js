@@ -294,7 +294,7 @@
     els.dialogue.hidden = false;
     els.progress.hidden = currentPages.length === 0;
     els.progress.textContent = (lineIndex + 1) + " / " + currentPages.length;
-    els.next.textContent = lineIndex < currentPages.length - 1 ? "点击继续　◆" : (currentScene.choices ? "请选择行动" : "剧情结束");
+    els.next.textContent = lineIndex < currentPages.length - 1 ? "点击画面 / E 继续　◆" : (currentScene.choices ? "请选择行动" : "剧情结束");
     seenBeforeRender = (state.narrativeLogKeys || []).indexOf(story.textRevision + ":" + currentSceneId + ":" + lineIndex) !== -1;
     if (currentPages.length && (!line.type || line.type === "dialogue")) addLog(line);
     saveNovelState();
@@ -480,17 +480,16 @@
     els.review.hidden = false;
   }
 
-  function loadSaved() {
-    pausePlayback();
-    var storage = preview ? sessionStorage : localStorage;
-    var loaded;
-    try { loaded = JSON.parse(storage.getItem("museum_novel_quick_" + user.id) || "null"); } catch (_) { loaded = null; }
-    if (!loaded) loaded = preview ? JSON.parse(sessionStorage.getItem("museum_class_preview") || "null") : MuseumState.load(user.id);
+  function openSaves(mode) {
+    window.MuseumSaveDialog.open({user:user,preview:preview,state:function(){return state;},save:saveNovelState,pause:pausePlayback,resume:schedulePlayback,load:loadSaved},mode);
+  }
+  function loadSaved(loaded) {
+    pausePlayback();clearChoices();els.end.hidden=true;els.review.hidden=true;
     if (!loaded) {
       showToast("当前没有可读取的剧情存档。");
       return;
     }
-    state = loaded;
+    state = loaded;persist();
     if (state.mode === "novel" || state.mode === "ending") {
       currentSceneId = state.narrativeNode || story.fallback;
       currentScene = getScene(currentSceneId);
@@ -513,7 +512,13 @@
     window.location.href = "../index.html?fromMenu=1";
   }
 
-  els.dialogue.addEventListener("click", advance);
+  // Capture eligibility before an investigation or modal click changes the current event.
+  document.addEventListener("click", function(event) {
+    if (event.button !== 0 || event.defaultPrevented) return;
+    if (event.target.closest('button,a,input,textarea,select,label,[contenteditable="true"],[role="button"],#novel-choices,#novel-review,#novel-end,#item-modal,dialog')) return;
+    if (currentLine().type === "explore" || String(window.getSelection()).trim()) return;
+    advance();
+  }, true);
   els.dialogue.addEventListener("keydown", function (event) {
     if (event.target !== els.dialogue) return;
     if (event.key === "Enter" || event.key === " ") {
@@ -540,16 +545,17 @@
   document.getElementById("novel-achievements-button").addEventListener("click",function(){window.MuseumAchievements.open();});
   document.getElementById("novel-review-close").addEventListener("click", function () { els.review.hidden = true; });
   els.review.addEventListener("click", function (event) { if (event.target === els.review) els.review.hidden = true; });
-  document.getElementById("novel-save-button").addEventListener("click", function () {
-    saveNovelState();
-    (preview ? sessionStorage : localStorage).setItem("museum_novel_quick_" + user.id, JSON.stringify(state));
-    showToast("已保存当前位置，可用“读取”返回。");
-  });
-  document.getElementById("novel-load-button").addEventListener("click", loadSaved);
+  document.getElementById("novel-save-button").addEventListener("click",function(){openSaves("save");});
+  document.getElementById("novel-load-button").addEventListener("click",function(){openSaves("load");});
   document.getElementById("novel-menu-button").addEventListener("click", toMenu);
   document.getElementById("novel-end-save").addEventListener("click", function () { saveEnding(); showToast("结局已保存。"); });
   document.getElementById("novel-end-menu").addEventListener("click", function () { saveEnding(); window.location.href = "../index.html?fromEnding=1"; });
   document.addEventListener("keydown", function (event) {
+    if (event.key.toLowerCase() === "e") {
+      if (event.repeat || event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey) return;
+      if (event.target.closest('input,textarea,select,[contenteditable="true"]') || currentLine().type === "explore") return;
+      event.preventDefault();advance();return;
+    }
     if (event.key !== "Escape") return;
     if(stage.isOpen())stage.close();
     else if (!els.review.hidden) {els.review.hidden = true;schedulePlayback();}

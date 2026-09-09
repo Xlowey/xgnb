@@ -25,6 +25,7 @@
     var canvas=document.createElement("canvas"); canvas.width=W;canvas.height=H;canvas.className="exploration-character";canvas.setAttribute("aria-hidden","true");map.appendChild(canvas);
     var ctx=canvas.getContext("2d"), keys={}, route=[], closest=null, destroyed=false, frame, last=0, moving=false, facing="down", travelled=0;
     var saved=hooks.state.flags.dormExplorationPosition;
+    if(saved && ["up","down","left","right"].includes(saved.facing))facing=saved.facing;
     var player=saved && Number.isFinite(saved.x) && Number.isFinite(saved.y) && !blocked(saved.x,saved.y)?{x:saved.x,y:saved.y}:{x:835,y:745};
     var hint=document.createElement("p");hint.className="investigation-hint";hint.id="investigation-hint";hint.setAttribute("aria-live","polite");
     var action=document.createElement("button");action.type="button";action.className="nearby-investigation";action.hidden=true;
@@ -32,7 +33,7 @@
     function ready(){return objects.slice(0,4).every(function(o){return hooks.state.flags["examined-"+o.id];});}
     function enabled(o){return o.id!=="wardrobe" || ready();}
     function suspended(){return document.hidden || !hooks.canExplore();}
-    function remember(){hooks.state.flags.dormExplorationPosition={x:player.x,y:player.y};}
+    function remember(){hooks.state.flags.dormExplorationPosition={x:player.x,y:player.y,facing:facing};}
     function stop(){keys={};route=[];if(moving){moving=false;remember();hooks.save();}}
     function distance(o){return Math.hypot(player.x-o.x,player.y-o.y);}
     function update(){
@@ -92,7 +93,7 @@
     function keyup(e){delete keys[e.key.toLowerCase()];}
     function draw(){
       ctx.clearRect(0,0,W,H);
-      window.MuseumPlayerAvatar.draw(ctx,player.x,player.y,facing,moving,travelled);
+      window.MuseumPlayerAvatar.draw(ctx,player.x,player.y,facing,moving,travelled,"dorm");
     }
     function tick(now){
       if(destroyed)return;var dt=Math.min((now-last)/1000||0,.04);last=now;

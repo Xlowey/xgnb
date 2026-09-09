@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>独立注册 · 怪谈博物馆</title>
-  <link rel="stylesheet" href="../css/style.css?v=8">
+  <link rel="stylesheet" href="../css/style.css?v=10">
 </head>
 <body class="login-page-body game-public-body">
   <main class="login-page">
@@ -14,17 +14,18 @@
       <h1>建立档案</h1>
       <form id="register-page-form" class="auth-form">
         <label for="register-page-username">档案名称</label>
-        <input id="register-page-username" type="text" required maxlength="16" placeholder="2—16 个字符">
+        <input id="register-page-username" type="text" required maxlength="16" placeholder="1—16 个字符">
         <label for="register-page-password">设置口令</label>
-        <input id="register-page-password" type="password" required minlength="4" maxlength="32" placeholder="至少 4 位">
+        <input id="register-page-password" type="password" required placeholder="输入口令">
         <label for="register-page-password-again">再次输入口令</label>
-        <input id="register-page-password-again" type="password" required minlength="4" maxlength="32">
+        <input id="register-page-password-again" type="password" required>
         <button class="button button-primary" type="submit">建立档案</button>
       </form>
       <p id="register-page-message" class="status-message" role="status" aria-live="polite"></p>
+      <p class="login-switch">已有档案？<a href="login.html">登录账号</a></p>
     </section>
   </main>
-  <script src="../js/auth.js"></script>
+  <script src="../js/auth.js?v=3"></script>
   <script src="../js/register.js"></script>
 </body>
 </html>

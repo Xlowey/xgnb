@@ -335,7 +335,7 @@
     drawPlayer(); ctx.restore(); drawMiniMap(room);
   }
   function drawPlayer() {
-    window.MuseumPlayerAvatar.draw(ctx, state.playerX, state.playerY, state.facing, avatarMoving && state.mode === "explore" && !overlaysOpen(), avatarTravelled);
+    window.MuseumPlayerAvatar.draw(ctx, state.playerX, state.playerY, state.facing, avatarMoving && state.mode === "explore" && !overlaysOpen(), avatarTravelled, state.roomId);
   }
 
   function renderRooms() { el.rooms.textContent = ""; ["dorm", "hall", "wax"].forEach(function (id) { var button = document.createElement("button"); button.type = "button"; var unlocked = has(state.unlockedRooms, id); button.className = "room-button" + (state.roomId === id ? " current" : ""); button.disabled = !unlocked; button.innerHTML = "<strong>" + roomName(id) + "</strong><small>" + (unlocked ? (state.roomId === id ? "当前位置" : "已探索") : "尚未开放") + "</small>"; if (unlocked) button.addEventListener("click", function () { switchRoom(id); }); el.rooms.appendChild(button); }); }
@@ -350,6 +350,7 @@
   function loadSelected(loaded, label) {
     if (!loaded) { el.savePanelMessage.textContent = "这个存档无法读取。"; return; }
     state = loaded;
+    el.pause.hidden=true;keys={};heldTouch=null;avatarMoving=false;
     if ((state.mode === "novel" || state.mode === "ending") && state.narrativeNode) { MuseumState.save(state, currentUser.id); window.location.href = "pages/novel.html?scene=" + encodeURIComponent(state.narrativeNode); return; }
     state.mode = "explore"; MuseumState.save(state, currentUser.id); el.savePanel.hidden = true; showGame(); renderAll(); showToast("已读取" + label + "。");
   }
@@ -415,6 +416,7 @@
     var loaded = MuseumState.load(currentUser.id);
     if (!loaded) return;
     state = loaded;
+    el.pause.hidden=true;keys={};heldTouch=null;avatarMoving=false;
     if ((state.mode === "novel" || state.mode === "ending") && state.narrativeNode) { window.location.href = "pages/novel.html?scene=" + encodeURIComponent(state.narrativeNode); return; }
     showGame();
     renderAll();
@@ -495,6 +497,7 @@
     renderAll();
     showToast("已载入所选存档。");
   } else if (currentUser && openNewGame) {
+    localStorage.removeItem("museum_novel_quick_" + currentUser.id);
     state = MuseumState.create(currentUser);
     startNovel("scene-01");
   } else if (currentUser && openStoryReturn) {

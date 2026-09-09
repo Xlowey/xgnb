@@ -1,0 +1,5 @@
+.story-save-dialog { width:min(850px,calc(100vw - 32px));max-height:85dvh;box-sizing:border-box;padding:24px;border:1px solid #a8916b;background:#142027;color:#edf1eb; }
+.story-save-dialog::backdrop { background:#000b; }
+.story-save-dialog header,.story-save-dialog nav { display:flex;align-items:center;justify-content:space-between;gap:12px; }
+.story-save-dialog nav { justify-content:flex-start; }.story-save-dialog button { padding:9px 16px;color:#edf1eb;background:#29414b;border:1px solid #61777b;cursor:pointer; }.story-save-dialog button:disabled { opacity:.4;cursor:default; }
+.story-save-grid { display:grid;gap:10px; }.story-save-grid article { display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px;border:1px solid #43545a; }.story-save-grid article div { line-height:1.6; }

@@ -24,7 +24,7 @@
     var canvas=node("canvas","exploration-character");canvas.width=1670;canvas.height=942;
     var source=root.querySelector(".exploration-character");
     if(source)canvas.getContext("2d").drawImage(source,0,0);
-    else {var p=hooks.state.flags.dormExplorationPosition || {x:835,y:745};window.MuseumPlayerAvatar.ready.then(function(){if(canvas.isConnected)window.MuseumPlayerAvatar.draw(canvas.getContext("2d"),p.x,p.y,p.facing || "down",false,0);});}
+    else {var p=hooks.state.flags.dormExplorationPosition || {x:835,y:745};window.MuseumPlayerAvatar.ready.then(function(){if(canvas.isConnected)window.MuseumPlayerAvatar.draw(canvas.getContext("2d"),p.x,p.y,p.facing || "down",false,0,"dorm");});}
     frame.appendChild(canvas);backdrop.appendChild(frame);document.querySelector(".novel-stage").prepend(backdrop);
     function fit(){var b=backdrop.getBoundingClientRect(),scale=Math.min(b.width/1670,Math.max(0,b.height-38)/942);frame.style.width=(1670*scale)+"px";frame.style.height=(942*scale)+"px";}
     backdropObserver=new ResizeObserver(fit);backdropObserver.observe(backdrop);fit();
@@ -108,5 +108,5 @@
   }
   modal.addEventListener("click",function(e){if(e.target===modal)closeModal();});
   modal.addEventListener("keydown",function(e){if(e.key!=="Tab")return;var controls=Array.from(modal.querySelectorAll('button, [tabindex="0"]'));var first=controls[0],last=controls[controls.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}});
-  window.MuseumStage={render:render,bag:bag,close:closeModal,isOpen:function(){return !modal.hidden || window.MuseumInventory.isOpen() || window.MuseumAchievements.isOpen();}};
+  window.MuseumStage={render:render,bag:bag,close:closeModal,isOpen:function(){return (window.MuseumSaveDialog && window.MuseumSaveDialog.isOpen()) || !modal.hidden || window.MuseumInventory.isOpen() || window.MuseumAchievements.isOpen();}};
 }());
