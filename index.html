@@ -24,21 +24,36 @@
     </section>
 
     <section id="game-screen" class="screen game-screen" hidden aria-label="游戏界面">
-      <div class="game-topbar"><div><p class="eyebrow">探索记录 · <span id="room-chapter">序章</span></p><h1 id="room-title">员工宿舍</h1></div><div class="topbar-actions"><button id="log-button" class="button button-small" type="button">回顾文本</button><button id="save-button" class="button button-small" type="button">保存</button><button id="load-button" class="button button-small" type="button">读档</button><button id="back-to-cover-button" class="button button-small" type="button">标题</button></div></div>
+      <section class="map-panel" aria-label="二维房间地图">
+        <div class="map-viewport">
+          <canvas id="explore-canvas" width="960" height="540" aria-label="玩家可以移动的房间地图"></canvas>
+          <div class="map-room-label" aria-live="polite"><p class="eyebrow">探索记录 · <span id="room-chapter">序章</span></p><h1 id="room-title">员工宿舍</h1></div>
+          <div id="interaction-prompt" class="interaction-prompt" hidden></div>
+          <div id="map-toast" class="map-toast" role="status" aria-live="polite"></div>
+        </div>
+        <div class="map-controls"><span>WASD / 方向键移动</span><span>靠近物品后按 E 调查</span><span>Esc 暂停</span></div>
+        <div class="touch-controls" aria-label="移动控制"><button data-move="up" type="button" aria-label="向上">▲</button><div><button data-move="left" type="button" aria-label="向左">◀</button><button data-move="down" type="button" aria-label="向下">▼</button><button data-move="right" type="button" aria-label="向右">▶</button></div></div>
+      </section>
 
-      <div class="explore-layout">
-        <section class="map-panel" aria-label="二维房间地图">
-          <div class="map-viewport"><canvas id="explore-canvas" width="960" height="540" aria-label="玩家可以移动的房间地图"></canvas><canvas id="mini-map" width="200" height="120" aria-label="当前房间小地图"></canvas><div id="interaction-prompt" class="interaction-prompt" hidden></div><div id="map-toast" class="map-toast" role="status" aria-live="polite"></div></div>
-          <div class="map-controls"><span>WASD / 方向键移动</span><span>靠近物品后按 E 调查</span></div>
-          <div class="touch-controls" aria-label="移动控制"><button data-move="up" type="button" aria-label="向上">▲</button><div><button data-move="left" type="button" aria-label="向左">◀</button><button data-move="down" type="button" aria-label="向下">▼</button><button data-move="right" type="button" aria-label="向右">▶</button></div></div>
-        </section>
-
-        <aside class="explore-sidebar" aria-label="探索信息">
-          <section class="info-card"><div class="card-heading"><span>当前状态</span><span class="system-dot" aria-label="系统在线"></span></div><dl class="stat-list"><div><dt>生存点</dt><dd id="hp-value">25</dd></div><div><dt>系统信任</dt><dd id="trust-value">50</dd></div><div><dt>线索</dt><dd id="clue-value">0</dd></div></dl><p id="task-value" class="task-text">调查宿舍，寻找离开的办法。</p></section>
-          <section class="info-card"><div class="card-heading"><span>馆内区域</span><button id="map-toggle-button" class="text-button" type="button">收起</button></div><div id="room-list" class="room-list"></div></section>
-          <section class="info-card"><div class="card-heading"><span>调查记录</span><span id="achievement-count">0 / 4</span></div><ul id="achievement-list" class="achievement-list"></ul></section>
-        </aside>
-      </div>
+      <section id="pause-overlay" class="pause-overlay" hidden aria-label="暂停菜单">
+        <div class="pause-card" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+          <p class="eyebrow">怪谈博物馆 · 探索中</p>
+          <h2 id="pause-title">游戏暂停</h2>
+          <button id="resume-button" class="button button-primary" type="button">继续探索</button>
+          <button id="save-button" class="button" type="button">保存游戏</button>
+          <button id="load-button" class="button" type="button">读取存档</button>
+          <button id="log-button" class="button" type="button">回顾文本</button>
+          <details class="pause-help"><summary>操作说明</summary><p>WASD / 方向键移动；靠近物品后按 E 调查；Esc 暂停或继续。</p></details>
+          <section class="pause-status" aria-label="当前状态">
+            <div class="card-heading"><span>当前状态</span><span class="system-dot" aria-label="系统在线"></span></div>
+            <dl class="stat-list"><div><dt>生存点</dt><dd id="hp-value">25</dd></div><div><dt>系统信任</dt><dd id="trust-value">50</dd></div><div><dt>线索</dt><dd id="clue-value">0</dd></div></dl>
+            <p id="task-value" class="task-text">调查宿舍，寻找离开的办法。</p>
+            <div class="card-heading pause-section-heading"><span>馆内区域</span></div><div id="room-list" class="room-list"></div>
+            <div class="card-heading pause-section-heading"><span>调查记录</span><span id="achievement-count">0 / 4</span></div><ul id="achievement-list" class="achievement-list"></ul>
+          </section>
+          <button id="back-to-cover-button" class="button button-quiet" type="button">保存并返回标题</button>
+        </div>
+      </section>
 
       <section id="rules-overlay" class="modal-overlay" hidden aria-label="规则小游戏"><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="rules-title"><div class="modal-heading"><span>现场记录 · 小游戏</span><button id="rules-close" class="text-button" type="button">返回地图</button></div><h2 id="rules-title">哪一条规则值得相信？</h2><p id="rules-question">血字纸条写着：远离红色制服的工作人员。你在大厅看见了红制服员工，应该怎么做？</p><div id="rules-options" class="modal-options"></div><p id="rules-feedback" class="feedback" role="status" aria-live="polite"></p></div></section>
       <p id="game-message" class="game-message" role="status" aria-live="polite"></p>
@@ -50,6 +65,6 @@
   </main>
   <script src="js/auth.js?v=3"></script>
   <script src="js/state.js?v=5"></script>
-  <script src="js/game.js?v=9"></script>
+  <script src="js/game.js?v=10"></script>
 </body>
 </html>

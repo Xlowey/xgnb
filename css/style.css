@@ -15,6 +15,237 @@
   font-family: "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
 }
 
+/* ===== 探索模式：地图即界面 =====
+   地图探索时只保留场景、提示和移动操作，所有管理信息统一放入 Esc 暂停菜单。 */
+/* 旧版规则保留在注释中，实际规则统一在文件末尾。 */
+/*
+.game-screen {
+  position: relative;
+  display: block;
+  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
+  padding: 0;
+  background: #0b1014;
+}
+
+.game-topbar,
+.explore-sidebar {
+  display: none !important;
+}
+
+.explore-layout {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+.map-panel {
+  width: 100%;
+  height: 100%;
+}
+
+.map-viewport {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  border: 0;
+  box-shadow: none;
+}
+
+#explore-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  aspect-ratio: auto;
+}
+
+#mini-map {
+  display: none !important;
+}
+
+.map-room-label {
+  position: absolute;
+  z-index: 3;
+  top: 24px;
+  left: 28px;
+  max-width: min(420px, 70vw);
+  pointer-events: none;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, .85);
+}
+
+.map-room-label .eyebrow {
+  margin: 0 0 4px;
+  color: var(--accent-strong);
+  font-size: .78rem;
+}
+
+.map-room-label h1 {
+  margin: 0;
+  color: #f2f0e7;
+  font-size: clamp(1.2rem, 2.8vw, 2.1rem);
+  letter-spacing: .12em;
+}
+
+.map-controls {
+  position: fixed;
+  z-index: 4;
+  right: 24px;
+  bottom: 18px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid rgba(214, 231, 225, .2);
+  color: rgba(237, 241, 235, .78);
+  background: rgba(5, 9, 12, .64);
+  font-size: .78rem;
+  backdrop-filter: blur(8px);
+}
+
+.map-controls span + span::before {
+  margin-right: 10px;
+}
+
+.game-message {
+  position: fixed;
+  z-index: 5;
+  right: 24px;
+  bottom: 58px;
+  width: auto;
+  max-width: min(480px, calc(100vw - 48px));
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--accent-strong);
+  background: rgba(5, 9, 12, .72);
+  pointer-events: none;
+}
+
+.pause-overlay {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(3, 7, 9, .7);
+  backdrop-filter: blur(6px);
+}
+
+.pause-overlay[hidden] {
+  display: none;
+}
+
+.pause-card {
+  width: min(430px, 100%);
+  max-height: min(720px, calc(100vh - 32px));
+  overflow: auto;
+  padding: clamp(22px, 4vw, 34px);
+  border: 1px solid rgba(155, 214, 212, .45);
+  background: rgba(15, 24, 29, .97);
+  box-shadow: 0 26px 90px rgba(0, 0, 0, .5);
+}
+
+.pause-card h2 {
+  margin: 4px 0 20px;
+  color: var(--text);
+  font-size: clamp(1.6rem, 4vw, 2.1rem);
+}
+
+.pause-card > .button {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.pause-help {
+  margin-top: 20px;
+  border-top: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--muted);
+}
+
+.pause-help summary {
+  padding: 12px 0;
+  cursor: pointer;
+  color: var(--accent);
+}
+
+.pause-help p {
+  margin: 0 0 14px;
+  line-height: 1.7;
+}
+
+.pause-status {
+  margin-top: 18px;
+  padding-top: 2px;
+}
+
+.pause-status .stat-list {
+  margin: 10px 0 0;
+}
+
+.pause-status .task-text {
+  margin: 10px 0 14px;
+  font-size: .9rem;
+}
+
+.pause-section-heading {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.pause-status .room-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.pause-status .room-button {
+  min-height: 58px;
+  padding: 7px;
+}
+
+.pause-status .room-button strong,
+.pause-status .room-button small {
+  font-size: .72rem;
+}
+
+.pause-status .achievement-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin-top: 8px;
+}
+
+.pause-card .button-quiet {
+  margin-top: 18px;
+}
+
+@media (max-width: 620px) {
+  .map-room-label {
+    top: 16px;
+    left: 16px;
+  }
+
+  .map-controls {
+    right: 12px;
+    bottom: 12px;
+    max-width: calc(100vw - 24px);
+    font-size: .7rem;
+  }
+
+  .pause-overlay {
+    padding: 12px;
+  }
+
+  .pause-card .room-list,
+  .pause-card .achievement-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+*/
+
 * {
   box-sizing: border-box;
 }
@@ -1343,4 +1574,42 @@ input:focus {
   .save-slot-actions .button {
     flex: 1;
   }
+}
+
+/* ===== 探索模式布局覆盖（位于全部响应式规则之后） ===== */
+.game-screen { position: relative; display: block; min-height: 100vh; height: 100vh; overflow: hidden; padding: 0; background: #0b1014; }
+.game-topbar, .explore-sidebar { display: none !important; }
+.explore-layout { display: block; width: 100%; height: 100%; margin: 0; }
+.map-panel, .map-viewport { width: 100%; height: 100%; min-height: 100%; }
+.map-viewport { display: grid; place-items: center; border: 0; box-shadow: none; background: #0b1014; }
+#explore-canvas { display: block; width: 100%; height: 100%; min-height: 0; object-fit: cover; object-position: center; }
+#mini-map { display: none !important; }
+.map-room-label { position: absolute; z-index: 3; top: 24px; left: 28px; max-width: min(420px, 70vw); pointer-events: none; text-shadow: 0 2px 16px rgba(0, 0, 0, .85); }
+.map-room-label .eyebrow { margin: 0 0 4px; color: var(--accent-strong); font-size: .78rem; }
+.map-room-label h1 { margin: 0; color: #f2f0e7; font-size: clamp(1.2rem, 2.8vw, 2.1rem); letter-spacing: .12em; }
+.map-controls { position: fixed; z-index: 4; right: 24px; bottom: 18px; margin: 0; padding: 8px 12px; border: 1px solid rgba(214, 231, 225, .2); color: rgba(237, 241, 235, .78); background: rgba(5, 9, 12, .64); font-size: .78rem; backdrop-filter: blur(8px); }
+.map-controls span + span::before { margin-right: 10px; }
+.game-message { position: fixed; z-index: 5; right: 24px; bottom: 58px; width: auto; max-width: min(480px, calc(100vw - 48px)); margin: 0; padding: 8px 12px; color: var(--accent-strong); background: rgba(5, 9, 12, .72); pointer-events: none; }
+.pause-overlay { position: fixed; z-index: 30; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(3, 7, 9, .7); backdrop-filter: blur(6px); }
+.pause-overlay[hidden] { display: none; }
+.pause-card { width: min(430px, 100%); max-height: min(720px, calc(100vh - 32px)); overflow: auto; padding: clamp(22px, 4vw, 34px); border: 1px solid rgba(155, 214, 212, .45); background: rgba(15, 24, 29, .97); box-shadow: 0 26px 90px rgba(0, 0, 0, .5); }
+.pause-card h2 { margin: 4px 0 20px; color: var(--text); font-size: clamp(1.6rem, 4vw, 2.1rem); }
+.pause-card > .button { width: 100%; margin-top: 10px; }
+.pause-help { margin-top: 20px; border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); color: var(--muted); }
+.pause-help summary { padding: 12px 0; cursor: pointer; color: var(--accent); }
+.pause-help p { margin: 0 0 14px; line-height: 1.7; }
+.pause-status { margin-top: 18px; padding-top: 2px; }
+.pause-status .stat-list { margin: 10px 0 0; }
+.pause-status .task-text { margin: 10px 0 14px; font-size: .9rem; }
+.pause-section-heading { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.pause-status .room-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+.pause-status .room-button { min-height: 58px; padding: 7px; }
+.pause-status .room-button strong, .pause-status .room-button small { font-size: .72rem; }
+.pause-status .achievement-list { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; margin-top: 8px; }
+.pause-card .button-quiet { margin-top: 18px; }
+@media (max-width: 620px) {
+  .map-room-label { top: 16px; left: 16px; }
+  .map-controls { right: 12px; bottom: 12px; max-width: calc(100vw - 24px); font-size: .7rem; }
+  .pause-overlay { padding: 12px; }
+  .pause-card .room-list, .pause-card .achievement-list { grid-template-columns: 1fr 1fr; }
 }

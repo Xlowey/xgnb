@@ -93,6 +93,7 @@
     canvas: canvas, roomTitle: document.getElementById("room-title"), roomChapter: document.getElementById("room-chapter"), prompt: document.getElementById("interaction-prompt"), toast: document.getElementById("map-toast"), gameMessage: document.getElementById("game-message"),
     hp: document.getElementById("hp-value"), trust: document.getElementById("trust-value"), clues: document.getElementById("clue-value"), task: document.getElementById("task-value"), rooms: document.getElementById("room-list"), achievements: document.getElementById("achievement-list"), achievementCount: document.getElementById("achievement-count"),
     rules: document.getElementById("rules-overlay"), rulesOptions: document.getElementById("rules-options"), rulesFeedback: document.getElementById("rules-feedback"),
+    pause: document.getElementById("pause-overlay"), resumeButton: document.getElementById("resume-button"),
     logPanel: document.getElementById("log-panel"), logUserName: document.getElementById("log-user-name"), logList: document.getElementById("dialogue-log-list"),
     savePanel: document.getElementById("save-panel"), savePanelTitle: document.getElementById("save-panel-title"), savePanelMessage: document.getElementById("save-panel-message"), saveUserName: document.getElementById("save-user-name"), saveModeButton: document.getElementById("save-mode-button"), loadModeButton: document.getElementById("load-mode-button"), saveSlotList: document.getElementById("save-slot-list")
   };
@@ -115,6 +116,9 @@
   function showCover() {
     el.cover.hidden = false;
     el.game.hidden = true;
+    if (el.pause) el.pause.hidden = true;
+    keys = {};
+    heldTouch = null;
     if (el.currentUser) el.currentUser.textContent = currentUser ? currentUser.username : "未登录";
     var loginButton = document.getElementById("cover-login-button");
     if (loginButton) loginButton.textContent = "登录档案";
@@ -125,8 +129,25 @@
     el.cover.hidden = true;
     el.game.hidden = false;
   }
+  function openPauseMenu() {
+    if (!state || state.mode !== "explore" || !el.pause) return;
+    state.mode = "paused";
+    keys = {};
+    heldTouch = null;
+    renderStats();
+    renderRooms();
+    el.pause.hidden = false;
+  }
+  function closePauseMenu() {
+    if (!el.pause) return;
+    el.pause.hidden = true;
+    if (state) state.mode = "explore";
+    keys = {};
+    heldTouch = null;
+    renderAll();
+  }
   function overlaysOpen() {
-    return (el.savePanel && !el.savePanel.hidden) || (el.logPanel && !el.logPanel.hidden) || (el.rules && !el.rules.hidden);
+    return (el.savePanel && !el.savePanel.hidden) || (el.logPanel && !el.logPanel.hidden) || (el.rules && !el.rules.hidden) || (el.pause && !el.pause.hidden);
   }
   function roomName(id) { return rooms[id] ? rooms[id].title : "未知地点"; }
 
@@ -166,7 +187,7 @@
   }
   function switchRoom(id, x, y) {
     if (!rooms[id]) return;
-    state.roomId = id; state.currentNode = id; state.chapter = rooms[id].chapter; state.playerX = x === undefined ? rooms[id].spawn.x : x; state.playerY = y === undefined ? rooms[id].spawn.y : y; state.mode = "explore"; state.task = tasks[id];
+    state.roomId = id; state.currentNode = id; state.chapter = rooms[id].chapter; state.playerX = x === undefined ? rooms[id].spawn.x : x; state.playerY = y === undefined ? rooms[id].spawn.y : y; state.mode = "explore"; if (el.pause) el.pause.hidden = true; state.task = tasks[id];
     addUnique(state.unlockedRooms, id); renderAll(); save("已进入" + rooms[id].title + "。");
   }
 
@@ -397,10 +418,10 @@
   document.getElementById("log-button").addEventListener("click", openLogPanel);
   document.getElementById("close-log-panel").addEventListener("click", function () { el.logPanel.hidden = true; });
   el.logPanel.addEventListener("click", function (event) { if (event.target === el.logPanel) el.logPanel.hidden = true; });
-  document.getElementById("back-to-cover-button").addEventListener("click", function () { save("已返回标题，进度已保存。"); showCover(); });
+  el.resumeButton.addEventListener("click", closePauseMenu);
+  document.getElementById("back-to-cover-button").addEventListener("click", function () { if (state) state.mode = "explore"; save("已返回标题，进度已保存。"); showCover(); });
   var logoutButton = document.getElementById("logout-button");
   if (logoutButton) logoutButton.addEventListener("click", function () { MuseumAuth.logout(); currentUser = null; state = null; showCover(); });
-  document.getElementById("map-toggle-button").addEventListener("click", function () { document.querySelector(".explore-sidebar").classList.toggle("collapsed"); this.textContent = document.querySelector(".explore-sidebar").classList.contains("collapsed") ? "展开" : "收起"; });
   document.getElementById("rules-close").addEventListener("click", function () { el.rules.hidden = true; if (state) state.mode = "explore"; renderAll(); save(); });
   document.addEventListener("keydown", function (event) {
     var key = event.key;
@@ -410,7 +431,8 @@
       else if (el.rules && !el.rules.hidden) {
         el.rules.hidden = true;
         if (state) state.mode = "explore";
-      }
+      } else if (el.pause && !el.pause.hidden) closePauseMenu();
+      else if (el.game && !el.game.hidden && state && state.mode === "explore") openPauseMenu();
       return;
     }
     if (overlaysOpen()) {
@@ -424,7 +446,23 @@
     }
   });
   document.addEventListener("keyup", function (event) { keys[event.key] = false; });
-  el.canvas.addEventListener("click", function (event) { if (!state || state.mode !== "explore") return; var rect = canvas.getBoundingClientRect(); var scaleX = canvas.width / rect.width; var scaleY = canvas.height / rect.height; var x = event.clientX - rect.left; var y = event.clientY - rect.top; var worldX = x * scaleX + camera.x; var worldY = y * scaleY + camera.y; var object = currentRoom().objects.slice().sort(function (a, b) { return Math.hypot(worldX - a.x, worldY - a.y) - Math.hypot(worldX - b.x, worldY - b.y); })[0]; if (!object || Math.hypot(worldX - object.x, worldY - object.y) >= object.r * 1.1) return; var playerDistance = Math.hypot(state.playerX - object.x, state.playerY - object.y); if (playerDistance < object.r) interact(object); else showToast("请先走近「" + object.label + "」再调查。"); });
+  el.canvas.addEventListener("click", function (event) {
+    if (!state || state.mode !== "explore") return;
+    var rect = canvas.getBoundingClientRect();
+    var fitScale = Math.max(rect.width / canvas.width, rect.height / canvas.height);
+    var renderedWidth = canvas.width * fitScale;
+    var renderedHeight = canvas.height * fitScale;
+    var offsetX = (rect.width - renderedWidth) / 2;
+    var offsetY = (rect.height - renderedHeight) / 2;
+    var x = (event.clientX - rect.left - offsetX) / fitScale;
+    var y = (event.clientY - rect.top - offsetY) / fitScale;
+    var worldX = x + camera.x;
+    var worldY = y + camera.y;
+    var object = currentRoom().objects.slice().sort(function (a, b) { return Math.hypot(worldX - a.x, worldY - a.y) - Math.hypot(worldX - b.x, worldY - b.y); })[0];
+    if (!object || Math.hypot(worldX - object.x, worldY - object.y) >= object.r * 1.1) return;
+    var playerDistance = Math.hypot(state.playerX - object.x, state.playerY - object.y);
+    if (playerDistance < object.r) interact(object); else showToast("请先走近「" + object.label + "」再调查。");
+  });
   document.querySelectorAll("[data-move]").forEach(function (button) { button.addEventListener("pointerdown", function () { heldTouch = button.getAttribute("data-move"); }); button.addEventListener("pointerup", function () { heldTouch = null; }); button.addEventListener("pointerleave", function () { heldTouch = null; }); });
   var pendingResult = currentUser ? consumeBattleResult() : null;
   var query = new URLSearchParams(window.location.search);

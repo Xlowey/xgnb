@@ -78,7 +78,7 @@
     state.achievements = Array.isArray(state.achievements) ? state.achievements : [];
     state.dialogueLog = Array.isArray(state.dialogueLog) ? state.dialogueLog : [];
     state.narrativeLogKeys = Array.isArray(state.narrativeLogKeys) ? state.narrativeLogKeys : [];
-    if (state.mode === "dialogue" || state.mode === "mini" || state.mode === "battle") state.mode = "explore";
+    if (state.mode === "dialogue" || state.mode === "mini" || state.mode === "battle" || state.mode === "paused") state.mode = "explore";
     if (loaded.currentNode && !loaded.roomId) state.roomId = loaded.currentNode;
     if (typeof state.playerX !== "number") state.playerX = state.roomId === "hall" ? 260 : 300;
     if (typeof state.playerY !== "number") state.playerY = state.roomId === "dorm" ? 520 : 460;
