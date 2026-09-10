@@ -1,0 +1,65 @@
+中华美食网站 —— 实拍菜品图片来源
+
+说明
+本次重新搜集了九道菜的真实菜品照片，全部为公开网页中的实拍图，不使用 AI 生成图、AI 扩图或 AI 重绘。图片下载后仅做本地 JPEG 转换/压缩，保留菜品本身，不去除水印。
+
+页面中使用本地 images/ 文件，避免浏览时依赖原站外链。图片来源链接在首页“内容与图片来源”中可展开查看，详情页主图下方也保留来源入口。当前用途为课程学习展示；如用于公开发布，应按原站规则另行取得许可。
+
+1. 东坡肘子
+文件：images/dongpo-pork-hock.jpg
+来源页：https://www.tesegu.com/techan/43718.html
+来源标题：东坡肘子详细介绍：特点、历史（特色谷）
+取图链接：https://www.tesegu.com/public/upload/photos/000/001/546/62/8317525270ee923b7e4ba8e1230a72869a8E8F.jpg
+
+2. 宫保鸡丁
+文件：images/kung-pao-chicken.jpg
+来源页：https://www.maigoo.com/citiao/152601.html
+来源标题：闻名中外特色传统名菜宫保鸡丁（买购网）
+取图链接：https://image.maigoo.com/upload/images/20220830/11182526211_640x426.jpg
+
+3. 毛血旺
+文件：images/maoxuewang.jpg
+来源页：https://k.sina.com.cn/article_2811683960_a796e478001007p61.html
+来源标题：经典川菜毛血旺（新浪新闻）
+取图链接：https://n.sinaimg.cn/sinacn15/534/w800h534/20180524/09a3-haysviy0076080.jpg
+
+4. 白切鸡
+文件：images/white-cut-chicken.jpg
+来源页：https://www.wecook123.com/%E7%99%BD%E6%96%AC%E9%9B%9E_0mdu607qzo-jpg/
+来源标题：白斩鸡｜料理123
+取图链接：https://www.wecook123.com/wp-content/uploads/2017/05/%E7%99%BD%E6%96%AC%E9%9B%9E_0Mdu607QzO-768x576.jpg
+
+5. 蜜汁叉烧
+文件：images/char-siu.jpg
+来源页：https://m.sohu.com/a/1006842839_122606066
+来源标题：蜜汁脆边，软嫩多汁！手把手教你做广东叉烧肉（搜狐）
+取图链接：https://q4.itc.cn/images01/20260408/b0e4d08770c14731933d0f304b70a414.jpeg
+
+6. 清蒸鲈鱼
+文件：images/steamed-sea-bass.jpg
+来源页：https://m.baidu.com/bh/m/detail/ar_8850397343068329908?frsrcid=rec
+来源标题：秋天，抓紧吃它！高蛋白低脂肪（百度页面）
+取图链接：https://pic.rmb.bdstatic.com/bjh/240905/dump/b5a1dc5a330052196cde3245d799e959.jpeg
+
+7. 龙井虾仁
+文件：images/longjing-shrimp.jpg
+来源页：https://cookidoo.international/recipes/recipe/en/r165017
+来源标题：龙凤呈祥龙井虾｜Cookidoo / Thermomix
+取图链接：https://assets.tmecosys.com/image/upload/t_web_rdp_recipe_584x480_1_5x/img/recipe/ras/Assets/0CF61364-1254-4B62-B96E-D2872DE39C2F/Derivates/C5DEC371-1B85-494D-9D10-0722E661EF4D.jpg
+
+8. 西湖醋鱼
+文件：images/west-lake-vinegar-fish.jpg
+来源页：https://feeds-drcn.cloud.huawei.com.cn/landingpage/latest?cpid=666&ctype=news&docid=1051166OCMS74bddfb68d050681_si_-2&dy_scenario=relate&ifl=zh_CN&r=CN&tn=57202e7d25e26452a6b04bccf5151f4d69950713cb26765dbe0db3a050c6cb22&to_app=hwbrowser
+来源标题：西湖醋鱼图文页面（华为浏览器资讯页）
+取图链接：https://contentcenter-drcn.dbankcdn.cn/img/pub_1/Browser_contentImg_1166_8/64/v3/1051166OCMS74bddfb68d050681_si_-2/feddb7732eef479895281ab592604e2e_5_0/hd.webp
+
+9. 东坡肉
+文件：images/dongpo-pork.jpg
+来源页：https://www.thechinajourney.com/hangzhou-travel-guide/
+来源标题：2026 Hangzhou Travel Guide: West Lake, Tea & Jiangnan Charm（The China Journey）
+取图链接：https://www.thechinajourney.com/wp-content/uploads/2025/07/Dongpo-Pork-hangzhou-e1751364709628.webp
+
+核对记录
+- 每个文件均可读取并与菜名形态对应。
+- 九张图片均为 JPEG，存放在网站本地 images/ 目录。
+- 网站代码不会再标注或引用 AI 生成图片。
