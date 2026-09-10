@@ -30,8 +30,10 @@
     var hint=document.createElement("p");hint.className="investigation-hint";hint.id="investigation-hint";hint.setAttribute("aria-live","polite");
     var action=document.createElement("button");action.type="button";action.className="nearby-investigation";action.hidden=true;
     var pins=[];
-    function ready(){return objects.slice(0,4).every(function(o){return hooks.state.flags["examined-"+o.id];});}
-    function enabled(o){return o.id!=="wardrobe" || ready();}
+    function ready(){return objects.slice(0,4).some(function(o){return hooks.state.flags["examined-"+o.id];});}
+    // The wardrobe is a valid first discovery. Do not force an arbitrary
+    // four-object checklist before the player can follow the script.
+    function enabled(){return true;}
     function suspended(){return document.hidden || !hooks.canExplore();}
     function remember(){hooks.state.flags.dormExplorationPosition={x:player.x,y:player.y,facing:facing};}
     function stop(){keys={};route=[];if(moving){moving=false;remember();hooks.save();}}
@@ -39,16 +41,17 @@
     function distance(o){return Math.hypot(player.x-o.x,player.y-o.y);}
     function update(){
       closest=objects.filter(function(o){return enabled(o)&&distance(o)<115;}).sort(function(a,b){return distance(a)-distance(b);})[0] || null;
-      pins.forEach(function(pin,i){var o=objects[i];pin.hidden=!enabled(o);pin.classList.toggle("is-near",o===closest);pin.classList.toggle("is-examined",!!hooks.state.flags["examined-"+o.id]);});
+      pins.forEach(function(pin,i){var o=objects[i];pin.hidden=!enabled(o);pin.classList.toggle("is-near",o===closest);pin.classList.toggle("is-distant",!!closest&&o!==closest);pin.classList.toggle("is-examined",!!hooks.state.flags["examined-"+o.id]);});
       action.hidden=!closest;
       if(closest){action.textContent="E · "+(closest.id==="wardrobe"?"打开":"调查")+closest.name;action.style.left=(player.x/W*100)+"%";action.style.top=((player.y+25)/H*100)+"%";}
-      var text=ready()?"打开更衣柜":"调查电视、影碟机、木桌和床底";
+      var text=closest?(closest.id==="wardrobe"?"E 打开更衣柜":"E 调查"):(ready()?"继续寻找房间里的异常":"探索宿舍，靠近一个物件");
       if(hint.textContent!==text)hint.textContent=text;
       map.dataset.playerX=player.x.toFixed(1);map.dataset.playerY=player.y.toFixed(1);
     }
     function interact(){
       if(suspended() || !closest)return;
       var target=closest;stop();remember();hooks.save();
+      if(window.MuseumTutorial && !window.MuseumTutorial.isDone("investigation")) window.MuseumTutorial.complete("investigation");
       if(target.id==="wardrobe"){hooks.state.flags.cabinetOpen=true;hooks.setAdvance(true);hooks.advance();}
       else inspect(target);
     }
@@ -106,11 +109,18 @@
         dx=dx/len*230*dt;dy=dy/len*230*dt;var steps=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dy))/7));
         for(var i=0;i<steps;i++){if(!blocked(player.x+dx/steps,player.y)){player.x+=dx/steps;moving=true;}if(!blocked(player.x,player.y+dy/steps)){player.y+=dy/steps;moving=true;}}
         facing=Math.abs(dx)>Math.abs(dy)?(dx>0?"right":"left"):(dy>0?"down":"up");travelled+=Math.hypot(dx,dy);remember();
+        if(moving && window.MuseumTutorial && !window.MuseumTutorial.isDone("movement")) window.MuseumTutorial.complete("movement");
       }
       if(wasMoving&&!moving)hooks.save();update();draw();frame=requestAnimationFrame(tick);
+      if(window.MuseumTutorial && window.MuseumTutorial.isDone("movement") && !window.MuseumTutorial.isDone("investigation")) window.MuseumTutorial.show("investigation",{kind:"map",title:"靠近一个物件",body:"走到桌子、电视、床边或更衣柜旁，按 E 调查；只高亮最近的物件。"});
     }
     document.addEventListener("keydown",keydown);document.addEventListener("keyup",keyup);window.addEventListener("blur",stop);document.addEventListener("visibilitychange",stop);window.addEventListener("pagehide",saveBeforeLeave);window.addEventListener("beforeunload",saveBeforeLeave);
-    update();draw();map.focus({preventScroll:true});frame=requestAnimationFrame(tick);
+    update();draw();map.focus({preventScroll:true});
+    if(window.MuseumTutorial){
+      if(!window.MuseumTutorial.isDone("movement")) window.MuseumTutorial.show("movement",{kind:"map",title:"先熟悉一下移动",body:"用 WASD 或方向键走两步。也可以点击地面，让角色走到那里。"});
+      else if(!window.MuseumTutorial.isDone("investigation")) window.MuseumTutorial.show("investigation",{kind:"map",title:"靠近一个物件",body:"走到桌子、电视、床边或更衣柜旁，按 E 调查；只高亮最近的物件。"});
+    }
+    frame=requestAnimationFrame(tick);
     return function(){destroyed=true;cancelAnimationFrame(frame);observer.disconnect();document.removeEventListener("keydown",keydown);document.removeEventListener("keyup",keyup);window.removeEventListener("blur",stop);document.removeEventListener("visibilitychange",stop);window.removeEventListener("pagehide",saveBeforeLeave);window.removeEventListener("beforeunload",saveBeforeLeave);};
   }
   window.MuseumDormExploration={mount:mount};

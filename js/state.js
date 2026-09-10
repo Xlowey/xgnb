@@ -16,10 +16,20 @@
     battleDemoCompleted: false,
     waxDoorUnlocked: false,
     foundContract: false,
-    understoodTruth: false
+    understoodTruth: false,
+    tutorialChoiceSaved: false
+  };
+  var DEFAULT_TUTORIAL = {
+    movement: false,
+    investigation: false,
+    dialogue: false,
+    inventory: false,
+    itemRead: false,
+    save: false,
+    branch: false
   };
   var DEFAULT_STATE = {
-    schemaVersion: 4,
+    schemaVersion: 5,
     userId: null,
     playerName: "",
     characterName: "",
@@ -54,6 +64,7 @@
     returnScene: null,
     ending: null,
     endingComplete: false,
+    tutorial: DEFAULT_TUTORIAL,
     savedAt: null,
     flags: DEFAULT_FLAGS
   };
@@ -70,7 +81,8 @@
     var state = createState({ id: userId, username: loaded.playerName || "" });
     Object.keys(state).forEach(function (key) { if (loaded[key] !== undefined) state[key] = loaded[key]; });
     state.userId = userId;
-    state.schemaVersion = 4;
+    state.schemaVersion = 5;
+    state.tutorial = Object.assign({}, DEFAULT_TUTORIAL, loaded.tutorial || {});
     state.flags = Object.assign({}, DEFAULT_FLAGS, loaded.flags || {});
     state.clues = Array.isArray(state.clues) ? state.clues : [];
     state.inventory = Array.isArray(state.inventory) ? state.inventory : [];

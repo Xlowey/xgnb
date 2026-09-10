@@ -96,6 +96,7 @@ body[data-event="explore"] #novel-skip-button { display:none; }
 .investigation-pin::after { content:""; position:absolute; inset:11px; transform:rotate(45deg); background:#e1c792ba; box-shadow:0 0 0 2px #382b1ca8,0 0 12px #eacd8870; }
 .investigation-pin.is-examined::after { background:#a5b8af66; box-shadow:0 0 0 1px #13251b88; }
 .investigation-pin.is-near::after { background:#fff3c9; box-shadow:0 0 0 2px #604621,0 0 16px #ffe2a5; }
+.investigation-pin.is-distant { opacity:.28; }
 .nearby-investigation { position:absolute; transform:translateX(-50%); white-space:nowrap; border:1px solid #c4a36980; border-radius:4px; background:#10191eed; color:#f0dbb6; padding:7px 12px; font:13px system-ui,sans-serif; box-shadow:0 4px 16px #0008; cursor:pointer; }
 .investigation-hint { position:absolute; bottom:4px; left:0; right:0; margin:0; text-align:center; color:#c1b496; font-size:13px; line-height:26px; pointer-events:none; }
 .observation-panel { width:min(510px,100%); padding:20px; max-height:100%; overflow:auto; }

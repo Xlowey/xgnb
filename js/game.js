@@ -97,6 +97,11 @@
     savePanel: document.getElementById("save-panel"), savePanelTitle: document.getElementById("save-panel-title"), savePanelMessage: document.getElementById("save-panel-message"), saveUserName: document.getElementById("save-user-name"), saveModeButton: document.getElementById("save-mode-button"), loadModeButton: document.getElementById("load-mode-button"), saveSlotList: document.getElementById("save-slot-list")
   };
 
+  window.MuseumTutorial.bind({
+    getState: function () { return state; },
+    save: function () { save(); }
+  });
+
   function currentRoom() { return rooms[state && state.roomId] || rooms.dorm; }
   function addUnique(list, value) { if (list.indexOf(value) === -1) list.push(value); }
   function has(list, value) { return list.indexOf(value) !== -1; }
@@ -104,6 +109,16 @@
   function addClue(id) { addUnique(state.clues, id); }
   function addItem(id) { addUnique(state.inventory, id); }
   function showToast(message) { if (!el.toast) return; el.toast.textContent = message; el.toast.classList.add("visible"); window.clearTimeout(showToast.timer); showToast.timer = window.setTimeout(function () { el.toast.classList.remove("visible"); }, 2600); }
+  function showMapTutorial() {
+    if (!state || !el.game || el.game.hidden || overlaysOpen()) return;
+    if (!window.MuseumTutorial.isDone("movement")) {
+      window.MuseumTutorial.show("movement", { kind: "map", title: "先熟悉一下移动", body: "用 WASD 或方向键走两步。靠近物件时，地图会告诉你下一步能做什么。" });
+    } else if (!window.MuseumTutorial.isDone("investigation")) {
+      window.MuseumTutorial.show("investigation", { kind: "map", title: "靠近一个物件", body: "走到物件旁边，按 E 调查；点击地图上的物件只能作为辅助入口。" });
+    } else if (state.roomId === "hall" && !window.MuseumTutorial.isDone("save")) {
+      window.MuseumTutorial.show("save", { kind: "save", title: "进度已经自动保存", body: "重要调查和场景切换会自动保存。第一次想保留节点时，可以打开暂停菜单保存一个手动存档。", action: function () { openTutorialSave(); }, actionLabel: "现在保存一次" });
+    }
+  }
   function save(message) { if (!currentUser || !state) return; MuseumState.save(state, currentUser.id); lastSave = performance.now(); if (message && el.gameMessage) el.gameMessage.textContent = message; refreshContinue(); }
   function saveBeforeLeave() {
     if (!currentUser || !state || (el.game && el.game.hidden)) return;
@@ -150,6 +165,7 @@
     keys = {};
     heldTouch = null;
     renderAll();
+    showMapTutorial();
   }
   function overlaysOpen() {
     return window.MuseumInventory.isOpen() || window.MuseumAchievements.isOpen() || (el.savePanel && !el.savePanel.hidden) || (el.logPanel && !el.logPanel.hidden) || (el.rules && !el.rules.hidden) || (el.pause && !el.pause.hidden);
@@ -169,6 +185,7 @@
     if (!blocked(room, state.playerX, nextY, 22)) state.playerY = nextY;
     var distance = Math.hypot(state.playerX - previousX, state.playerY - previousY);
     avatarMoving = distance > 0; avatarTravelled += distance;
+    if (distance > 0 && !window.MuseumTutorial.isDone("movement")) window.MuseumTutorial.complete("movement");
     if (Math.abs(dx) > Math.abs(dy)) state.facing = dx > 0 ? "right" : "left"; else state.facing = dy > 0 ? "down" : "up";
   }
   function playerDirection() {
@@ -255,6 +272,7 @@
   }
   function interact(object) {
     if (!object || !state || state.mode !== "explore") return;
+    if (object.type !== "travel" && !window.MuseumTutorial.isDone("investigation")) window.MuseumTutorial.complete("investigation");
     if (object.type === "travel") { switchRoom(object.target); return; }
     if (object.type === "note") openNote();
     else if (object.type === "wardrobe") openWardrobe();
@@ -347,13 +365,14 @@
 
   function renderRooms() { el.rooms.textContent = ""; ["dorm", "hall", "wax"].forEach(function (id) { var button = document.createElement("button"); button.type = "button"; var unlocked = has(state.unlockedRooms, id); button.className = "room-button" + (state.roomId === id ? " current" : ""); button.disabled = !unlocked; button.innerHTML = "<strong>" + roomName(id) + "</strong><small>" + (unlocked ? (state.roomId === id ? "当前位置" : "已探索") : "尚未开放") + "</small>"; if (unlocked) button.addEventListener("click", function () { switchRoom(id); }); el.rooms.appendChild(button); }); }
   function renderStats() { el.hp.textContent = String(state.hp); el.trust.textContent = String(state.systemTrust); el.clues.textContent = String(state.clues.length); el.task.textContent = state.task || tasks[state.roomId] || "继续探索。"; window.MuseumAchievements.refresh(); }
-  function renderAll() { if (!state) return; var room = currentRoom(); el.roomTitle.textContent = room.title; el.roomChapter.textContent = room.chapter; renderRooms(); renderStats(); drawRoom(room); interactionHint(nearestObject()); }
+  function renderAll() { if (!state) return; var room = currentRoom(); el.roomTitle.textContent = room.title; el.roomChapter.textContent = room.chapter; renderRooms(); renderStats(); drawRoom(room); interactionHint(nearestObject()); showMapTutorial(); }
 
   function formatSaveTime(value) { if (!value) return "尚未保存"; var date = new Date(value); return Number.isNaN(date.getTime()) ? "时间未知" : date.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }); }
   function saveSummary(saveState) { if (!saveState) return "空存档位"; return roomName(saveState.roomId || saveState.currentNode) + " · 线索 " + ((saveState.clues || []).length); }
-  function makeSlotCard(title, entry, index, auto) { var card = document.createElement("article"); card.className = "save-slot" + (entry ? " occupied" : " empty"); var info = document.createElement("div"); info.className = "save-slot-info"; var heading = document.createElement("strong"); heading.textContent = title; var detail = document.createElement("span"); var slotState = auto ? entry : entry && entry.state; detail.textContent = saveSummary(slotState); var time = document.createElement("small"); time.textContent = entry ? formatSaveTime(entry.savedAt) : "—"; info.appendChild(heading); info.appendChild(detail); info.appendChild(time); card.appendChild(info); var actions = document.createElement("div"); actions.className = "save-slot-actions"; var action = document.createElement("button"); action.type = "button"; action.className = "button button-small"; if (auto) { action.textContent = savePanelMode === "save" ? "当前自动档" : "读取"; action.disabled = savePanelMode === "save" || !entry; action.addEventListener("click", function () { loadSelected(MuseumState.load(currentUser.id), "自动存档"); }); } else if (savePanelMode === "save") { action.textContent = entry ? "覆盖" : "保存"; action.addEventListener("click", function () { if (entry && !window.confirm("确定覆盖存档位 " + (index + 1) + " 吗？")) return; MuseumState.saveSlot(state, currentUser.id, index); el.savePanelMessage.textContent = "已保存到存档位 " + (index + 1) + "。"; renderSavePanel(); }); } else { action.textContent = "读取"; action.disabled = !entry; action.addEventListener("click", function () { loadSelected(MuseumState.loadSlot(currentUser.id, index), "存档位 " + (index + 1)); }); } actions.appendChild(action); if (!auto && entry) { var del = document.createElement("button"); del.type = "button"; del.className = "text-button danger-button"; del.textContent = "删除"; del.addEventListener("click", function () { if (!window.confirm("确定删除存档位 " + (index + 1) + " 吗？")) return; MuseumState.deleteSlot(currentUser.id, index); renderSavePanel(); }); actions.appendChild(del); } card.appendChild(actions); return card; }
+  function makeSlotCard(title, entry, index, auto) { var card = document.createElement("article"); card.className = "save-slot" + (entry ? " occupied" : " empty"); var info = document.createElement("div"); info.className = "save-slot-info"; var heading = document.createElement("strong"); heading.textContent = title; var detail = document.createElement("span"); var slotState = auto ? entry : entry && entry.state; detail.textContent = saveSummary(slotState); var time = document.createElement("small"); time.textContent = entry ? formatSaveTime(entry.savedAt) : "—"; info.appendChild(heading); info.appendChild(detail); info.appendChild(time); card.appendChild(info); var actions = document.createElement("div"); actions.className = "save-slot-actions"; var action = document.createElement("button"); action.type = "button"; action.className = "button button-small"; if (auto) { action.textContent = savePanelMode === "save" ? "当前自动档" : "读取"; action.disabled = savePanelMode === "save" || !entry; action.addEventListener("click", function () { loadSelected(MuseumState.load(currentUser.id), "自动存档"); }); } else if (savePanelMode === "save") { action.textContent = entry ? "覆盖" : "保存"; action.addEventListener("click", function () { if (entry && !window.confirm("确定覆盖存档位 " + (index + 1) + " 吗？")) return; MuseumState.saveSlot(state, currentUser.id, index); window.MuseumTutorial.complete("save"); el.savePanelMessage.textContent = "已保存到存档位 " + (index + 1) + "。"; renderSavePanel(); }); } else { action.textContent = "读取"; action.disabled = !entry; action.addEventListener("click", function () { loadSelected(MuseumState.loadSlot(currentUser.id, index), "存档位 " + (index + 1)); }); } actions.appendChild(action); if (!auto && entry) { var del = document.createElement("button"); del.type = "button"; del.className = "text-button danger-button"; del.textContent = "删除"; del.addEventListener("click", function () { if (!window.confirm("确定删除存档位 " + (index + 1) + " 吗？")) return; MuseumState.deleteSlot(currentUser.id, index); renderSavePanel(); }); actions.appendChild(del); } card.appendChild(actions); return card; }
   function renderSavePanel() { if (!currentUser) return; el.savePanelTitle.textContent = savePanelMode === "save" ? "保存游戏" : "读取存档"; el.saveModeButton.classList.toggle("active", savePanelMode === "save"); el.loadModeButton.classList.toggle("active", savePanelMode === "load"); el.saveModeButton.setAttribute("aria-selected", String(savePanelMode === "save")); el.loadModeButton.setAttribute("aria-selected", String(savePanelMode === "load")); el.saveSlotList.textContent = ""; el.saveSlotList.appendChild(makeSlotCard("自动存档", MuseumState.load(currentUser.id), -1, true)); MuseumState.listSlots(currentUser.id).forEach(function (entry, index) { el.saveSlotList.appendChild(makeSlotCard("存档位 " + (index + 1), entry, index, false)); }); }
-  function openSavePanel(mode) { if (!currentUser) return showAuth("game"); savePanelMode = mode; if (mode === "save") save(); el.saveUserName.textContent = currentUser.username; el.savePanelMessage.textContent = ""; renderSavePanel(); el.savePanel.hidden = false; }
+  function openTutorialSave() { openPauseMenu(); window.setTimeout(function () { if (el.pause && !el.pause.hidden) openSavePanel("save"); }, 0); }
+  function openSavePanel(mode) { if (!currentUser) return showAuth("game"); window.MuseumTutorial.hide(); savePanelMode = mode; if (mode === "save") save(); el.saveUserName.textContent = currentUser.username; el.savePanelMessage.textContent = ""; renderSavePanel(); el.savePanel.hidden = false; }
   function loadSelected(loaded, label) {
     if (!loaded) { el.savePanelMessage.textContent = "这个存档无法读取。"; return; }
     state = loaded;
@@ -410,14 +429,19 @@
       interactionHint(nearestObject());
       drawRoom(currentRoom());
       if (timestamp - lastSave > 6000) save();
+      showMapTutorial();
     }
     window.requestAnimationFrame(frame);
   }
 
-  document.getElementById("start-button").addEventListener("click", function () {
-    if (!currentUser) return showAuth("story");
-    window.location.href = "pages/story.html?flow=start";
-  });
+  function beginNewGame() {
+    if (!currentUser) return showAuth("newGame");
+    localStorage.removeItem("museum_novel_quick_" + currentUser.id);
+    state = MuseumState.create(currentUser);
+    window.MuseumTutorial.resetDismissed();
+    startNovel("scene-01");
+  }
+  document.getElementById("start-button").addEventListener("click", beginNewGame);
   el.continueButton.addEventListener("click", function () {
     if (!currentUser) return showAuth("game");
     var loaded = MuseumState.load(currentUser.id);
@@ -431,10 +455,10 @@
   document.getElementById("cover-load-button").addEventListener("click", function () { openSavePanel("load"); });
   document.getElementById("save-button").addEventListener("click", function () { openSavePanel("save"); });
   document.getElementById("load-button").addEventListener("click", function () { openSavePanel("load"); });
-  document.getElementById("close-save-panel").addEventListener("click", function () { el.savePanel.hidden = true; });
+  document.getElementById("close-save-panel").addEventListener("click", function () { el.savePanel.hidden = true; showMapTutorial(); });
   el.saveModeButton.addEventListener("click", function () { savePanelMode = "save"; renderSavePanel(); });
   el.loadModeButton.addEventListener("click", function () { savePanelMode = "load"; renderSavePanel(); });
-  el.savePanel.addEventListener("click", function (event) { if (event.target === el.savePanel) el.savePanel.hidden = true; });
+  el.savePanel.addEventListener("click", function (event) { if (event.target === el.savePanel) { el.savePanel.hidden = true; showMapTutorial(); } });
   document.getElementById("log-button").addEventListener("click", openLogPanel);
   document.getElementById("close-log-panel").addEventListener("click", function () { el.logPanel.hidden = true; });
   el.logPanel.addEventListener("click", function (event) { if (event.target === el.logPanel) el.logPanel.hidden = true; });
@@ -484,7 +508,7 @@
     if (playerDistance < object.r) interact(object); else showToast("请先走近「" + object.label + "」再调查。");
   });
   document.querySelectorAll("[data-move]").forEach(function (button) { button.addEventListener("pointerdown", function () { heldTouch = button.getAttribute("data-move"); }); button.addEventListener("pointerup", function () { heldTouch = null; }); button.addEventListener("pointerleave", function () { heldTouch = null; }); });
-  window.MuseumInventory.bind({getState:function(){return state;},save:save,canOpen:function(){return el.game && !el.game.hidden && !overlaysOpen();},onOpen:function(){keys={};heldTouch=null;avatarMoving=false;drawRoom(currentRoom());},onClose:function(){keys={};heldTouch=null;renderAll();}});
+  window.MuseumInventory.bind({getState:function(){return state;},save:save,canOpen:function(){return el.game && !el.game.hidden && !overlaysOpen();},onOpen:function(){keys={};heldTouch=null;avatarMoving=false;window.MuseumTutorial.complete("inventory");drawRoom(currentRoom());},onClose:function(){keys={};heldTouch=null;renderAll();showMapTutorial();}});
   document.getElementById("map-bag-button").addEventListener("click",function(){window.MuseumInventory.open();});
   window.MuseumAchievements.bind({getState:function(){return state;},save:save,canOpen:function(){return el.game && !el.game.hidden && !overlaysOpen();},onOpen:function(){keys={};heldTouch=null;avatarMoving=false;drawRoom(currentRoom());},onClose:function(){keys={};heldTouch=null;renderAll();}});
   document.getElementById("map-achievements-button").addEventListener("click",function(){window.MuseumAchievements.open();});
@@ -511,7 +535,7 @@
     showGame();
     state.mode = "explore";
     renderAll();
-    save("剧情结束，回到地图。");
+    save("已自动保存：你已离开宿舍。");
   } else if (currentUser && openEndingReturn) {
     showCover();
     showToast("结局已保存。可以开始新的探索或读取其他存档。");

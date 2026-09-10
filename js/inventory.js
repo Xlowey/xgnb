@@ -36,6 +36,7 @@
   }
   function closeZoom(){zoom.hidden=true;zoom.textContent="";windowPanel.inert=false;var b=detail.querySelector(".inventory-enlarge");if(b)b.focus();}
   function showZoom(item){
+    if(window.MuseumTutorial && !window.MuseumTutorial.isDone("itemRead"))window.MuseumTutorial.complete("itemRead");
     zoom.textContent="";zoom.hidden=false;windowPanel.inert=true;
     var back=button("返回物品",closeZoom);zoom.appendChild(back);zoom.appendChild(art(item,side==="back"));back.focus();
   }

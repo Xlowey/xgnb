@@ -4,7 +4,8 @@
   var form = document.getElementById("register-page-form");
   var message = document.getElementById("register-page-message");
   var params = new URLSearchParams(window.location.search);
-  var next = params.get("next") === "story" ? "story" : "";
+  var requestedNext = params.get("next");
+  var next = ["story", "newGame", "game"].indexOf(requestedNext) !== -1 ? requestedNext : "";
 
   if (!form || !message) return;
 
@@ -23,6 +24,8 @@
       return;
     }
 
-    window.location.href = next === "story" ? "story.html?flow=start" : "../index.html";
+    if (next === "story") window.location.href = "story.html?flow=start";
+    else if (next === "newGame") window.location.href = "../index.html?newGame=1";
+    else window.location.href = "../index.html";
   });
 }());

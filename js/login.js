@@ -5,7 +5,8 @@
   var message = document.getElementById("login-page-message");
   var registerLink = document.getElementById("login-register-link");
   var params = new URLSearchParams(window.location.search);
-  var next = params.get("next") === "story" ? "story" : "";
+  var requestedNext = params.get("next");
+  var next = ["story", "newGame", "game"].indexOf(requestedNext) !== -1 ? requestedNext : "";
 
   if (registerLink && next) {
     registerLink.href = "register.html?next=" + encodeURIComponent(next);
@@ -22,6 +23,8 @@
       message.textContent = result.message;
       return;
     }
-    window.location.href = next === "story" ? "story.html?flow=start" : "../index.html";
+    if (next === "story") window.location.href = "story.html?flow=start";
+    else if (next === "newGame") window.location.href = "../index.html?newGame=1";
+    else window.location.href = "../index.html";
   });
 }());

@@ -80,10 +80,12 @@
     root.className="scene-events";
     if (event.type === "document") {
       window.MuseumInventory.acquire(hooks.state,event.item,{save:hooks.save});
+      if (event.item === "note" && window.MuseumTutorial && !window.MuseumTutorial.isDone("inventory")) window.MuseumTutorial.show("inventory", { kind: "inventory", title: "纸条已经收好", body: "它已经放入背包。打开一次背包，就能随时重看纸条的正面和背面。", action: function () { window.MuseumInventory.open(); }, actionLabel: "打开背包" });
       root.appendChild(showDocument(window.MuseumStory.items[event.item],event.side));hooks.save();return;
     }
     if (event.type === "item") {
       if(event.collect)window.MuseumInventory.acquire(hooks.state,event.collect,{save:hooks.save});
+      if (event.collect === "note" && window.MuseumTutorial && !window.MuseumTutorial.isDone("inventory")) window.MuseumTutorial.show("inventory", { kind: "inventory", title: "纸条已经收好", body: "它已经放入背包。打开一次背包，就能随时重看纸条的正面和背面。", action: function () { window.MuseumInventory.open(); }, actionLabel: "打开背包" });
       var crop=event.crop || [0,0,1670,942];
       var card=node("article","item-preview");var imageButton=button("",function(){showZoom(event.image,event.title,crop);},"item-focus-button");imageButton.setAttribute("aria-label","放大查看"+event.title);imageButton.appendChild(focusedPicture(event.image,event.title,crop));card.appendChild(imageButton);
       var detail=node("div","item-caption");detail.appendChild(node("h2","",event.title));detail.appendChild(node("p","",event.description));card.appendChild(detail);root.appendChild(card);

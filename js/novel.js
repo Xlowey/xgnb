@@ -79,7 +79,8 @@
     review: document.getElementById("novel-review"),
     reviewList: document.getElementById("novel-review-list")
   };
-  window.MuseumInventory.bind({getState:function(){return state;},save:persist,canOpen:function(){return els.review.hidden && els.end.hidden && !stage.isOpen();},onOpen:pausePlayback,onClose:function(){schedulePlayback();}});
+  window.MuseumTutorial.bind({getState:function(){return state;},save:persist});
+  window.MuseumInventory.bind({getState:function(){return state;},save:persist,canOpen:function(){return els.review.hidden && els.end.hidden && !stage.isOpen();},onOpen:function(){pausePlayback();window.MuseumTutorial.complete("inventory");},onClose:function(){schedulePlayback();}});
   window.MuseumAchievements.bind({getState:function(){return state;},save:persist,canOpen:function(){return els.review.hidden && els.end.hidden && !stage.isOpen();},onOpen:pausePlayback,onClose:function(){schedulePlayback();}});
 
   function getScene(sceneId) {
@@ -283,6 +284,12 @@
     if (!Array.isArray(currentScene.choices) || !currentScene.choices.length) return;
 
     els.choices.hidden = false;
+    if (!state.flags.tutorialChoiceSaved) {
+      state.flags.tutorialChoiceSaved = true;
+      saveNovelState();
+      showToast("选择前已自动保存。你可以按自己的判断行动。");
+    }
+    if (!window.MuseumTutorial.isDone("branch")) window.MuseumTutorial.show("branch", { kind: "dialogue", title: "这里的选择会留下记录", body: "没有选项说明是正确答案。按照你掌握的线索行动，之后仍然可以读取选择前的存档。" });
     currentScene.choices.forEach(function (choice) {
       var button = document.createElement("button");
       button.type = "button";
@@ -357,6 +364,7 @@
     if(line.type === "system") els.text.textContent = "";
     document.getElementById("novel-back-button").disabled = lineIndex === 0;
     schedulePlayback();
+    if ((!line.type || line.type === "dialogue") && !window.MuseumTutorial.isDone("dialogue")) window.MuseumTutorial.show("dialogue", { kind: "dialogue", title: "对白可以这样推进", body: "点击屏幕任意空白处，或按 E 继续。第一次推进后，这条提示会消失。" });
   }
 
   function applyChoice(choice) {
@@ -413,6 +421,7 @@
   }
 
   function choose(choice) {
+    if (!window.MuseumTutorial.isDone("branch")) window.MuseumTutorial.complete("branch");
     completeCurrentScene();
     applyChoice(choice);
     if (choice.effect === "take-key") { persist(); render(); showToast("获得物品：宿舍钥匙"); return; }
@@ -467,6 +476,7 @@
   function advance() {
     if (!els.review.hidden || !els.end.hidden || stage.isOpen() || !eventAdvance) return;
     if (!els.choices.hidden) return;
+    if ((!currentLine().type || currentLine().type === "dialogue") && !window.MuseumTutorial.isDone("dialogue")) window.MuseumTutorial.complete("dialogue");
     if (lineIndex < currentPages.length - 1) {
       lineIndex += 1;
       render();

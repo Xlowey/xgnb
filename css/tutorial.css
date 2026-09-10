@@ -1,0 +1,47 @@
+.tutorial-cue {
+  position: fixed;
+  z-index: 28;
+  left: 50%;
+  bottom: 92px;
+  width: min(460px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  padding: 14px 18px 13px;
+  border: 1px solid rgba(155, 214, 212, .72);
+  border-radius: 6px;
+  color: #edf1eb;
+  background: rgba(12, 26, 31, .96);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, .48), 0 0 0 3px rgba(155, 214, 212, .08);
+  font-family: "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+  pointer-events: auto;
+  animation: tutorial-cue-in .22s ease-out;
+}
+
+.tutorial-cue[hidden] { display: none; }
+.tutorial-cue-kicker { display: block; color: #9bd6d4; font-size: 11px; letter-spacing: .12em; }
+.tutorial-cue-title { display: block; margin-top: 3px; color: #f1d39f; font-size: 16px; font-weight: 600; }
+.tutorial-cue-body { margin: 5px 0 10px; color: #d5dfdc; font-size: 13px; line-height: 1.65; }
+.tutorial-cue-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.tutorial-cue-actions button { border: 1px solid rgba(155, 214, 212, .48); border-radius: 3px; padding: 6px 10px; color: #e9f0ec; background: rgba(34, 59, 65, .8); cursor: pointer; font-size: 12px; }
+.tutorial-cue-actions button:hover, .tutorial-cue-actions button:focus-visible { border-color: #9bd6d4; background: rgba(53, 83, 88, .95); outline: none; }
+.tutorial-cue-action { color: #0c1b20 !important; background: #9bd6d4 !important; border-color: #9bd6d4 !important; }
+.tutorial-cue-later { color: #a9b6b5 !important; background: transparent !important; border-color: rgba(169, 182, 181, .25) !important; }
+.tutorial-cue-dialogue { bottom: 238px; }
+.tutorial-cue-inventory { bottom: 205px; }
+.tutorial-cue-save { bottom: 78px; }
+.tutorial-cue-map { bottom: 78px; }
+
+@keyframes tutorial-cue-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (max-width: 700px) {
+  .tutorial-cue { bottom: 118px; width: calc(100vw - 24px); padding: 12px 14px; }
+  .tutorial-cue-dialogue { bottom: 300px; }
+  .tutorial-cue-inventory { bottom: 245px; }
+  .tutorial-cue-save, .tutorial-cue-map { bottom: 105px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-cue { animation: none; }
+}
