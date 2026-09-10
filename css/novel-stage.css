@@ -1,6 +1,7 @@
 /* Stage and dialogue share the viewport; images always retain their ratio. */
 :root { --dialogue-height: 194px; --stage-bottom: 222px; }
-.novel-background { --scene-background: url('../assets/images/dorm-map.png'); filter: none; }
+body { --scene-background: url('../assets/images/dorm-map.png'); }
+.novel-background { filter: none; }
 body[data-theme="dorm"],body[data-theme="wardrobe"] { --scene-background: url('../assets/images/dorm-map.png'); }
 body[data-theme="patrol"],body[data-theme="nightmare"] { --scene-background: url('../assets/images/corridor-map.png'); }
 body[data-theme="office"] { --scene-background: url('../assets/images/office-map.png'); }

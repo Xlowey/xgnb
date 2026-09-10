@@ -35,6 +35,7 @@
     function suspended(){return document.hidden || !hooks.canExplore();}
     function remember(){hooks.state.flags.dormExplorationPosition={x:player.x,y:player.y,facing:facing};}
     function stop(){keys={};route=[];if(moving){moving=false;remember();hooks.save();}}
+    function saveBeforeLeave(){stop();remember();hooks.save();}
     function distance(o){return Math.hypot(player.x-o.x,player.y-o.y);}
     function update(){
       closest=objects.filter(function(o){return enabled(o)&&distance(o)<115;}).sort(function(a,b){return distance(a)-distance(b);})[0] || null;
@@ -108,9 +109,9 @@
       }
       if(wasMoving&&!moving)hooks.save();update();draw();frame=requestAnimationFrame(tick);
     }
-    document.addEventListener("keydown",keydown);document.addEventListener("keyup",keyup);window.addEventListener("blur",stop);document.addEventListener("visibilitychange",stop);
+    document.addEventListener("keydown",keydown);document.addEventListener("keyup",keyup);window.addEventListener("blur",stop);document.addEventListener("visibilitychange",stop);window.addEventListener("pagehide",saveBeforeLeave);window.addEventListener("beforeunload",saveBeforeLeave);
     update();draw();map.focus({preventScroll:true});frame=requestAnimationFrame(tick);
-    return function(){destroyed=true;cancelAnimationFrame(frame);observer.disconnect();document.removeEventListener("keydown",keydown);document.removeEventListener("keyup",keyup);window.removeEventListener("blur",stop);document.removeEventListener("visibilitychange",stop);};
+    return function(){destroyed=true;cancelAnimationFrame(frame);observer.disconnect();document.removeEventListener("keydown",keydown);document.removeEventListener("keyup",keyup);window.removeEventListener("blur",stop);document.removeEventListener("visibilitychange",stop);window.removeEventListener("pagehide",saveBeforeLeave);window.removeEventListener("beforeunload",saveBeforeLeave);};
   }
   window.MuseumDormExploration={mount:mount};
 }());

@@ -4,6 +4,9 @@
   var MAX_ENEMY_HP = 30;
   var RESULT_KEY = "museum_pending_battle_v1";
   var query = new URLSearchParams(window.location.search);
+  var preview = query.get("preview") === "1";
+  var resultStorage = preview ? sessionStorage : localStorage;
+  var returnScene = query.get("returnScene") || "guard-after-battle";
   var enemyPatterns = ["observe", "attack", "attack", "heavyAttack"];
   var enemyActionLabels = { observe: "观察", attack: "攻击", heavyAttack: "重击" };
   var state;
@@ -30,8 +33,12 @@
     addLog(message);
     var result=makeResult(status); result.userId=query.get("user") || null;
     window.lastBattleResult=result;
-    localStorage.setItem(RESULT_KEY,JSON.stringify(result));
-    if (elements.returnLink) { elements.returnLink.href="../../index.html?fromBattle=1"; elements.returnLink.textContent="← 返回剧情"; elements.returnLink.classList.add("ready"); }
+    resultStorage.setItem(RESULT_KEY,JSON.stringify(result));
+    if (elements.returnLink) {
+      elements.returnLink.href = preview ? "../../pages/novel.html?scene=" + encodeURIComponent(returnScene) + "&preview=1&resume=1" : "../../index.html?fromBattle=1";
+      elements.returnLink.textContent="← 返回剧情";
+      elements.returnLink.classList.add("ready");
+    }
     console.log("Battle result:",window.lastBattleResult);
     if (window.parent !== window) window.parent.postMessage({ type:"battle-result", result:window.lastBattleResult }, "*");
   }
@@ -61,8 +68,12 @@
   }
   function restart() {
     state=initialState(); elements.log.textContent=""; elements.playerStatus.textContent="等待你的行动。"; setButtonsDisabled(false); addLog("战斗开始。系统建议：先观察目标。"); updateView(); window.lastBattleResult=null;
-    localStorage.removeItem(RESULT_KEY);
-    if (elements.returnLink) { elements.returnLink.href="../../index.html"; elements.returnLink.textContent="← 返回项目入口"; elements.returnLink.classList.remove("ready"); }
+    resultStorage.removeItem(RESULT_KEY);
+    if (elements.returnLink) {
+      elements.returnLink.href = preview ? "../../pages/novel.html?scene=" + encodeURIComponent(returnScene) + "&preview=1&resume=1" : "../../index.html";
+      elements.returnLink.textContent = preview ? "← 返回剧情" : "← 返回项目入口";
+      elements.returnLink.classList.remove("ready");
+    }
   }
   document.querySelectorAll(".action-button").forEach(function (button) { button.addEventListener("click",function () { takeAction(button.dataset.action); }); });
   document.getElementById("restart-button").addEventListener("click",restart); restart();

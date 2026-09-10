@@ -105,6 +105,13 @@
   function addItem(id) { addUnique(state.inventory, id); }
   function showToast(message) { if (!el.toast) return; el.toast.textContent = message; el.toast.classList.add("visible"); window.clearTimeout(showToast.timer); showToast.timer = window.setTimeout(function () { el.toast.classList.remove("visible"); }, 2600); }
   function save(message) { if (!currentUser || !state) return; MuseumState.save(state, currentUser.id); lastSave = performance.now(); if (message && el.gameMessage) el.gameMessage.textContent = message; refreshContinue(); }
+  function saveBeforeLeave() {
+    if (!currentUser || !state || (el.game && el.game.hidden)) return;
+    save();
+  }
+  window.addEventListener("pagehide", saveBeforeLeave);
+  window.addEventListener("beforeunload", saveBeforeLeave);
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") saveBeforeLeave(); });
   function refreshContinue() { if (!el.continueButton) return; var ok = currentUser && MuseumState.hasSave(currentUser.id); el.continueButton.disabled = !ok; el.continueButton.classList.toggle("button-primary", Boolean(ok)); }
   function showAuth(next) {
     var target = "pages/login.html";

@@ -68,7 +68,10 @@
     document.body.dataset.event = event ? event.type : "dialogue";
     root.className = "scene-events";
     if (!event) { document.querySelector(".novel-background").style.removeProperty("--scene-background");return; }
-    if (event.background) setBackground(event.background);else setBackground("dorm-map.png");
+    // Let the scene theme provide the room background when an event has no
+    // explicit artwork.  A hard-coded dorm image here used to replace the
+    // patrol and office backgrounds on every dialogue line.
+    if (event.background) setBackground(event.background);else document.querySelector(".novel-background").style.removeProperty("--scene-background");
     if (event.type === "dialogue") {
       if(event.visual){var visual=node("figure","dialogue-prop");visual.appendChild(picture(event.visual,"血字纸条"));root.appendChild(visual);}return;
     }

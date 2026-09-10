@@ -3,13 +3,41 @@
 
   var params = new URLSearchParams(window.location.search);
   var preview = params.get("preview") === "1";
+  var previewResume = preview && params.get("resume") === "1";
   var user = preview ? { id: "class-preview", username: "体验者" } : MuseumAuth.getCurrentUser();
   if (!user) {
     window.location.href = "login.html?next=novel";
     return;
   }
 
-  var state = preview ? MuseumState.create(user) : (MuseumState.load(user.id) || MuseumState.create(user));
+  function readPreviewState() {
+    if (!previewResume) return null;
+    try {
+      var raw = sessionStorage.getItem("museum_class_preview");
+      return raw ? JSON.parse(raw) : null;
+    } catch (error) { return null; }
+  }
+  var state = preview ? (readPreviewState() || MuseumState.create(user)) : (MuseumState.load(user.id) || MuseumState.create(user));
+  if (previewResume) {
+    // The preview battle does not pass through game.js, so finish the small
+    // amount of result handling here before showing the continuation scene.
+    var previewBattleResult = null;
+    try {
+      var previewBattleRaw = sessionStorage.getItem("museum_pending_battle_v1");
+      previewBattleResult = previewBattleRaw ? JSON.parse(previewBattleRaw) : null;
+    } catch (error) { previewBattleResult = null; }
+    sessionStorage.removeItem("museum_pending_battle_v1");
+    state.mode = "novel";
+    state.returnScene = null;
+    if (previewBattleResult && previewBattleResult.status === "win") {
+      state.flags.battleDemoCompleted = true;
+      state.flags.waxDoorUnlocked = true;
+      if (state.clues.indexOf("faceless-mask") === -1) state.clues.push("faceless-mask");
+      if (state.unlockedRooms.indexOf("wax") === -1) state.unlockedRooms.push("wax");
+    }
+    if (previewBattleResult && Number.isFinite(Number(previewBattleResult.remainingHp))) state.hp = Math.max(0, Number(previewBattleResult.remainingHp));
+    persist();
+  }
   function persist() {
     if (preview) sessionStorage.setItem("museum_class_preview", JSON.stringify(state));
     else MuseumState.save(state, user.id);
@@ -157,7 +185,7 @@
     state.narrativeChoice = endingChoice;
     state.ending = currentScene.endingId || endingChoice || state.ending;
     state.endingComplete = true;
-    MuseumState.save(state, user.id);
+    persist();
   }
 
   function addLog(line) {
@@ -378,8 +406,10 @@
     state.returnScene = choice.afterBattle || "guard-after-battle";
     state.mode = "battle";
     state.narrativeNode = state.returnScene;
-    MuseumState.save(state, user.id);
-    window.location.href = "../demos/battle/index.html?from=novel&user=" + encodeURIComponent(user.id);
+    persist();
+    var battleUrl = "../demos/battle/index.html?from=novel&user=" + encodeURIComponent(user.id) + "&returnScene=" + encodeURIComponent(state.returnScene);
+    if (preview) battleUrl += "&preview=1&resume=1";
+    window.location.href = battleUrl;
   }
 
   function choose(choice) {
