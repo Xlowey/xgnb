@@ -13,4 +13,4 @@ Use case: background-extraction and precise-object-edit. Edit this exact 3-colum
 
 ## 导入与验证
 
-生成工具未正确输出透明通道，经用户明确同意，使用 Python/Pillow 做背景连通域去除，并保留每格人物的主要连通部分。最终素材：hero-walk-cycle.png；动画预览：walk-cycle-preview.gif。原生成结果保留。地图按实际移动距离切帧，不旋转、挤压或拉伸身体。已验证四向帧切换、循环、静止姿势、五张地图及第二场探索。
+生成工具未正确输出透明通道，经用户明确同意，使用 Python/Pillow 做背景连通域去除，并保留每格人物的主要连通部分。最终素材：hero-walk-cycle.png。旧图集和动画预览已清理。地图按实际移动距离切帧，不旋转、挤压或拉伸身体。已验证四向帧切换、循环、静止姿势、五张地图及第二场探索。

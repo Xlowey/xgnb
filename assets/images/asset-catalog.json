@@ -1,0 +1,48 @@
+{
+  "maps/world/museum-overview-map.png": "地图/世界",
+  "maps/rooms/dorm-map.png": "地图/房间/宿舍",
+  "maps/rooms/hall-map.png": "地图/房间/大厅",
+  "maps/rooms/office-map.png": "地图/房间/馆长办公室",
+  "maps/rooms/食堂走廊地图.png": "地图/房间/食堂走廊",
+  "maps/rooms/蜡像馆地图.png": "地图/房间/蜡像馆",
+  "maps/rooms/教室展厅背景.jpeg": "地图/房间/教室展厅",
+  "maps/rooms/走廊示意图1.png": "地图/房间/普通走廊",
+
+  "story-backgrounds/locations/hospital/病房展厅（电视机打开）.jpeg": "剧情背景/病房展厅/电视打开",
+  "story-backgrounds/locations/hospital/病房展厅(电视机关闭）.jpeg": "剧情背景/病房展厅/电视关闭",
+  "story-backgrounds/locations/canteen/食堂走廊背景.png": "剧情背景/食堂走廊",
+  "story-backgrounds/locations/canteen/食堂门口背景.png": "剧情背景/食堂门口",
+  "story-backgrounds/locations/canteen/食堂正常背景.jpeg": "剧情背景/食堂/正常",
+  "story-backgrounds/locations/canteen/食堂背景（含彩带版）.jpeg": "剧情背景/食堂/彩带状态",
+  "story-backgrounds/locations/wax/蜡像馆背景（正常版）.jpeg": "剧情背景/蜡像馆/正常",
+  "story-backgrounds/locations/wax/蜡像馆背景（有人涌入版）.jpeg": "剧情背景/蜡像馆/有人涌入",
+  "story-backgrounds/locations/silver/银色的恋人展厅.jpeg": "剧情背景/银色恋人展厅",
+
+  "cg/peach-dream.png": "CG/梦境",
+  "cg/rabbits-recording.png": "CG/录像",
+  "items/documents/note-front.png": "物品/文档/纸条正面",
+  "items/documents/note-back.png": "物品/文档/纸条背面",
+  "items/closeups/wardrobe-detail.png": "物品/调查特写/衣柜",
+
+  "characters/portraits/hero-portrait.png": "角色/立绘/主角",
+  "characters/portraits/zhaoling-portrait.png": "角色/立绘/赵灵",
+  "characters/portraits/director-portrait.png": "角色/立绘/馆长",
+  "characters/walk/hero-walk-cycle.png": "角色/行走/主角四向",
+
+  "ui/frames/dialogue-frame.png": "UI/运行素材/对话框",
+  "ui/frames/system-frame.png": "UI/运行素材/系统框",
+  "ui/menus/menu-panel.png": "UI/运行素材/菜单面板",
+  "ui/buttons/button-primary.png": "UI/运行素材/主要按钮",
+  "ui/buttons/button-normal.png": "UI/运行素材/普通按钮",
+  "ui/buttons/button-dark.png": "UI/运行素材/深色按钮",
+  "ui/frames/普通对话框.png": "UI/候选素材/普通对话框",
+  "ui/frames/系统对话框 (1).png": "UI/候选素材/系统对话框1",
+  "ui/frames/系统对话框 (2).png": "UI/候选素材/系统对话框2",
+
+  "_source/characters/男主立绘（戴帽子）.png": "原始素材/角色/主角戴帽",
+  "_source/characters/男主立绘（不带帽子）.png": "原始素材/角色/主角不戴帽",
+  "_source/characters/赵灵立绘最新版.png": "原始素材/角色/赵灵最新版",
+  "_source/characters/馆长 (1).png": "原始素材/角色/馆长",
+  "_reference/登录界面参考.png": "参考/登录界面",
+  "_reference/屏幕截图 2026-09-10 200131.png": "参考/UI截图"
+}

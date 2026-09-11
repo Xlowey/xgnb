@@ -4,10 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>怪谈博物馆</title>
-  <link rel="stylesheet" href="css/style.css?v=9">
-  <link rel="stylesheet" href="css/inventory.css?v=1">
-  <link rel="stylesheet" href="css/achievements.css?v=1">
-  <link rel="stylesheet" href="css/tutorial.css?v=1">
+  <link rel="stylesheet" href="css/style.css?v=38">
+  <link rel="stylesheet" href="css/inventory.css?v=38">
+  <link rel="stylesheet" href="css/achievements.css?v=38">
+  <link rel="stylesheet" href="css/tutorial.css?v=38">
+  <link rel="stylesheet" href="css/game-art-ui.css?v=2">
 </head>
 <body>
   <main class="app-shell">
@@ -31,11 +32,18 @@
         <div class="map-viewport">
           <canvas id="explore-canvas" width="960" height="540" aria-label="玩家可以移动的房间地图"></canvas>
           <div class="map-room-label" aria-live="polite"><p class="eyebrow">探索记录 · <span id="room-chapter">序章</span></p><h1 id="room-title">员工宿舍</h1></div>
+          <aside class="map-guide" aria-label="馆内导航">
+            <strong>馆内导览</strong>
+            <canvas id="mini-map" width="384" height="256" aria-label="馆内地图，白点为当前位置，金圈为目标"></canvas>
+            <small>● 白色：你的位置　◎ 金色：当前目标</small>
+            <p id="mini-map-destination" aria-live="polite"></p>
+          </aside>
           <div class="map-quick-actions">
             <button id="map-bag-button" class="map-bag-button" data-inventory-open type="button">背包 · B</button>
             <button id="map-achievements-button" class="map-achievements-button" data-achievements-open type="button">成就 · J</button>
           </div>
           <div id="interaction-prompt" class="interaction-prompt" hidden></div>
+          <p id="chapter-objective" class="chapter-objective" aria-live="polite"></p>
           <div id="map-toast" class="map-toast" role="status" aria-live="polite"></div>
         </div>
         <div class="map-controls"><span>WASD / 方向键移动</span><span>靠近物品后按 E 调查</span><span>Esc 暂停</span></div>
@@ -69,16 +77,22 @@
 
     <section id="save-panel" class="save-panel" hidden aria-labelledby="save-panel-title"><div class="save-window" role="dialog" aria-modal="true"><header class="save-window-header"><div><p class="eyebrow">当前档案 · <span id="save-user-name">—</span></p><h2 id="save-panel-title">存档管理</h2></div><button id="close-save-panel" class="button button-small" type="button">关闭</button></header><div class="save-mode-tabs" role="tablist" aria-label="保存或读取"><button id="save-mode-button" class="save-mode-button active" type="button" role="tab" aria-selected="true">保存游戏</button><button id="load-mode-button" class="save-mode-button" type="button" role="tab" aria-selected="false">读取存档</button></div><p class="save-help">自动存档会持续更新；下面的 20 个手动存档位不会被自动覆盖。</p><p id="save-panel-message" class="status-message" role="status" aria-live="polite"></p><div id="save-slot-list" class="save-slot-list" aria-label="手动存档位"></div></div></section>
   </main>
-  <script src="js/auth.js?v=3"></script>
-  <script src="js/state.js?v=8"></script>
-  <script src="js/items.js?v=1"></script>
-  <script src="js/inventory.js?v=2"></script>
-  <script src="js/achievements-data.js?v=1"></script>
-  <script src="js/achievements.js?v=1"></script>
-  <script src="js/tutorial.js?v=1"></script>
-  <script src="js/map-art.js?v=4"></script>
-  <script src="js/player-avatar.js?v=5"></script>
-  <script src="js/game.js?v=18"></script>
+  <script src="js/auth.js?v=38"></script>
+  <script src="js/state.js?v=38"></script>
+  <script src="js/items.js?v=38"></script>
+  <script src="js/inventory.js?v=38"></script>
+  <script src="js/achievements-data.js?v=38"></script>
+  <script src="js/achievements.js?v=38"></script>
+  <script src="js/tutorial.js?v=38"></script>
+  <script src="js/asset-paths.js?v=51"></script>
+  <script src="js/map-data.js?v=47"></script>
+  <script src="js/chapter-maps.js?v=51"></script>
+  <script src="js/chapter-progress.js?v=47"></script>
+  <script src="js/scene-transition.js?v=38"></script>
+  <script src="js/map-art.js?v=51"></script>
+  <script src="js/player-avatar.js?v=38"></script>
+  <script src="js/map-guide.js?v=45"></script>
+  <script src="js/game.js?v=50"></script>
 </body>
 </html>
 

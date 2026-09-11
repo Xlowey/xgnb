@@ -2,9 +2,10 @@
 
 用户提供原图，使用内置 imagegen 工具去除背景后导入；原始文件保留。
 
-- hero-walk-sheet.png：透明四向图集。上走使用背面，下走使用正面。每方向只有一帧，移动添加轻微起伏，不是完整逐帧步行动画。
-- hero-portrait.png：主角立绘。
-- zhaoling-portrait.png：赵灵立绘。
+- portraits/hero-portrait.png：主角立绘。
+- portraits/zhaoling-portrait.png：赵灵立绘。
+- portraits/director-portrait.png：馆长立绘。
+- walk/hero-walk-cycle.png：主角四向行走图。
 
 所有地图共用 js/player-avatar.js，坐标以脚底为准。js/novel-portraits.js 按剧本原始说话人切换立绘；新角色在此扩展，不改变剧情文本。
 

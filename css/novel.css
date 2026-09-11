@@ -46,7 +46,7 @@ button:focus-visible {
   position: absolute;
   inset: 0;
   z-index: -2;
-  background: linear-gradient(180deg, rgba(3, 7, 9, .30), rgba(7, 12, 15, .10) 45%, rgba(4, 8, 10, .72)), var(--scene-background, url("../assets/images/title-dorm-bg.png")) center / cover no-repeat, #0b1013;
+  background: linear-gradient(180deg, rgba(3, 7, 9, .30), rgba(7, 12, 15, .10) 45%, rgba(4, 8, 10, .72)), var(--scene-background, linear-gradient(140deg,#101a1d,#071013 72%)) center / cover no-repeat, #0b1013;
   filter: saturate(.72) contrast(1.05);
 }
 
@@ -445,10 +445,10 @@ body[data-theme="nightmare"] .novel-vignette { background: radial-gradient(ellip
 
 }
 
-body[data-theme="patrol"] { --scene-background: url("../assets/images/novel-corridor.png"); }
-body[data-theme="office"] { --scene-background: url("../assets/images/novel-office.png"); }
-body[data-theme="canteen"] { --scene-background: url("../assets/images/novel-canteen.png"); }
-body[data-theme="nightmare"] { --scene-background: url("../assets/images/novel-corridor.png"); }
+body[data-theme="patrol"] { --scene-background: linear-gradient(140deg,#152226,#071013 72%); }
+body[data-theme="office"] { --scene-background: linear-gradient(140deg,#201a18,#0b1013 72%); }
+body[data-theme="canteen"] { --scene-background: url("../assets/images/story-backgrounds/locations/canteen/食堂正常背景.jpeg"); }
+body[data-theme="nightmare"] { --scene-background: linear-gradient(140deg,#251317,#080c10 74%); }
 @media (max-width: 700px) {
   .novel-dialogue { max-height: 280px; padding-bottom: 34px; }
   .novel-choices { bottom: 285px; max-height: calc(100dvh - 390px); }

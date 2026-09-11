@@ -5,8 +5,8 @@
   var currentHooks, currentEvent, disposeExploration, backdrop, backdropObserver, previewObserver;
   function node(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
   function button(label, action, cls) { var b = node("button", cls || "event-button", label); b.type = "button"; b.addEventListener("click", action); return b; }
-  function asset(name) { return "../assets/images/" + name; }
-  function picture(name, alt) { var img = node("img"); img.src = asset(name); img.alt = alt || ""; img.draggable = false; return img; }
+  function asset(name, category) { return window.MuseumAssets.url(name, category); }
+  function picture(name, alt, category) { var img = node("img"); img.src = asset(name, category); img.alt = alt || ""; img.draggable = false; return img; }
   // Display a region of the supplied artwork without changing the source file.
   function focusedPicture(name, title, crop) {
     var frame=node("span","focused-picture"),img=picture(name,title);
@@ -15,12 +15,13 @@
     frame.appendChild(img);return frame;
   }
   function syncRoomBackdrop(event,hooks) {
-    var visible=event && (["item","document"].includes(event.type) || (["dialogue","television"].includes(event.type) && hooks.state.flags.dormExplorationPosition));
+    var inDorm=hooks.scene && /员工宿舍/.test(hooks.scene.location || "");
+    var visible=inDorm && event && (!event.background || event.background === "dorm-map.png") && (["item","document"].includes(event.type) || (["dialogue","television"].includes(event.type) && hooks.state.flags.dormExplorationPosition));
     document.body.classList.toggle("has-room-backdrop",!!visible);
     if(!visible){if(backdropObserver)backdropObserver.disconnect();if(backdrop)backdrop.remove();backdrop=null;return;}
     if(backdrop)return;
     backdrop=node("div","investigation-backdrop");backdrop.setAttribute("aria-hidden","true");
-    var frame=node("div","investigation-still");frame.appendChild(picture("dorm-map.png",""));
+    var frame=node("div","investigation-still");frame.appendChild(picture("dorm-map.png","","maps"));
     var canvas=node("canvas","exploration-character");canvas.width=1670;canvas.height=942;
     var source=root.querySelector(".exploration-character");
     if(source)canvas.getContext("2d").drawImage(source,0,0);
@@ -42,7 +43,12 @@
     detail.appendChild(node("h2", "", item.name));
     if (item.description) detail.appendChild(node("p", "item-description", item.description));
     var text = node("div", "item-transcript", paragraphText(side === "back" ? item.reverseText : item.text));
-    text.tabIndex = 0; text.setAttribute("aria-label", item.name + "清晰文字"); detail.appendChild(text);
+    text.tabIndex = 0; text.setAttribute("aria-label", item.name + "清晰文字");
+    var transcript = node("details", "document-transcript");
+    transcript.appendChild(node("summary", "", "查看清晰文字"));
+    transcript.appendChild(text);
+    transcript.addEventListener("click", function (event) { event.stopPropagation(); });
+    detail.appendChild(transcript);
     if (inModal && item.reverseImage) detail.appendChild(button(side === "back" ? "翻到正面" : "翻到背面", function () { openItem(item, side === "back" ? "front" : "back"); }));
     card.appendChild(detail); return card;
   }
@@ -59,7 +65,7 @@
   function bag() {
     window.MuseumInventory.open();
   }
-  function setBackground(name) { document.querySelector(".novel-background").style.setProperty("--scene-background", 'url("'+asset(name)+'")'); }
+  function setBackground(name, category) { document.querySelector(".novel-background").style.setProperty("--scene-background", 'url("'+asset(name,category || "storyBackgrounds")+'")'); }
   function render(event, hooks) {
     syncRoomBackdrop(event,hooks);
     if (previewObserver) { previewObserver.disconnect(); previewObserver=null; }
@@ -67,11 +73,27 @@
     currentHooks = hooks;currentEvent = event;root.textContent = "";root.hidden = !event;
     document.body.dataset.event = event ? event.type : "dialogue";
     root.className = "scene-events";
-    if (!event) { document.querySelector(".novel-background").style.removeProperty("--scene-background");return; }
+    var background = event && event.background || hooks.scene && hooks.scene.background;
     // Let the scene theme provide the room background when an event has no
     // explicit artwork.  A hard-coded dorm image here used to replace the
     // patrol and office backgrounds on every dialogue line.
-    if (event.background) setBackground(event.background);else document.querySelector(".novel-background").style.removeProperty("--scene-background");
+    if (background) {
+      var backgroundKind = event && event.type === "explore" ? "maps" : window.MuseumAssets.categoryFor(background,"root");
+      if ((!event || event.type !== "explore") && backgroundKind === "maps") {
+        // A map accidentally placed in a dialogue event must never become a
+        // full-screen visual-novel backdrop.
+        console.warn("已忽略剧情事件中的地图背景：" + background);
+        document.querySelector(".novel-background").style.removeProperty("--scene-background");
+      } else setBackground(background,backgroundKind);
+    } else document.querySelector(".novel-background").style.removeProperty("--scene-background");
+    if (!event) return;
+    if (event.type === "investigate") { window.MuseumInvestigation.mount(root,event,hooks);return; }
+    if (event.type === "incident") {
+      root.classList.add("ribbon-incident");
+      var ribbons=node("div","falling-ribbons");ribbons.setAttribute("aria-hidden","true");
+      for(var i=0;i<32;i++){var ribbon=node("i");ribbon.style.left=(12+(i*29)%77)+"%";ribbon.style.setProperty("--delay",(i%7)*.13+"s");ribbon.style.background=["#b75a66","#d5b667","#6f99bd","#7eab88"][i%4];ribbons.appendChild(ribbon);}
+      root.appendChild(ribbons);root.appendChild(node("p","incident-caption",event.text));return;
+    }
     if (event.type === "dialogue") {
       if(event.visual){var visual=node("figure","dialogue-prop");visual.appendChild(picture(event.visual,"血字纸条"));root.appendChild(visual);}return;
     }
@@ -97,7 +119,7 @@
       disposeExploration=window.MuseumDormExploration.mount(root,hooks,function(o){
         hooks.state.flags["examined-"+o.id]=true;hooks.save();hooks.pause();modal.hidden=false;modal.textContent="";
         var box=node("article","observation-panel");
-        var crop=node("div","observation-closeup"), photo=picture("dorm-map.png",o.name+"特写");
+        var crop=node("div","observation-closeup"), photo=picture("dorm-map.png",o.name+"特写","maps");
         crop.style.aspectRatio=o.crop[2]+" / "+o.crop[3];
         Object.assign(photo.style,{width:(1670/o.crop[2]*100)+"%",left:(-o.crop[0]/o.crop[2]*100)+"%",top:(-o.crop[1]/o.crop[3]*100)+"%"});crop.appendChild(photo);box.appendChild(crop);
         box.appendChild(node("h2","",o.name));box.appendChild(node("p","",o.text));box.appendChild(button("返回房间",closeModal));modal.appendChild(box);box.querySelector("button").focus();

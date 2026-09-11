@@ -39,8 +39,13 @@
     persist();
   }
   function persist() {
-    if (preview) sessionStorage.setItem("museum_class_preview", JSON.stringify(state));
-    else MuseumState.save(state, user.id);
+    try {
+      if (preview) { sessionStorage.setItem("museum_class_preview", JSON.stringify(state)); return true; }
+      return MuseumState.save(state, user.id) !== false;
+    } catch (error) {
+      console.warn("剧情存档写入失败。", error);
+      return false;
+    }
   }
   var story = window.MuseumStory;
   var currentSceneId = params.get("scene") || state.narrativeNode || story.fallback;
@@ -49,14 +54,48 @@
   var lineIndex = Number(state.narrativeIndex) || 0;
   var endingChoice = state.narrativeChoice || state.ending || null;
   var finalChoiceTimer = null;
+  var finalChoiceRemaining = null;
   var finalChoiceSeconds = 15;
-  var automatic = false, autoTimer = null, eventAdvance = true, seenBeforeRender = false;
+  var automatic = false, autoTimer = null, revealTimer = null, revealTextValue = "", revealIndex = 0, revealComplete = true, eventAdvance = true, seenBeforeRender = false, pageHistory = {};
   var stage = window.MuseumStage;
   var eventNext = document.getElementById("event-next");
-  function pausePlayback() { window.clearTimeout(autoTimer); autoTimer = null; }
+  function pausePlayback() {
+    window.clearTimeout(autoTimer); autoTimer = null;
+    window.clearInterval(revealTimer); revealTimer = null;
+    if (finalChoiceTimer) { window.clearInterval(finalChoiceTimer); finalChoiceTimer = null; }
+  }
+  function finishTextReveal() {
+    window.clearInterval(revealTimer); revealTimer = null;
+    revealIndex = revealTextValue.length; revealComplete = true;
+    if (els && els.text) els.text.textContent = revealTextValue;
+    if (automatic && els && els.review && els.review.hidden) schedulePlayback();
+  }
+  function startTextReveal(value) {
+    revealTextValue = String(value || ""); revealIndex = 0; revealComplete = !revealTextValue;
+    if (!els || !els.text || revealComplete) { if (els && els.text) els.text.textContent = revealTextValue; return; }
+    els.text.textContent = "";
+    var cps = 34;
+    revealTimer = window.setInterval(function () {
+      revealIndex = Math.min(revealTextValue.length, revealIndex + 1);
+      els.text.textContent = revealTextValue.slice(0, revealIndex);
+      if (revealIndex >= revealTextValue.length) finishTextReveal();
+    }, Math.max(16, Math.round(1000 / cps)));
+  }
+  function resumeTextReveal() {
+    if (revealComplete || revealTimer) return;
+    els.text.textContent = revealTextValue.slice(0, revealIndex);
+    var cps = 34;
+    revealTimer = window.setInterval(function () {
+      revealIndex = Math.min(revealTextValue.length, revealIndex + 1);
+      els.text.textContent = revealTextValue.slice(0, revealIndex);
+      if (revealIndex >= revealTextValue.length) finishTextReveal();
+    }, Math.max(16, Math.round(1000 / cps)));
+  }
   function schedulePlayback() {
     pausePlayback();
-    if (!automatic || !els.review.hidden || !els.end.hidden || stage.isOpen() || !els.choices.hidden) return;
+    if (!revealComplete) { resumeTextReveal(); return; }
+    if (!els.choices.hidden) { startFinalChoiceTimer(); return; }
+    if (!automatic || !els.review.hidden || !els.end.hidden || stage.isOpen()) return;
     var line = currentLine();
     if (line.type && line.type !== "dialogue" && line.type !== "system") return;
     autoTimer = window.setTimeout(advance, Math.max(2600, (line.text || "").length * 100));
@@ -77,11 +116,16 @@
     endTitle: document.getElementById("novel-end-title"),
     endDescription: document.getElementById("novel-end-description"),
     review: document.getElementById("novel-review"),
-    reviewList: document.getElementById("novel-review-list")
+    reviewList: document.getElementById("novel-review-list"),
+    pause: document.getElementById("novel-pause"),
+    pauseResume: document.getElementById("novel-resume-button"),
+    pauseSave: document.getElementById("novel-pause-save"),
+    pauseLoad: document.getElementById("novel-pause-load"),
+    pauseMenu: document.getElementById("novel-pause-menu")
   };
   window.MuseumTutorial.bind({getState:function(){return state;},save:persist});
-  window.MuseumInventory.bind({getState:function(){return state;},save:persist,canOpen:function(){return els.review.hidden && els.end.hidden && !stage.isOpen();},onOpen:function(){pausePlayback();window.MuseumTutorial.complete("inventory");},onClose:function(){schedulePlayback();}});
-  window.MuseumAchievements.bind({getState:function(){return state;},save:persist,canOpen:function(){return els.review.hidden && els.end.hidden && !stage.isOpen();},onOpen:pausePlayback,onClose:function(){schedulePlayback();}});
+  window.MuseumInventory.bind({getState:function(){return state;},save:persist,canOpen:function(){return els.review.hidden && els.end.hidden && els.pause.hidden && !stage.isOpen();},onOpen:function(){pausePlayback();window.MuseumTutorial.complete("inventory");},onClose:function(){schedulePlayback();}});
+  window.MuseumAchievements.bind({getState:function(){return state;},save:persist,canOpen:function(){return els.review.hidden && els.end.hidden && els.pause.hidden && !stage.isOpen();},onOpen:pausePlayback,onClose:function(){schedulePlayback();}});
 
   function getScene(sceneId) {
     return story.scenes[sceneId] || story.scenes[story.fallback];
@@ -170,12 +214,47 @@
     state.narrativeIndex = lineIndex;
     state.narrativeChoice = endingChoice;
     state.flags.narrativeTextRevision = story.textRevision;
-    persist();
+    return persist();
+  }
+
+  function openPauseMenu() {
+    if (!els.pause || !els.pause.hidden) return;
+    pausePlayback();
+    els.pause.hidden = false;
+    if (els.pauseResume) els.pauseResume.focus();
+  }
+
+  function closePauseMenu() {
+    if (!els.pause) return;
+    els.pause.hidden = true;
+    schedulePlayback();
   }
 
   function completeCurrentScene() {
+    if(currentSceneId!=="scene-09") MuseumState.completeScene(state, currentSceneId);
     if (currentScene.flag) state.flags[currentScene.flag] = true;
-    if (currentSceneId === "scene-03") { state.flags.prologueComplete = true; state.flags.readNote = true;state.task = "开始午夜巡逻。";state.returnRoom="hall";state.returnX=835;state.returnY=700;if(state.unlockedRooms.indexOf("hall")<0)state.unlockedRooms.push("hall"); }
+    // The wardrobe scene is the player's first usable progression item. The
+    // data file contains the inspection text but no separate choice node, so
+    // completing that scene must award the key explicitly; otherwise the
+    // newly connected dorm door can never be opened.
+    if (currentScene.flag === "scene02Seen" && !state.flags.hasKey) {
+      state.flags.cabinetKeyTaken = true;
+      state.flags.hasKey = true;
+      if (state.inventory.indexOf("dorm-key") === -1) state.inventory.push("dorm-key");
+      if (state.clues.indexOf("wardrobe-key") === -1) state.clues.push("wardrobe-key");
+      state.task = "调查宿舍里的纸条，确认下一步该怎么走。";
+    }
+    window.MuseumChapterProgress.complete(state,currentSceneId);
+    if (currentSceneId === "scene-03") {
+      state.flags.prologueComplete = true;
+      state.flags.readNote = true;
+      state.task = "从博物馆总地图开始午夜巡逻。";
+      state.returnRoom = "museum";
+      state.returnX = 615;
+      state.returnY = 610;
+      if (state.unlockedRooms.indexOf("museum") < 0) state.unlockedRooms.push("museum");
+      if (state.unlockedRooms.indexOf("hall") < 0) state.unlockedRooms.push("hall");
+    }
   }
 
   function saveEnding() {
@@ -186,7 +265,35 @@
     state.narrativeChoice = endingChoice;
     state.ending = currentScene.endingId || endingChoice || state.ending;
     state.endingComplete = true;
-    persist();
+    return persist();
+  }
+
+  function saveChoiceCheckpoint() {
+    if (state.checkpoint && state.checkpoint.sceneId === currentSceneId && Number(state.checkpoint.narrativeIndex) === lineIndex) return true;
+    var meta = {
+      label: currentScene.title || "重要选择前",
+      sceneId: currentSceneId,
+      narrativeIndex: lineIndex,
+      summary: displayText(currentLine().text || "")
+    };
+    var result;
+    if (preview) {
+      try {
+        var data = JSON.parse(JSON.stringify(state));
+        var savedAt = new Date().toISOString();
+        data.savedAt = savedAt;
+        data.checkpoint = Object.assign({}, meta, { savedAt: savedAt });
+        sessionStorage.setItem("museum_preview_checkpoint", JSON.stringify(data));
+        result = data;
+      } catch (error) { result = null; }
+    } else if (window.MuseumState && typeof window.MuseumState.saveCheckpoint === "function") {
+      result = window.MuseumState.saveCheckpoint(state, user.id, meta);
+    }
+    if (result) {
+      state.checkpoint = result.checkpoint;
+      return true;
+    }
+    return false;
   }
 
   function addLog(line) {
@@ -194,6 +301,7 @@
     var keys = state.narrativeLogKeys || [];
     if (keys.indexOf(key) !== -1) return;
     keys.push(key);
+    if (!preview && window.MuseumState && window.MuseumState.markRead) window.MuseumState.markRead(user.id, key);
     state.narrativeLogKeys = keys;
     state.dialogueLog = state.dialogueLog || [];
     state.dialogueLog.push({
@@ -212,18 +320,19 @@
     }
     els.choices.textContent = "";
     els.choices.hidden = true;
+    finalChoiceRemaining = null;
   }
 
-  function armFinalChoiceTimer() {
+  function startFinalChoiceTimer() {
     // The map enters the final decision through the stable alias `ending-choice`.
     // Keep the source id supported for direct testing and old saves as well.
-    if ((currentSceneId !== "scene-31" && currentSceneId !== "ending-choice") || finalChoiceTimer) return;
-    var remaining = finalChoiceSeconds;
-    els.next.textContent = "请选择行动 · " + remaining + " 秒";
+    if ((currentSceneId !== "scene-31" && currentSceneId !== "ending-choice") || finalChoiceTimer || els.choices.hidden) return;
+    if (finalChoiceRemaining === null) finalChoiceRemaining = finalChoiceSeconds;
+    els.next.textContent = "请选择行动 · " + finalChoiceRemaining + " 秒";
     finalChoiceTimer = window.setInterval(function () {
-      remaining -= 1;
-      els.next.textContent = "请选择行动 · " + Math.max(remaining, 0) + " 秒";
-      if (remaining <= 0) {
+      finalChoiceRemaining -= 1;
+      els.next.textContent = "请选择行动 · " + Math.max(finalChoiceRemaining, 0) + " 秒";
+      if (finalChoiceRemaining <= 0) {
         window.clearInterval(finalChoiceTimer);
         finalChoiceTimer = null;
         var timeoutChoice = currentScene.choices && currentScene.choices.filter(function (choice) { return choice.id === "ending-d"; })[0];
@@ -284,12 +393,13 @@
     if (!Array.isArray(currentScene.choices) || !currentScene.choices.length) return;
 
     els.choices.hidden = false;
+    saveChoiceCheckpoint();
     if (!state.flags.tutorialChoiceSaved) {
       state.flags.tutorialChoiceSaved = true;
       saveNovelState();
       showToast("选择前已自动保存。你可以按自己的判断行动。");
     }
-    if (!window.MuseumTutorial.isDone("branch")) window.MuseumTutorial.show("branch", { kind: "dialogue", title: "这里的选择会留下记录", body: "没有选项说明是正确答案。按照你掌握的线索行动，之后仍然可以读取选择前的存档。" });
+    if (!window.MuseumTutorial.isDone("branch")) window.MuseumTutorial.show("branch", { kind: "branch", title: "这里的选择会留下记录", body: "没有选项说明是正确答案。按照你掌握的线索行动，之后仍然可以读取选择前的存档。" });
     currentScene.choices.forEach(function (choice) {
       var button = document.createElement("button");
       button.type = "button";
@@ -301,7 +411,7 @@
       });
       els.choices.appendChild(button);
     });
-    armFinalChoiceTimer();
+    startFinalChoiceTimer();
   }
 
   function render() {
@@ -314,7 +424,7 @@
     els.subtitle.textContent = currentScene.subtitle || "";
     els.speaker.textContent = displaySpeaker(line.speaker);
     els.dialogue.classList.toggle("is-system", /MOSS|系统/.test(line.speaker));
-    els.text.textContent = displayText(line.text);
+    startTextReveal(displayText(line.text));
     document.body.dataset.theme = currentScene.theme || "dorm";
     var briefing = document.getElementById("novel-briefing");
     briefing.hidden = !currentScene.briefing;
@@ -322,7 +432,7 @@
     var inspection = document.getElementById("novel-inspection");
     inspection.hidden = !currentScene.inspection;
     if (currentScene.inspection) {
-      inspection.querySelector("img").src = "../assets/images/wardrobe-" + (state.flags.cabinetOpen ? "open" : "closed") + ".png";
+      inspection.querySelector("img").src = window.MuseumAssets ? window.MuseumAssets.url("wardrobe-detail.png","items") : "../assets/images/items/closeups/wardrobe-detail.png";
       inspection.querySelector("img").alt = state.flags.cabinetOpen ? "打开的更衣柜" : "关闭的更衣柜";
       inspection.querySelector("figcaption").textContent = state.flags.hasKey ? "已取得宿舍钥匙" : "更衣柜";
     }
@@ -330,7 +440,8 @@
     els.progress.hidden = currentPages.length === 0;
     els.progress.textContent = (lineIndex + 1) + " / " + currentPages.length;
     els.next.textContent = lineIndex < currentPages.length - 1 ? "点击画面 / E 继续　◆" : (currentScene.choices ? "请选择行动" : "剧情结束");
-    seenBeforeRender = (state.narrativeLogKeys || []).indexOf(story.textRevision + ":" + currentSceneId + ":" + lineIndex) !== -1;
+    var pageKey = story.textRevision + ":" + currentSceneId + ":" + lineIndex;
+    seenBeforeRender = (state.narrativeLogKeys || []).indexOf(pageKey) !== -1 || (!preview && window.MuseumState.hasRead && window.MuseumState.hasRead(user.id, pageKey));
     if (currentPages.length && (!line.type || line.type === "dialogue")) addLog(line);
     saveNovelState();
     renderChoices();
@@ -356,12 +467,13 @@
     eventNext.disabled = false;eventNext.textContent = line.action || "继续";
     els.speaker.hidden = !!isEvent; els.text.hidden = !!isEvent; els.next.hidden = !!isEvent;
     stage.render(currentScene.events ? line : null, {
-      state:state, save:persist, advance:advance, pause:pausePlayback, resume:function(){els.dialogue.focus();schedulePlayback();},
+      scene:currentScene, state:state, save:persist, advance:advance, pause:pausePlayback, resume:function(){els.dialogue.focus();schedulePlayback();},
       canExplore:function(){return els.review.hidden && els.end.hidden && !stage.isOpen() && els.choices.hidden;},
       setAdvance:function(enabled,label){eventAdvance=enabled;eventNext.hidden=!enabled;if(label)eventNext.textContent=label;}
     });
     window.MuseumPortraits.render(currentScene,line);
-    if(line.type === "system") els.text.textContent = "";
+    if(line.type === "system") { finishTextReveal(); els.text.textContent = ""; }
+    pageHistory[currentSceneId + ":" + lineIndex] = JSON.parse(JSON.stringify(state));
     document.getElementById("novel-back-button").disabled = lineIndex === 0;
     schedulePlayback();
     if ((!line.type || line.type === "dialogue") && !window.MuseumTutorial.isDone("dialogue")) window.MuseumTutorial.show("dialogue", { kind: "dialogue", title: "对白可以这样推进", body: "点击屏幕任意空白处，或按 E 继续。第一次推进后，这条提示会消失。" });
@@ -380,7 +492,7 @@
       state.flags.hasKey = true;
       if (state.inventory.indexOf("dorm-key") === -1) state.inventory.push("dorm-key");
       if (state.clues.indexOf("wardrobe-key") === -1) state.clues.push("wardrobe-key");
-      state.task = "带着钥匙离开宿舍，去中央大厅。";
+      state.task = "带着钥匙离开宿舍，穿过走廊前往馆内总览。";
     }
     if (/^office-/.test(choice.id)) {
       state.flags[choice.id] = true;
@@ -401,6 +513,7 @@
     currentScene = getScene(sceneId);
     currentPages = buildPages(currentScene);
     lineIndex = 0;
+    pageHistory = {};
     endingChoice = currentScene.endingId || endingChoice;
     els.end.hidden = true;
     window.history.replaceState({}, "", "?scene=" + encodeURIComponent(sceneId) + (preview ? "&preview=1" : ""));
@@ -424,6 +537,7 @@
     if (!window.MuseumTutorial.isDone("branch")) window.MuseumTutorial.complete("branch");
     completeCurrentScene();
     applyChoice(choice);
+    clearChoices();
     if (choice.effect === "take-key") { persist(); render(); showToast("获得物品：宿舍钥匙"); return; }
     if (choice.action === "battle") {
       startBattle(choice);
@@ -438,20 +552,9 @@
 
   function finishToMap() {
     if (preview) { window.location.href = "showcase.html"; return; }
-    state.mode = "explore";
-    state.narrativeNode = null;
-    state.narrativeIndex = 0;
-    state.narrativeChoice = null;
-    state.returnScene = null;
-    if (state.returnRoom) state.roomId = state.returnRoom;
-    if (state.returnX !== null) state.playerX = Number(state.returnX) || state.playerX;
-    if (state.returnY !== null) state.playerY = Number(state.returnY) || state.playerY;
-    if (state.returnFacing) state.facing = state.returnFacing;
-    state.returnRoom = null;
-    state.returnX = null;
-    state.returnY = null;
-    state.returnFacing = "down";
-    MuseumState.save(state, user.id);
+    var before=JSON.parse(JSON.stringify(state));
+    window.MuseumTransition.leaveStory(state);
+    if(!persist()){state=before;showToast("保存失败，请重试后再返回地图。");return;}
     window.location.href = "../index.html?fromStory=1";
   }
 
@@ -475,6 +578,7 @@
 
   function advance() {
     if (!els.review.hidden || !els.end.hidden || stage.isOpen() || !eventAdvance) return;
+    if (!revealComplete) { finishTextReveal(); schedulePlayback(); return; }
     if (!els.choices.hidden) return;
     if ((!currentLine().type || currentLine().type === "dialogue") && !window.MuseumTutorial.isDone("dialogue")) window.MuseumTutorial.complete("dialogue");
     if (lineIndex < currentPages.length - 1) {
@@ -530,6 +634,7 @@
       return;
     }
     state = loaded;persist();
+    pageHistory = {};
     if (state.mode === "novel" || state.mode === "ending") {
       currentSceneId = state.narrativeNode || story.fallback;
       currentScene = getScene(currentSceneId);
@@ -547,15 +652,18 @@
 
   function toMenu() {
     if (preview) { window.location.href = "showcase.html"; return; }
-    if (state.mode === "ending") saveEnding();
-    else saveNovelState();
+    var saved = state.mode === "ending" ? saveEnding() : saveNovelState();
+    if (!saved) { showToast("保存失败，请检查浏览器存储空间后重试。"); return; }
     window.location.href = "../index.html?fromMenu=1";
   }
 
   // Capture eligibility before an investigation or modal click changes the current event.
   document.addEventListener("click", function(event) {
     if (event.button !== 0 || event.defaultPrevented) return;
-    if (event.target.closest('button,a,input,textarea,select,label,[contenteditable="true"],[role="button"],#novel-choices,#novel-review,#novel-end,#item-modal,dialog')) return;
+    if (!els.pause.hidden) return;
+    if (event.target.closest('button,a,input,textarea,select,label,[contenteditable="true"],[role="button"],#novel-choices,#novel-review,#novel-end,#item-modal,dialog,.tutorial-cue')) return;
+    var inEventLayer = event.target.closest("#scene-events");
+    if (inEventLayer && currentLine().type && currentLine().type !== "dialogue" && currentLine().type !== "system") return;
     if (currentLine().type === "explore" || String(window.getSelection()).trim()) return;
     advance();
   }, true);
@@ -569,37 +677,55 @@
   document.getElementById("novel-review-button").addEventListener("click", showReview);
   document.querySelector('.novel-toolbar-actions').addEventListener("click",function(e){e.stopPropagation();});
   eventNext.addEventListener("click",function(e){e.stopPropagation();advance();});
-  document.getElementById("novel-back-button").addEventListener("click",function(){pausePlayback();if(lineIndex>0){lineIndex-=1;render();}});
+  document.getElementById("novel-back-button").addEventListener("click",function(){
+    pausePlayback();
+    if(lineIndex>0){
+      var previous=pageHistory[currentSceneId+":"+(lineIndex-1)];
+      if(previous) state=previous;
+      lineIndex-=1;render();
+    }
+  });
   document.getElementById("novel-auto-button").addEventListener("click",function(){automatic=!automatic;this.setAttribute("aria-pressed",String(automatic));this.textContent=automatic?"自动中":"自动";schedulePlayback();});
   document.getElementById("novel-skip-button").addEventListener("click",function(){
     pausePlayback();var moved=false;
     while (lineIndex<currentPages.length-1 && seenBeforeRender && (!currentLine().type || currentLine().type==="dialogue")) {
       var next=currentPages[lineIndex+1];
       if(next.type && next.type!=="dialogue")break;
-      if((state.narrativeLogKeys||[]).indexOf(story.textRevision+":"+currentSceneId+":"+(lineIndex+1))<0)break;
+      var nextKey=story.textRevision+":"+currentSceneId+":"+(lineIndex+1);
+      var knownNext=(state.narrativeLogKeys||[]).indexOf(nextKey)>=0 || (!preview && window.MuseumState.hasRead && window.MuseumState.hasRead(user.id,nextKey));
+      if(!knownNext)break;
       lineIndex+=1;moved=true;
     }
     if(moved)render();else showToast("没有可快进的已读对白。");
   });
   document.getElementById("novel-bag-button").addEventListener("click",function(){stage.bag();});
   document.getElementById("novel-achievements-button").addEventListener("click",function(){window.MuseumAchievements.open();});
-  document.getElementById("novel-review-close").addEventListener("click", function () { els.review.hidden = true; });
+  document.getElementById("novel-review-close").addEventListener("click", function () { els.review.hidden = true; schedulePlayback(); });
   els.review.addEventListener("click", function (event) { if (event.target === els.review) els.review.hidden = true; });
   document.getElementById("novel-save-button").addEventListener("click",function(){openSaves("save");});
   document.getElementById("novel-load-button").addEventListener("click",function(){openSaves("load");});
   document.getElementById("novel-menu-button").addEventListener("click", toMenu);
-  document.getElementById("novel-end-save").addEventListener("click", function () { saveEnding(); showToast("结局已保存。"); });
-  document.getElementById("novel-end-menu").addEventListener("click", function () { saveEnding(); window.location.href = "../index.html?fromEnding=1"; });
+  els.pauseResume.addEventListener("click", closePauseMenu);
+  els.pauseSave.addEventListener("click", function () { els.pause.hidden = true; openSaves("save"); });
+  els.pauseLoad.addEventListener("click", function () { els.pause.hidden = true; openSaves("load"); });
+  els.pauseMenu.addEventListener("click", function () { els.pause.hidden = true; toMenu(); });
+  els.pause.addEventListener("click", function (event) { if (event.target === els.pause) closePauseMenu(); });
+  document.getElementById("novel-end-save").addEventListener("click", function () { if (saveEnding()) showToast("结局已保存。"); else showToast("保存失败，请检查浏览器存储空间后重试。"); });
+  document.getElementById("novel-end-menu").addEventListener("click", function () { if (!saveEnding()) { showToast("保存失败，请检查浏览器存储空间后重试。"); return; } window.location.href = "../index.html?fromEnding=1"; });
   document.addEventListener("keydown", function (event) {
     if (event.key.toLowerCase() === "e") {
       if (event.repeat || event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey) return;
+      if (!els.pause.hidden) return;
       if (event.target.closest('input,textarea,select,[contenteditable="true"]') || currentLine().type === "explore") return;
       event.preventDefault();advance();return;
     }
     if (event.key !== "Escape") return;
-    if(stage.isOpen())stage.close();
-    else if (!els.review.hidden) {els.review.hidden = true;schedulePlayback();}
-    else {automatic=false;pausePlayback();document.getElementById("novel-auto-button").textContent="自动";document.getElementById("novel-auto-button").setAttribute("aria-pressed","false");}
+    event.preventDefault();
+    if(stage.isOpen()){stage.close();return;}
+    if (!els.review.hidden) {els.review.hidden = true;schedulePlayback();return;}
+    if (!els.pause.hidden) {closePauseMenu();return;}
+    automatic=false;document.getElementById("novel-auto-button").textContent="自动";document.getElementById("novel-auto-button").setAttribute("aria-pressed","false");
+    openPauseMenu();
   });
   document.addEventListener("visibilitychange",function(){if(document.hidden)pausePlayback();else schedulePlayback();});
 

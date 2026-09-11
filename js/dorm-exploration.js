@@ -21,7 +21,7 @@
   function mount(root, hooks, inspect) {
     var map=document.createElement("div"); map.className="investigation-map";
     map.tabIndex=0; map.setAttribute("role","group"); map.setAttribute("aria-label","员工宿舍。方向键或 WASD 移动，走近物品后按 E 调查，也可点击地面移动。");
-    var img=document.createElement("img"); img.src="../assets/images/dorm-map.png"; img.alt="员工宿舍"; img.draggable=false; map.appendChild(img);
+    var img=document.createElement("img"); img.src=window.MuseumAssets.url("dorm-map.png","maps"); img.alt="员工宿舍"; img.draggable=false; map.appendChild(img);
     var canvas=document.createElement("canvas"); canvas.width=W;canvas.height=H;canvas.className="exploration-character";canvas.setAttribute("aria-hidden","true");map.appendChild(canvas);
     var ctx=canvas.getContext("2d"), keys={}, route=[], closest=null, destroyed=false, frame, last=0, moving=false, facing="down", travelled=0;
     var saved=hooks.state.flags.dormExplorationPosition;

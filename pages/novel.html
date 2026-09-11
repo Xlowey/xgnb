@@ -4,20 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>怪谈博物馆 · 剧情</title>
-  <link rel="stylesheet" href="../css/novel.css?v=2">
-  <link rel="stylesheet" href="../css/novel-stage.css?v=7">
-  <link rel="stylesheet" href="../css/inventory.css?v=1">
-  <link rel="stylesheet" href="../css/achievements.css?v=1">
-  <link rel="stylesheet" href="../css/novel-portraits.css?v=1">
-  <link rel="stylesheet" href="../css/story-save-dialog.css?v=2">
-  <link rel="stylesheet" href="../css/tutorial.css?v=1">
+  <link rel="stylesheet" href="../css/novel.css?v=38">
+  <link rel="stylesheet" href="../css/novel-stage.css?v=49">
+  <link rel="stylesheet" href="../css/inventory.css?v=38">
+  <link rel="stylesheet" href="../css/achievements.css?v=38">
+  <link rel="stylesheet" href="../css/novel-portraits.css?v=38">
+  <link rel="stylesheet" href="../css/story-save-dialog.css?v=38">
+  <link rel="stylesheet" href="../css/tutorial.css?v=38">
+  <link rel="stylesheet" href="../css/novel-art-ui.css?v=3">
+  <link rel="stylesheet" href="../css/game-art-ui.css?v=2">
 </head>
 <body class="novel-page">
   <main class="novel-stage">
     <div class="novel-background" aria-hidden="true"></div>
     <div class="novel-vignette" aria-hidden="true"></div>
     <aside id="novel-briefing" class="novel-briefing" hidden></aside>
-    <figure id="novel-inspection" class="novel-inspection" hidden><img src="../assets/images/wardrobe-open.png" alt="打开的更衣柜"><figcaption>更衣柜</figcaption></figure>
+    <figure id="novel-inspection" class="novel-inspection" hidden><img src="../assets/images/items/closeups/wardrobe-detail.png" alt="打开的更衣柜"><figcaption>更衣柜</figcaption></figure>
     <div id="scene-events" class="scene-events" hidden></div>
     <header class="novel-toolbar">
       <div id="novel-location" class="novel-location">交互故事 · 剧情</div>
@@ -61,26 +63,42 @@
         <div id="novel-review-list" class="novel-review-list"></div>
       </div>
     </section>
+    <section id="novel-pause" class="novel-pause" hidden aria-label="剧情暂停">
+      <div class="novel-pause-card" role="dialog" aria-modal="true" aria-labelledby="novel-pause-title">
+        <p class="novel-pause-kicker">怪谈博物馆 · 剧情中</p>
+        <h2 id="novel-pause-title">游戏暂停</h2>
+        <button id="novel-resume-button" class="novel-pause-button novel-pause-primary" type="button">继续剧情</button>
+        <button id="novel-pause-save" class="novel-pause-button" type="button">保存游戏</button>
+        <button id="novel-pause-load" class="novel-pause-button" type="button">读取存档</button>
+        <button id="novel-pause-menu" class="novel-pause-button novel-pause-quiet" type="button">保存并返回标题</button>
+        <p class="novel-pause-hint">Esc 关闭菜单 · 剧情进度会记录到当前档案</p>
+      </div>
+    </section>
     <div id="novel-toast" class="novel-toast" hidden></div>
     <section id="item-modal" class="item-modal" role="dialog" aria-modal="true" aria-label="物品查看" hidden></section>
   </main>
-  <script src="../js/auth.js?v=3"></script>
-  <script src="../js/state.js?v=8"></script>
-  <script src="../js/items.js?v=1"></script>
-  <script src="../js/inventory.js?v=2"></script>
-  <script src="../js/achievements-data.js?v=1"></script>
-  <script src="../js/achievements.js?v=1"></script>
-  <script src="../js/tutorial.js?v=1"></script>
-  <script src="../js/novel-data.js?v=2"></script>
-  <script src="../js/novel-overrides.js?v=2"></script>
-  <script src="../js/novel-presentation.js?v=3"></script>
-  <script src="../js/novel-prologue.js?v=6"></script>
-  <script src="../js/player-avatar.js?v=5"></script>
-  <script src="../js/dorm-exploration.js?v=6"></script>
-  <script src="../js/novel-stage.js?v=13"></script>
-  <script src="../js/novel-portraits.js?v=1"></script>
-  <script src="../js/story-save-dialog.js?v=2"></script>
-  <script src="../js/novel.js?v=13"></script>
+  <script src="../js/auth.js?v=38"></script>
+  <script src="../js/state.js?v=38"></script>
+  <script src="../js/items.js?v=38"></script>
+  <script src="../js/inventory.js?v=38"></script>
+  <script src="../js/achievements-data.js?v=38"></script>
+  <script src="../js/achievements.js?v=38"></script>
+  <script src="../js/tutorial.js?v=38"></script>
+  <script src="../js/asset-paths.js?v=51"></script>
+  <script src="../js/chapter-progress.js?v=47"></script>
+  <script src="../js/scene-transition.js?v=38"></script>
+  <script src="../js/novel-data.js?v=38"></script>
+  <script src="../js/novel-overrides.js?v=38"></script>
+  <script src="../js/novel-presentation.js?v=38"></script>
+  <script src="../js/novel-prologue.js?v=51"></script>
+  <script src="../js/chapter-story.js?v=54"></script>
+  <script src="../js/investigation-stage.js?v=51"></script>
+  <script src="../js/player-avatar.js?v=38"></script>
+  <script src="../js/dorm-exploration.js?v=51"></script>
+  <script src="../js/novel-stage.js?v=54"></script>
+  <script src="../js/novel-portraits.js?v=48"></script>
+  <script src="../js/story-save-dialog.js?v=38"></script>
+  <script src="../js/novel.js?v=54"></script>
 </body>
 </html>
 

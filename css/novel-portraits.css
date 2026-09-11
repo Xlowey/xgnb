@@ -2,7 +2,7 @@
 .novel-portraits[hidden] { display:none; }
 .novel-portrait { position:absolute;bottom:calc(var(--dialogue-height) - 25px);width:min(43vw,610px);height:min(65dvh,650px);object-fit:contain;object-position:center bottom;filter:brightness(.56) saturate(.75);opacity:1;transition:filter .2s ease,opacity .2s ease; }
 .novel-portrait[hidden] { display:none; }.novel-portrait.is-speaking { filter:brightness(1) saturate(1);opacity:1; }
-.portrait-hero { left:max(10px,calc(50% - 610px)); }.portrait-zhaoling { right:max(10px,calc(50% - 610px)); }
+.portrait-hero { left:max(10px,calc(50% - 610px)); }.portrait-zhaoling,.portrait-director { right:max(10px,calc(50% - 610px)); }
 .novel-portraits.has-prop .novel-portrait { width:min(31vw,440px);height:min(55dvh,530px); }
 body.has-portraits .dialogue-prop { position:absolute;left:42%;right:12%;top:5%;bottom:4%; }
 body.has-portraits .dialogue-prop img { max-width:100%; }

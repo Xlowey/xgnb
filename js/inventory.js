@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  var script=document.currentScript,assetBase=new URL("../assets/images/",script.src).href;
+  var script=document.currentScript,assetBase=new URL("../assets/images/items/",script.src).href;
   var dialog,windowPanel,grid,detail,zoom,receipt,receiptTimer,context,selected,side="front",returnFocus;
   function node(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text)e.textContent=text;return e;}
   function button(text,fn,cls){var b=node("button",cls || "inventory-button",text);b.type="button";b.addEventListener("click",fn);return b;}
@@ -30,7 +30,7 @@
   function art(item,back){
     var figure=node("span","inventory-art"),name=back?item.reverseImage:item.image,crop=back?item.reverseCrop:item.crop;
     if(!name){figure.classList.add("inventory-placeholder");figure.textContent="◇";return figure;}
-    var img=node("img");img.src=assetBase+name;img.alt=item.name+(back?"背面":"");img.draggable=false;
+    var img=node("img");img.src=window.MuseumAssets ? window.MuseumAssets.url(name) : assetBase+name;img.alt=item.name+(back?"背面":"");img.draggable=false;
     if(crop){figure.style.aspectRatio=crop[2]+" / "+crop[3];figure.style.setProperty("--art-ratio",crop[2]/crop[3]);Object.assign(img.style,{width:(1670/crop[2]*100)+"%",left:(-crop[0]/crop[2]*100)+"%",top:(-crop[1]/crop[3]*100)+"%"});}
     else figure.classList.add("inventory-full-art");figure.appendChild(img);return figure;
   }

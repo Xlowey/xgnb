@@ -65,7 +65,8 @@
   function show(id, options) {
     options = options || {};
     var target = state();
-    if (!target || !id || isDone(id) || dismissed[id]) return;
+    var storedDismissed = target && target.tutorialDismissed && target.tutorialDismissed[id];
+    if (!target || !id || isDone(id) || dismissed[id] || storedDismissed) return;
     if (activeId === id && cue && !cue.hidden) return;
     if (activeId && cue && !cue.hidden) return;
     var box = buildCue();
@@ -101,6 +102,9 @@
     later.addEventListener("click", function (event) {
       event.stopPropagation();
       dismissed[id] = true;
+      target.tutorialDismissed = target.tutorialDismissed || {};
+      target.tutorialDismissed[id] = true;
+      if (context && context.save) context.save();
       hide(id);
     });
     actions.appendChild(later);

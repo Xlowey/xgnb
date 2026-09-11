@@ -45,3 +45,5 @@
 @media (prefers-reduced-motion: reduce) {
   .tutorial-cue { animation: none; }
 }
+
+.tutorial-cue-branch{top:65px;bottom:auto;left:auto;right:16px;transform:none;width:min(320px,calc(100vw - 32px));animation:none;}

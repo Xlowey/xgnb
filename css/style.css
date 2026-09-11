@@ -295,7 +295,7 @@ button:disabled {
   display: grid;
   place-items: center;
   padding: 24px;
-  background-image: linear-gradient(90deg, rgba(7, 11, 10, .35), rgba(7, 11, 10, .12) 48%, rgba(7, 11, 10, .32)), url("../assets/images/Main Interface Background.jpeg");
+  background-image: linear-gradient(90deg, rgba(7, 11, 10, .35), rgba(7, 11, 10, .12) 48%, rgba(7, 11, 10, .32)), radial-gradient(ellipse at 50% 25%, #34403a, #0b1014 75%);
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
@@ -498,7 +498,7 @@ input:focus {
 
 .login-page-body {
   min-height: 100vh;
-  background-image: linear-gradient(90deg, rgba(7, 11, 10, .42), rgba(7, 11, 10, .12) 52%, rgba(7, 11, 10, .3)), url("../assets/images/Main Interface Background.jpeg");
+  background-image: linear-gradient(90deg, rgba(7, 11, 10, .42), rgba(7, 11, 10, .12) 52%, rgba(7, 11, 10, .3)), radial-gradient(ellipse at 50% 25%, #34403a, #0b1014 75%);
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
@@ -573,7 +573,7 @@ input:focus {
   padding: 0 clamp(12px, 3vw, 36px) 28px;
   background-image:
     linear-gradient(90deg, rgba(7, 11, 10, .92), rgba(7, 11, 10, .64) 50%, rgba(7, 11, 10, .9)),
-    url("../assets/images/Main Interface Background.jpeg");
+    radial-gradient(ellipse at 50% 25%, #34403a, #0b1014 75%);
   background-position: center;
   background-size: cover;
   background-attachment: fixed;
@@ -1084,7 +1084,7 @@ input:focus {
 .public-page-body.game-public-body {
   background-image:
     linear-gradient(90deg, rgba(7, 11, 10, .4), rgba(7, 11, 10, .18) 50%, rgba(7, 11, 10, .38)),
-    url("../assets/images/Main Interface Background.jpeg");
+    radial-gradient(ellipse at 50% 25%, #34403a, #0b1014 75%);
   background-position: center;
   background-size: cover;
   background-attachment: fixed;
@@ -1583,6 +1583,7 @@ input:focus {
 .map-panel, .map-viewport { width: 100%; height: 100%; min-height: 100%; }
 .map-viewport { display: grid; place-items: center; border: 0; box-shadow: none; background: #0b1014; }
 #explore-canvas { display: block; width: 100%; height: 100%; min-height: 0; object-fit: cover; object-position: center; }
+.save-checkpoint { border-color: #b99a62; background: rgba(44, 55, 54, .85); }
 #mini-map { display: none !important; }
 .map-room-label { position: absolute; z-index: 3; top: 24px; left: 28px; max-width: min(420px, 70vw); pointer-events: none; text-shadow: 0 2px 16px rgba(0, 0, 0, .85); }
 .map-room-label .eyebrow { margin: 0 0 4px; color: var(--accent-strong); font-size: .78rem; }
@@ -1630,3 +1631,5 @@ input:focus {
   .login-page .login-panel { padding: 28px 24px; min-height: 570px; }
   .login-page .login-panel h1 { font-size: 36px; }
 }
+
+.chapter-objective{position:absolute;top:98px;left:24px;max-width:min(420px,75vw);margin:0;padding:8px 12px;background:#0a171de3;color:#ddcda7;font-size:14px;pointer-events:none;}

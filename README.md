@@ -34,7 +34,7 @@ xgnb/
 │  └─ battle.js            战斗逻辑与结果回传
 ├─ demos/battle/           独立回合战斗页面
 │  └─ index.html           战斗页面入口，结束后把结果交回主游戏
-└─ assets/images/         登录、标题、房间背景和可替换素材
+└─ assets/images/         地图、剧情背景、角色、物品、界面及待接入素材（见素材分类指南）
 ```
 
 ## 运行和操作
@@ -57,11 +57,11 @@ xgnb/
 - 宿舍、走廊、大厅和办公室通过门相连。再次调查守则或纸条后回到原位置，不需要钥匙。
 - “保存”打开 20 个手动存档位；自动存档会持续更新，“读档”可以随时读取任意手动档。
 
-新地图配置在 `js/map-art.js` 中；背景保留原始比例，碰撞与交互单独配置。更衣柜特写使用 `assets/images/wardrobe-detail.png`，纸条正反面使用 `note-front.png`、`note-back.png`。
+新地图配置在 `js/map-art.js` 中；背景保留原始比例，碰撞与交互单独配置。地图、剧情背景和物品按用途归档在 `assets/images/maps/`、`assets/images/story-backgrounds/`、`assets/images/items/`，路径由 `js/asset-paths.js` 统一解析。更衣柜特写使用 `items/closeups/wardrobe-detail.png`，纸条正反面使用 `items/documents/note-front.png`、`items/documents/note-back.png`。
 
 第二场宿舍探索由 `js/dorm-exploration.js` 管理，背景、人物和调查点共用原图 1670 × 942 坐标，按可用窗口等比缩放。探索时隐藏重复背景与空对白框，仅显示底部操作栏。查看物品和回顾时暂停移动；人物位置随存档保存。四件物品的局部特写直接取自原场景图。
 
-公共页面背景已换成 `assets/images/dorm-map.png`。前三场不依赖网络；图文内容随项目一同交付。
+公共页面不再借用地图作为背景；前三场不依赖网络，图文内容随项目一同交付。完整分类见 `assets/images/素材分类指南.md`。
 
 背包在地图右上角、对白框右下角均有入口，也可按 B 打开或收起，Esc 收起。阅读员工守则时收录规则记录，从黑色制服口袋取出血字纸条时获得物品；重复查看不会重复获得。背包可选物品、查看清晰原文、翻面和放大，关闭后继续原位置与剧情。物品随当前账号的自动档和手动档保存，旧档中已获得的纸条与守则会自动恢复；课堂预览仍使用独立的临时状态。`js/items.js` 是剧情与背包共用的物品定义，`js/inventory.js` 管理收录与界面；新物品通过定义和 `MuseumInventory.acquire(state, id, {save: persist})` 接入。
 

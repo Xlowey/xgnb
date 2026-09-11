@@ -1,0 +1,88 @@
+/* Shared skin from the supplied museum UI atlas; layout stays in each module. */
+.map-guide { position:absolute;right:20px;top:18px;width:320px;z-index:4;padding:10px;border:8px solid transparent;border-image:url('../assets/images/ui/menus/menu-panel.png') 70 fill / 8px stretch;color:#e8d4ad;pointer-events:none; }
+.map-guide #mini-map { display:block!important;position:static;width:100%;height:auto;max-width:none;margin:6px 0;border:0; }
+.map-guide small { font-size:11px; }
+.map-guide p { margin:6px 0 0;font-size:12px;line-height:1.5; }
+.map-quick-actions { top:auto;bottom:58px;right:24px; }
+.game-message { bottom:115px; }
+@media(max-width:700px) { .map-guide { width:190px;right:10px;top:10px;padding:5px; }.map-guide small{font-size:9px}.map-guide p{font-size:10px}.map-quick-actions {top:auto;bottom:65px;right:12px}.chapter-objective{max-width:calc(100vw - 230px)} }
+:root { --accent:#d7b675; --accent-strong:#ebcb94; --line:#97774c66; --text:#eee1c7; }
+body { scrollbar-color:#a58a60 #241f1a; scrollbar-width:thin; }
+*,*::before,*::after { scrollbar-color:#a58a60 #241f1a; }
+.cover-card,.pause-card,.login-panel,.public-panel,
+.inventory-dialog,.achievements-dialog,.story-save-dialog,.novel-review-card,
+.novel-end-card,.tutorial-cue,.save-window,.log-window,.modal-card {
+  border:15px solid transparent; border-image:url('../assets/images/ui/menus/menu-panel.png') 70 fill / 15px stretch;
+  background:transparent; border-radius:0; box-shadow:0 16px 55px #0009;
+  color:#eee1c7;
+}
+.cover-card { width:min(520px,calc(100vw - 32px)); padding:45px 38px 30px; }
+.cover-card h1 { color:#e8cda0; text-shadow:2px 3px #441a16; font-family:serif; }
+.pause-card { width:min(580px,calc(100vw - 32px)); max-height:calc(100dvh - 40px); padding:24px; }
+.login-panel { padding:35px; }
+.button,.event-button,.inventory-button,.achievement-button,
+.story-save-dialog button,.tutorial-cue-actions button,
+.map-bag-button,.map-achievements-button,.save-slot button,
+.novel-choice,.novel-end-actions button {
+  border:7px solid transparent; border-image:url('../assets/images/ui/buttons/button-dark.png') 22 fill / 7px stretch;
+  background:transparent; border-radius:0; color:#f0dfbd;
+  padding:9px 18px; text-shadow:0 1px #191613; box-shadow:none;
+}
+.button-primary,.cover-actions .button:first-child,.tutorial-cue-action {
+  border:7px solid transparent!important;
+  border-image:url('../assets/images/ui/buttons/button-primary.png') 22 fill / 7px stretch!important;
+  background:transparent!important; color:#39251b!important; text-shadow:none;
+}
+.button:hover,.event-button:hover,.inventory-button:hover,.achievement-button:hover,
+.story-save-dialog button:hover,.map-bag-button:hover,.map-achievements-button:hover {
+  background:transparent; filter:brightness(1.18); color:#f7e7c9;
+}
+button:focus-visible,a:focus-visible,summary:focus-visible { outline:2px solid #efcf8e; outline-offset:3px; }
+button:disabled { filter:grayscale(.65); opacity:.45; }
+.cover-actions { gap:12px; }
+.cover-actions .button { min-height:54px; }
+.auth-form input { background:#1f1a16; border:1px solid #ac8d5d; color:#f1e2ca; }
+.inventory-grid,.inventory-slot,.achievement-card,.save-slot,.story-save-grid article,
+.save-page-slot { background:#241e18e8; border-color:#8c71484d; border-radius:0; }
+.save-window-header,.save-mode-tabs,.save-help,.save-window>.status-message { background:transparent; color:#ddc9a6; border-color:#97774c66; }
+.save-mode-button { background:transparent; color:#bca98a; }
+.save-mode-button.active { color:#ffe0a5; border-color:#d7b675; background:#70522b33; }
+.save-slot-list,.dialogue-log-list { scrollbar-width:thin; }
+.save-slot-card,.log-entry { background:#241e18e8; border-color:#97774c66; }
+.inventory-slot[aria-pressed="true"],.achievements-filters button[aria-pressed="true"] { background:#493723; border-color:#d5b171; color:#ffe2ab; }
+.inventory-header,.achievements-header,.story-save-dialog header { border-color:#98764e66; }
+.inventory-count,.achievements-summary,.inventory-detail-head p,.achievement-empty p,
+.signed-in,.login-switch,.status-message { color:#cdbfa6; }
+.tutorial-cue { padding:15px 19px; backdrop-filter:none; }
+.tutorial-cue-kicker,.tutorial-cue-body { color:#ddc9a6; }
+.tutorial-cue-later { color:#dfc9a3!important; background:transparent!important; }
+.interaction-prompt,.game-message,.map-toast,.chapter-objective {
+  border:5px solid transparent; border-image:url('../assets/images/ui/buttons/button-dark.png') 22 fill / 5px stretch;
+  background:transparent; color:#f2ddb6; border-radius:0;
+}
+.novel-toolbar-actions .novel-tool { background:transparent; border:0; }
+.hotspot-investigation>button {
+  border:7px solid transparent;
+  border-image:url('../assets/images/ui/buttons/button-dark.png') 22 fill / 7px stretch;
+  background:transparent;
+  border-radius:0;
+  color:#f0dfbd;
+  text-shadow:0 1px #191613;
+  box-shadow:none;
+}
+.hotspot-investigation>button:hover { filter:brightness(1.16); }
+.hotspot-investigation>button.examined { border-image-source:url('../assets/images/ui/buttons/button-primary.png'); color:#39251b; text-shadow:none; filter:saturate(.7); }
+.investigation-feedback {
+  border:5px solid transparent;
+  border-image:url('../assets/images/ui/frames/system-frame.png') 34 fill / 5px stretch;
+  background:transparent;
+  color:#ead7b0;
+  min-height:28px;
+  box-sizing:border-box;
+}
+.investigation-feedback.complete { color:#ffe1a3; }
+@media(max-width:600px) {
+ .cover-card,.login-panel { padding:25px 18px; }
+ .pause-card { padding:15px; }
+ .button,.inventory-button,.achievement-button,.story-save-dialog button { padding:7px 10px; }
+}

@@ -12,75 +12,25 @@
     closed: new Image(),
     open: new Image()
   };
-  wardrobeImages.closed.src = "assets/images/wardrobe-closed.png";
-  wardrobeImages.open.src = "assets/images/wardrobe-open.png";
+  wardrobeImages.closed.src = window.MuseumAssets ? window.MuseumAssets.url("wardrobe-detail.png","items") : "assets/images/items/closeups/wardrobe-detail.png";
+  wardrobeImages.open.src = window.MuseumAssets ? window.MuseumAssets.url("wardrobe-detail.png","items") : "assets/images/items/closeups/wardrobe-detail.png";
   var keys = {};
   var heldTouch = null;
   var camera = { x: 0, y: 0 };
+  var renderView = { scale: 1, offsetX: 0, offsetY: 0 };
   var lastFrame = 0;
   var lastSave = 0;
   var avatarMoving = false, avatarTravelled = 0;
   var savePanelMode = "save";
 
-  var rooms = {
-    dorm: {
-      id: "dorm", title: "员工宿舍", chapter: "序章", width: 1500, height: 860, spawn: { x: 300, y: 520 },
-      colliders: [{ x: 0, y: 0, w: 1500, h: 34 }, { x: 0, y: 826, w: 1500, h: 34 }, { x: 0, y: 0, w: 34, h: 860 }, { x: 1466, y: 0, w: 34, h: 860 }, { x: 130, y: 125, w: 360, h: 180 }, { x: 620, y: 104, w: 260, h: 100 }, { x: 1040, y: 120, w: 220, h: 200 }, { x: 170, y: 610, w: 310, h: 130 }, { x: 760, y: 610, w: 330, h: 110 }],
-      objects: [
-        { id: "dorm-note", type: "note", x: 580, y: 458, r: 72, label: "床边纸条" },
-        { id: "dorm-wardrobe", type: "wardrobe", x: 1140, y: 420, r: 92, label: "衣柜" },
-        { id: "dorm-terminal", type: "terminal", x: 930, y: 475, r: 75, label: "旧电视" },
-        { id: "dorm-mirror", type: "mirror", x: 1250, y: 680, r: 70, label: "墙上的镜子" },
-        { id: "dorm-door", type: "door", x: 1375, y: 460, r: 82, label: "宿舍门" },
-        { id: "dorm-scene-11", type: "scene", scene: "scene-11", requiredFlag: "scene10Seen", x: 420, y: 740, r: 82, label: "宿舍门口的客人" },
-        { id: "dorm-scene-12", type: "scene", scene: "scene-12", requiredFlag: "scene11Seen", x: 620, y: 740, r: 82, label: "散落的彩带" },
-        { id: "dorm-scene-13", type: "scene", scene: "scene-13", requiredFlag: "scene12Seen", x: 820, y: 740, r: 82, label: "馆长的来信" },
-        { id: "dorm-scene-14", type: "scene", scene: "scene-14", requiredFlag: "scene13Seen", x: 1040, y: 740, r: 82, label: "食堂的彩带" },
-        { id: "dorm-scene-25", type: "scene", scene: "scene-25", requiredFlag: "scene24Seen", x: 1240, y: 740, r: 82, label: "红色制服" }
-      ]
-    },
-    hall: {
-      id: "hall", title: "中央大厅", chapter: "第一幕", width: 1700, height: 860, spawn: { x: 160, y: 460 },
-      colliders: [{ x: 0, y: 0, w: 1700, h: 34 }, { x: 0, y: 826, w: 1700, h: 34 }, { x: 0, y: 0, w: 34, h: 860 }, { x: 1666, y: 0, w: 34, h: 860 }, { x: 170, y: 110, w: 260, h: 170 }, { x: 570, y: 120, w: 280, h: 130 }, { x: 1080, y: 110, w: 320, h: 170 }, { x: 180, y: 640, w: 360, h: 80 }, { x: 1040, y: 630, w: 410, h: 90 }],
-      objects: [
-        { id: "hall-return", type: "returnDorm", x: 90, y: 460, r: 70, label: "回宿舍" },
-        { id: "hall-guard", type: "guard", x: 710, y: 455, r: 100, label: "无脸保安" },
-        { id: "hall-rules", type: "rules", x: 1020, y: 360, r: 88, label: "值班告示" },
-        { id: "hall-scene-05", type: "scene", scene: "scene-05", x: 420, y: 400, r: 76, label: "病房展厅" },
-        { id: "hall-scene-06", type: "scene", scene: "scene-06", requiredFlag: "scene05Seen", x: 430, y: 620, r: 76, label: "教室展厅" },
-        { id: "hall-scene-08", type: "scene", scene: "scene-08", requiredFlag: "scene07Seen", x: 820, y: 650, r: 76, label: "食堂门前" },
-        { id: "hall-scene-09", type: "scene", scene: "scene-09", requiredFlag: "scene08Seen", x: 1220, y: 430, r: 76, label: "馆长办公室" },
-        { id: "hall-scene-10", type: "scene", scene: "scene-10", requiredFlag: "scene09Seen", x: 1430, y: 650, r: 76, label: "阴暗角落" },
-        { id: "hall-wax-door", type: "waxDoor", x: 1530, y: 455, r: 95, label: "蜡像馆入口" }
-      ]
-    },
-    wax: {
-      id: "wax", title: "蜡像馆", chapter: "第二幕", width: 1600, height: 860, spawn: { x: 160, y: 460 },
-      colliders: [{ x: 0, y: 0, w: 1600, h: 34 }, { x: 0, y: 826, w: 1600, h: 34 }, { x: 0, y: 0, w: 34, h: 860 }, { x: 1566, y: 0, w: 34, h: 860 }, { x: 170, y: 110, w: 260, h: 160 }, { x: 560, y: 105, w: 300, h: 170 }, { x: 1020, y: 110, w: 310, h: 170 }, { x: 220, y: 650, w: 300, h: 75 }, { x: 710, y: 650, w: 350, h: 75 }, { x: 1200, y: 650, w: 220, h: 75 }],
-      objects: [
-        { id: "wax-return", type: "returnHall", x: 90, y: 460, r: 70, label: "返回大厅" },
-        { id: "wax-contract", type: "contract", x: 690, y: 445, r: 105, label: "张明诚展台" },
-        { id: "wax-scene-16", type: "scene", scene: "scene-16", requiredFlag: "scene15Seen", x: 350, y: 620, r: 72, label: "王辰龙展台" },
-        { id: "wax-scene-17", type: "scene", scene: "scene-17", requiredFlag: "scene16Seen", x: 560, y: 620, r: 72, label: "馆长办公室" },
-        { id: "wax-scene-18", type: "scene", scene: "scene-18", requiredFlag: "scene17Seen", x: 820, y: 620, r: 72, label: "银色的恋人" },
-        { id: "wax-scene-21", type: "scene", scene: "scene-21", requiredFlag: "scene20Seen", x: 1040, y: 620, r: 72, label: "食堂铁门" },
-        { id: "wax-scene-22", type: "scene", scene: "scene-22", requiredFlag: "scene21Seen", x: 1240, y: 620, r: 72, label: "彩带深处" },
-        { id: "wax-scene-23", type: "scene", scene: "scene-23", requiredFlag: "scene22Seen", x: 1420, y: 620, r: 72, label: "梦魇的回声" },
-        { id: "wax-scene-24", type: "scene", scene: "scene-24", requiredFlag: "scene23Seen", x: 340, y: 360, r: 72, label: "第二份契约" },
-        { id: "wax-scene-26", type: "scene", scene: "scene-26", requiredFlag: "scene25Seen", x: 900, y: 360, r: 72, label: "巡逻路线" },
-        { id: "wax-scene-27", type: "scene", scene: "scene-27", requiredFlag: "scene26Seen", x: 1120, y: 360, r: 72, label: "宿舍门" },
-        { id: "wax-scene-28", type: "scene", scene: "scene-28", requiredFlag: "scene27Seen", x: 1280, y: 360, r: 72, label: "反复穿越" },
-        { id: "wax-scene-29", type: "scene", scene: "scene-29", requiredFlag: "scene28Seen", x: 1420, y: 360, r: 72, label: "食堂前方" },
-        { id: "wax-scene-30", type: "scene", scene: "scene-30", requiredFlag: "scene29Seen", x: 1240, y: 740, r: 72, label: "出口前" },
-        { id: "wax-exit", type: "exit", x: 1480, y: 455, r: 95, label: "出口" }
-      ]
-    }
-  };
+  var rooms = window.MuseumMapData.create();
   if (window.MuseumMapArt) window.MuseumMapArt(rooms);
-  if (state && rooms[state.roomId] && rooms[state.roomId].art && blocked(rooms[state.roomId], state.playerX, state.playerY, 22)) {
+  window.MuseumChapterMaps(rooms);
+  if (state && rooms[state.roomId] && rooms[state.roomId].art && blocked(rooms[state.roomId], state.playerX, state.playerY, rooms[state.roomId].id === "museum" ? 10 : 22)) {
     state.playerX=rooms[state.roomId].spawn.x;state.playerY=rooms[state.roomId].spawn.y;
   }
   var tasks = {
+    museum: "沿着总地图探索展厅，找到下一条线索。",
     dorm: "调查宿舍，寻找离开的办法。",
     hall: "在大厅寻找进入下一处展厅的线索。",
     wax: "调查张明诚的展台，找出这里的真相。"
@@ -115,11 +65,11 @@
       window.MuseumTutorial.show("movement", { kind: "map", title: "先熟悉一下移动", body: "用 WASD 或方向键走两步。靠近物件时，地图会告诉你下一步能做什么。" });
     } else if (!window.MuseumTutorial.isDone("investigation")) {
       window.MuseumTutorial.show("investigation", { kind: "map", title: "靠近一个物件", body: "走到物件旁边，按 E 调查；点击地图上的物件只能作为辅助入口。" });
-    } else if (state.roomId === "hall" && !window.MuseumTutorial.isDone("save")) {
+    } else if ((state.roomId === "museum" || state.roomId === "hall") && !window.MuseumTutorial.isDone("save")) {
       window.MuseumTutorial.show("save", { kind: "save", title: "进度已经自动保存", body: "重要调查和场景切换会自动保存。第一次想保留节点时，可以打开暂停菜单保存一个手动存档。", action: function () { openTutorialSave(); }, actionLabel: "现在保存一次" });
     }
   }
-  function save(message) { if (!currentUser || !state) return; MuseumState.save(state, currentUser.id); lastSave = performance.now(); if (message && el.gameMessage) el.gameMessage.textContent = message; refreshContinue(); }
+  function save(message) { if (!currentUser || !state) return false; var ok = MuseumState.save(state, currentUser.id); if (!ok) { if (message && el.gameMessage) el.gameMessage.textContent = "存档写入失败，请检查浏览器存储空间。"; return false; } lastSave = performance.now(); if (message && el.gameMessage) el.gameMessage.textContent = message; refreshContinue(); return true; }
   function saveBeforeLeave() {
     if (!currentUser || !state || (el.game && el.game.hidden)) return;
     save();
@@ -133,13 +83,14 @@
     if (next) target += "?next=" + encodeURIComponent(next);
     window.location.href = target;
   }
-  function showCover() {
+  function showCover(message) {
     el.cover.hidden = false;
     el.game.hidden = true;
     if (el.pause) el.pause.hidden = true;
     keys = {};
     heldTouch = null;
     if (el.currentUser) el.currentUser.textContent = currentUser ? currentUser.username : "未登录";
+    if (el.coverMessage) el.coverMessage.textContent = message || "";
     var loginButton = document.getElementById("cover-login-button");
     if (loginButton) loginButton.textContent = "登录档案";
     refreshContinue();
@@ -174,15 +125,21 @@
 
   function blocked(room, x, y, radius) {
     if (x < radius || y < radius || x > room.width - radius || y > room.height - radius) return true;
+    if (room.walkable) {
+      var inside = function (px, py) {
+        return room.walkable.some(function (area) { return px >= area.x && px <= area.x + area.w && py >= area.y && py <= area.y + area.h; });
+      };
+      if (![[x-radius,y],[x+radius,y],[x,y-radius],[x,y+radius]].every(function (point) { return inside(point[0],point[1]); })) return true;
+    }
     return room.colliders.some(function (rect) { return x + radius > rect.x && x - radius < rect.x + rect.w && y + radius > rect.y && y - radius < rect.y + rect.h; });
   }
   function movePlayer(dx, dy, deltaMs) {
     if (!state || state.mode !== "explore") return;
-    var room = currentRoom(); var speed = 235; var len = Math.hypot(dx, dy) || 1; var dt = Math.min(Number(deltaMs) || 16, 50) / 1000; dx = dx / len * speed; dy = dy / len * speed;
+    var room = currentRoom(); var speed = room.id === "museum" ? 100 : 235; var len = Math.hypot(dx, dy) || 1; var dt = Math.min(Number(deltaMs) || 16, 50) / 1000; dx = dx / len * speed; dy = dy / len * speed;
     var previousX = state.playerX, previousY = state.playerY;
     var nextX = state.playerX + dx * dt; var nextY = state.playerY + dy * dt;
-    if (!blocked(room, nextX, state.playerY, 22)) state.playerX = nextX;
-    if (!blocked(room, state.playerX, nextY, 22)) state.playerY = nextY;
+    if (!blocked(room, nextX, state.playerY, room.id === "museum" ? 10 : 22)) state.playerX = nextX;
+    if (!blocked(room, state.playerX, nextY, room.id === "museum" ? 10 : 22)) state.playerY = nextY;
     var distance = Math.hypot(state.playerX - previousX, state.playerY - previousY);
     avatarMoving = distance > 0; avatarTravelled += distance;
     if (distance > 0 && !window.MuseumTutorial.isDone("movement")) window.MuseumTutorial.complete("movement");
@@ -197,37 +154,56 @@
   function nearestObject() {
     if (!state) return null;
     var room = currentRoom(); var nearest = null; var distance = Infinity;
-    room.objects.forEach(function (object) { var d = Math.hypot(state.playerX - object.x, state.playerY - object.y); if (d < object.r && d < distance) { nearest = object; distance = d; } });
+    room.objects.forEach(function (object) { var d = Math.hypot(state.playerX - object.x, state.playerY - object.y); if (d < object.r && d < distance && (room.id !== "museum" || [0,.25,.5,.75,1].every(function (t) { return !blocked(room,state.playerX+(object.x-state.playerX)*t,state.playerY+(object.y-state.playerY)*t,2); }))) { nearest = object; distance = d; } });
     return nearest;
   }
   function interactionHint(object) {
     if (!object) { el.prompt.hidden = true; return; }
+    if (object.requiredFlag && !state.flags[object.requiredFlag]) {
+      el.prompt.textContent = "「" + object.label + "」尚未开放";
+      el.prompt.hidden = false;
+      return;
+    }
     var action;
     if (object.type === "wardrobe") {
       action = state.flags.cabinetOpen ? (state.flags.cabinetKeyTaken ? "调查" : "调查") : "打开";
     } else {
       action = object.type === "door" || object.type === "waxDoor" || object.type === "exit" ? "进入" : "调查";
     }
+    if (object.type === "scene" && MuseumState.sceneCompleted(state, object.scene)) {
+      el.prompt.textContent = "「" + object.label + "」已调查";
+      el.prompt.hidden = false;
+      return;
+    }
     el.prompt.textContent = "E　" + action + "「" + object.label + "」"; el.prompt.hidden = false;
   }
   function switchRoom(id, x, y) {
     if (!rooms[id]) return;
-    state.roomId = id; state.currentNode = id; state.chapter = rooms[id].chapter; state.playerX = x === undefined ? rooms[id].spawn.x : x; state.playerY = y === undefined ? rooms[id].spawn.y : y; state.mode = "explore"; if (el.pause) el.pause.hidden = true; state.task = tasks[id];
+    state.roomId = id; state.currentNode = id; state.chapter = rooms[id].chapter; state.playerX = x === undefined ? rooms[id].spawn.x : x; state.playerY = y === undefined ? rooms[id].spawn.y : y; state.mode = "explore"; if (el.pause) el.pause.hidden = true; state.task = window.MuseumChapterProgress.objective(state).text;
     addUnique(state.unlockedRooms, id); renderAll(); save("已进入" + rooms[id].title + "。");
+  }
+
+  function switchRoomAt(id, entry) {
+    var point = entry || {};
+    switchRoom(id, Number.isFinite(point.x) ? point.x : undefined, Number.isFinite(point.y) ? point.y : undefined);
   }
 
   function startNovel(sceneId) {
     if (!currentUser || !state) return;
-    state.returnRoom = state.roomId;
-    state.returnX = state.playerX;
-    state.returnY = state.playerY;
-    state.returnFacing = state.facing;
-    state.returnScene = null;
-    state.mode = "novel";
-    state.narrativeNode = sceneId;
-    state.narrativeIndex = 0;
-    state.narrativeChoice = null;
-    MuseumState.save(state, currentUser.id);
+    // Map objects can intentionally expose a short repeat/inspection record.
+    // Only one-shot chapter scenes are blocked after completion; otherwise a
+    // repeat alias would be mistaken for the completed canonical scene.
+    var replayable = /(?:-repeat|-(?:inspect)|^terminal$|^mirror$)/.test(String(sceneId));
+    if (!replayable && MuseumState.sceneCompleted(state, sceneId)) {
+      showToast("这段剧情已经完成，可以在文本回顾中查看。");
+      return;
+    }
+    window.MuseumTransition.enterStory(state,sceneId);
+    if (!MuseumState.save(state, currentUser.id)) {
+      state.mode = "explore";
+      showToast("进度保存失败，请检查浏览器存储空间后重试。");
+      return;
+    }
     window.location.href = "pages/novel.html?scene=" + encodeURIComponent(sceneId);
   }
   function openNote() {
@@ -248,7 +224,7 @@
   }
   function openTerminal() {
     markDiscovered("dorm-terminal");
-    state.systemTrust += 2; startNovel("terminal");
+    if (!MuseumState.sceneCompleted(state, "terminal")) state.systemTrust += 2; startNovel("terminal");
   }
   function openMirror() { markDiscovered("dorm-mirror"); startNovel("mirror"); }
   function openGuard() {
@@ -272,20 +248,46 @@
   }
   function interact(object) {
     if (!object || !state || state.mode !== "explore") return;
+    if (currentRoom().id === "museum" && nearestObject() !== object) return;
     if (object.type !== "travel" && !window.MuseumTutorial.isDone("investigation")) window.MuseumTutorial.complete("investigation");
-    if (object.type === "travel") { switchRoom(object.target); return; }
+    if (object.id === "dorm-door" && !state.flags.hasKey) {
+      showToast("宿舍钥匙还在更衣柜里。先完成宿舍调查。");
+      return;
+    }
+    // Apply stage locks consistently to every object type.  Previously only
+    // travel and scene branches checked requiredFlag, so a locked guard/door
+    // could still be activated with E or a direct click from an old save.
+    if (object.requiredFlag && !state.flags[object.requiredFlag]) {
+      showToast("这段线索还没有出现。先完成前面的调查。");
+      return;
+    }
+    if (object.type === "travel") {
+      if (object.requiredFlag && !state.flags[object.requiredFlag]) {
+        showToast("这条通路还没有开放。先完成前面的调查。");
+        return;
+      }
+      if (state.roomId === "museum" && object.target !== "museum") {
+        state.mapReturnPoint = { x: state.playerX, y: state.playerY, facing: state.facing };
+      }
+      if (object.target === "museum" && state.mapReturnPoint) {
+        var point = state.mapReturnPoint;
+        state.facing = point.facing || "down";
+        switchRoomAt("museum", point);
+      } else {
+        switchRoomAt(object.target, object.entry);
+        // Scene 04 belongs to the first patrol in the corridor. It should
+        // begin after the player has actually left the dorm, not while the
+        // door is teleporting directly to the hall.
+        if (object.target === "corridor" && !state.flags.scene04Seen) startNovel("scene-04");
+      }
+      return;
+    }
     if (object.type === "note") openNote();
     else if (object.type === "wardrobe") openWardrobe();
     else if (object.type === "terminal") openTerminal();
     else if (object.type === "mirror") openMirror();
-    else if (object.type === "scene") {
-      if (object.requiredFlag && !state.flags[object.requiredFlag]) {
-        showToast("这段线索还没有出现。先完成前面的调查。");
-      } else {
-        startNovel(object.scene);
-      }
-    }
-    else if (object.type === "door") { if (!state.flags.hasKey) showToast("门锁着。衣柜里也许有能用的东西。"); else { state.flags.openedDormDoor = true; addUnique(state.unlockedRooms, "hall"); switchRoom("hall"); if (!state.flags.scene04Seen) startNovel("scene-04"); } }
+    else if (object.type === "scene") startNovel(object.scene);
+    else if (object.type === "door") { if (!state.flags.hasKey) showToast("门锁着。衣柜里也许有能用的东西。"); else { state.flags.openedDormDoor = true; addUnique(state.unlockedRooms, "corridor"); switchRoomAt(object.target || "corridor", object.entry || {x:1040,y:400}); if (!state.flags.scene04Seen) startNovel("scene-04"); } }
     else if (object.type === "returnDorm") switchRoom("dorm", 1330, 460);
     else if (object.type === "guard") openGuard();
     else if (object.type === "rules") openRules();
@@ -325,6 +327,7 @@
   }
   function drawMiniMap(room) {
     if (!miniCtx || !miniCanvas) return;
+    if(window.MuseumMapGuide){window.MuseumMapGuide(miniCtx,miniCanvas,rooms,state);return;}
     var scaleX = miniCanvas.width / room.width;
     var scaleY = miniCanvas.height / room.height;
     miniCtx.clearRect(0, 0, miniCanvas.width, miniCanvas.height);
@@ -341,10 +344,69 @@
     miniCtx.lineWidth = 1;
     miniCtx.strokeRect(4, 4, miniCanvas.width - 8, miniCanvas.height - 8);
   }
+  function drawOverviewMarkers(room) {
+    room.objects.forEach(function (object) {
+      var locked = object.requiredFlag && !state.flags[object.requiredFlag];
+      var nearby = nearestObject() && nearestObject().id === object.id;
+      ctx.save();
+      var target=window.MuseumChapterProgress.objective(state).entrance===object.id;
+      ctx.globalAlpha = locked ? .38 : (nearby ? 1 : .82);
+      ctx.fillStyle = object.type === "scene" ? "#9ed9d6" : "#f0c875";
+      ctx.strokeStyle = nearby || target ? "#ffffff" : "#263b42";
+      ctx.lineWidth = nearby ? 4 : 2;
+      ctx.beginPath();
+      ctx.moveTo(object.x, object.y - 6);
+      ctx.lineTo(object.x + 6, object.y);
+      ctx.lineTo(object.x, object.y + 6);
+      ctx.lineTo(object.x - 6, object.y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      if (nearby) {
+        ctx.strokeStyle = "rgba(231, 211, 144, .95)";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 5]);
+        ctx.beginPath();
+        ctx.arc(object.x, object.y, 12, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      if (nearby) {
+        ctx.font = "600 14px system-ui, sans-serif";
+        var labelWidth = ctx.measureText(object.label).width + 18;
+        ctx.fillStyle = "rgba(15, 24, 29, .82)";
+        ctx.fillRect(object.x - labelWidth / 2, object.y + 17, labelWidth, 23);
+        drawText(object.label, object.x, object.y + 28, 14, "#f4ead4", "center");
+      }
+      ctx.restore();
+    });
+  }
   function drawRoom(room) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height); camera.x = Math.max(0, Math.min(room.width - canvas.width, state.playerX - canvas.width / 2)); camera.y = Math.max(0, Math.min(room.height - canvas.height, state.playerY - canvas.height / 2)); ctx.save(); ctx.translate(-camera.x, -camera.y);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Room coordinates are authored in the source-map pixels (1670x942,
+    // 1774x887, ...), while the display canvas is only 960x540. The old
+    // renderer painted those pixels directly into the smaller canvas, which
+    // cropped the room and made the avatar several times too large. Fit the
+    // authored room to the viewport first, then apply only the room's small
+    // camera zoom so the map remains readable and movement still follows the
+    // player when a room is larger than the view.
+    var fitScale = Math.min(canvas.width / room.width, canvas.height / room.height);
+    var scale = fitScale * (room.cameraZoom || 1);
+    var viewWidth = canvas.width / scale;
+    var viewHeight = canvas.height / scale;
+    camera.x = Math.max(0, Math.min(Math.max(0, room.width - viewWidth), state.playerX - viewWidth / 2));
+    camera.y = Math.max(0, Math.min(Math.max(0, room.height - viewHeight), state.playerY - viewHeight / 2));
+    renderView.scale = scale;
+    renderView.offsetX = (canvas.width - room.width * scale) / 2;
+    renderView.offsetY = (canvas.height - room.height * scale) / 2;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.translate(renderView.offsetX, renderView.offsetY);
+    ctx.scale(scale, scale);
+    ctx.translate(-camera.x, -camera.y);
     if (room.art) {
       if (room.art.complete && room.art.naturalWidth) ctx.drawImage(room.art,0,0,room.width,room.height);
+      drawOverviewMarkers(room);
       var nearby = nearestObject();
       if (nearby && (!nearby.requiredFlag || state.flags[nearby.requiredFlag])) {ctx.strokeStyle="#e7d390";ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(nearby.x,nearby.y,40,17,0,0,Math.PI*2);ctx.stroke();}
       drawPlayer();ctx.restore();drawMiniMap(room);return;
@@ -363,14 +425,17 @@
     window.MuseumPlayerAvatar.draw(ctx, state.playerX, state.playerY, state.facing, avatarMoving && state.mode === "explore" && !overlaysOpen(), avatarTravelled, state.roomId);
   }
 
-  function renderRooms() { el.rooms.textContent = ""; ["dorm", "hall", "wax"].forEach(function (id) { var button = document.createElement("button"); button.type = "button"; var unlocked = has(state.unlockedRooms, id); button.className = "room-button" + (state.roomId === id ? " current" : ""); button.disabled = !unlocked; button.innerHTML = "<strong>" + roomName(id) + "</strong><small>" + (unlocked ? (state.roomId === id ? "当前位置" : "已探索") : "尚未开放") + "</small>"; if (unlocked) button.addEventListener("click", function () { switchRoom(id); }); el.rooms.appendChild(button); }); }
-  function renderStats() { el.hp.textContent = String(state.hp); el.trust.textContent = String(state.systemTrust); el.clues.textContent = String(state.clues.length); el.task.textContent = state.task || tasks[state.roomId] || "继续探索。"; window.MuseumAchievements.refresh(); }
-  function renderAll() { if (!state) return; var room = currentRoom(); el.roomTitle.textContent = room.title; el.roomChapter.textContent = room.chapter; renderRooms(); renderStats(); drawRoom(room); interactionHint(nearestObject()); showMapTutorial(); }
+  function renderRooms() { el.rooms.textContent = ""; Object.keys(rooms).forEach(function (id) { if (!rooms[id]) return; var button = document.createElement("button"); button.type = "button"; var unlocked = has(state.unlockedRooms, id); button.className = "room-button" + (state.roomId === id ? " current" : ""); button.disabled = true; button.innerHTML = "<strong>" + roomName(id) + "</strong><small>" + (unlocked ? (state.roomId === id ? "当前位置" : "已探索") : "尚未开放") + "</small>";  el.rooms.appendChild(button); }); }
+  function renderStats() { var objective=window.MuseumChapterProgress.objective(state); state.task=objective.text; var hint=document.getElementById("chapter-objective"); if(hint)hint.textContent=objective.text;  el.hp.textContent = String(state.hp); el.trust.textContent = String(state.systemTrust); el.clues.textContent = String(state.clues.length); el.task.textContent = objective.text || tasks[state.roomId] || "继续探索。"; window.MuseumAchievements.refresh(); }
+  function renderAll() { if (!state) return; var room = currentRoom();
+    if (!Number.isFinite(state.playerX) || !Number.isFinite(state.playerY) || blocked(room,state.playerX,state.playerY,room.id === "museum" ? 10 : 22)) {
+      state.playerX=room.spawn.x; state.playerY=room.spawn.y;
+    } el.roomTitle.textContent = room.title; el.roomChapter.textContent = room.chapter; renderRooms(); renderStats(); drawRoom(room); interactionHint(nearestObject()); showMapTutorial(); }
 
   function formatSaveTime(value) { if (!value) return "尚未保存"; var date = new Date(value); return Number.isNaN(date.getTime()) ? "时间未知" : date.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }); }
   function saveSummary(saveState) { if (!saveState) return "空存档位"; return roomName(saveState.roomId || saveState.currentNode) + " · 线索 " + ((saveState.clues || []).length); }
-  function makeSlotCard(title, entry, index, auto) { var card = document.createElement("article"); card.className = "save-slot" + (entry ? " occupied" : " empty"); var info = document.createElement("div"); info.className = "save-slot-info"; var heading = document.createElement("strong"); heading.textContent = title; var detail = document.createElement("span"); var slotState = auto ? entry : entry && entry.state; detail.textContent = saveSummary(slotState); var time = document.createElement("small"); time.textContent = entry ? formatSaveTime(entry.savedAt) : "—"; info.appendChild(heading); info.appendChild(detail); info.appendChild(time); card.appendChild(info); var actions = document.createElement("div"); actions.className = "save-slot-actions"; var action = document.createElement("button"); action.type = "button"; action.className = "button button-small"; if (auto) { action.textContent = savePanelMode === "save" ? "当前自动档" : "读取"; action.disabled = savePanelMode === "save" || !entry; action.addEventListener("click", function () { loadSelected(MuseumState.load(currentUser.id), "自动存档"); }); } else if (savePanelMode === "save") { action.textContent = entry ? "覆盖" : "保存"; action.addEventListener("click", function () { if (entry && !window.confirm("确定覆盖存档位 " + (index + 1) + " 吗？")) return; MuseumState.saveSlot(state, currentUser.id, index); window.MuseumTutorial.complete("save"); el.savePanelMessage.textContent = "已保存到存档位 " + (index + 1) + "。"; renderSavePanel(); }); } else { action.textContent = "读取"; action.disabled = !entry; action.addEventListener("click", function () { loadSelected(MuseumState.loadSlot(currentUser.id, index), "存档位 " + (index + 1)); }); } actions.appendChild(action); if (!auto && entry) { var del = document.createElement("button"); del.type = "button"; del.className = "text-button danger-button"; del.textContent = "删除"; del.addEventListener("click", function () { if (!window.confirm("确定删除存档位 " + (index + 1) + " 吗？")) return; MuseumState.deleteSlot(currentUser.id, index); renderSavePanel(); }); actions.appendChild(del); } card.appendChild(actions); return card; }
-  function renderSavePanel() { if (!currentUser) return; el.savePanelTitle.textContent = savePanelMode === "save" ? "保存游戏" : "读取存档"; el.saveModeButton.classList.toggle("active", savePanelMode === "save"); el.loadModeButton.classList.toggle("active", savePanelMode === "load"); el.saveModeButton.setAttribute("aria-selected", String(savePanelMode === "save")); el.loadModeButton.setAttribute("aria-selected", String(savePanelMode === "load")); el.saveSlotList.textContent = ""; el.saveSlotList.appendChild(makeSlotCard("自动存档", MuseumState.load(currentUser.id), -1, true)); MuseumState.listSlots(currentUser.id).forEach(function (entry, index) { el.saveSlotList.appendChild(makeSlotCard("存档位 " + (index + 1), entry, index, false)); }); }
+  function makeSlotCard(title, entry, index, auto) { var card = document.createElement("article"); card.className = "save-slot" + (entry ? " occupied" : " empty"); var info = document.createElement("div"); info.className = "save-slot-info"; var heading = document.createElement("strong"); heading.textContent = title; var detail = document.createElement("span"); var slotState = auto ? entry : entry && entry.state; detail.textContent = saveSummary(slotState); var time = document.createElement("small"); time.textContent = entry ? formatSaveTime(entry.savedAt) : "—"; info.appendChild(heading); info.appendChild(detail); info.appendChild(time); card.appendChild(info); var actions = document.createElement("div"); actions.className = "save-slot-actions"; var action = document.createElement("button"); action.type = "button"; action.className = "button button-small"; if (auto) { action.textContent = savePanelMode === "save" ? "当前自动档" : "读取"; action.disabled = savePanelMode === "save" || !entry; action.addEventListener("click", function () { loadSelected(MuseumState.load(currentUser.id), "自动存档"); }); } else if (savePanelMode === "save") { action.textContent = entry ? "覆盖" : "保存"; action.addEventListener("click", function () { if (entry && !window.confirm("确定覆盖存档位 " + (index + 1) + " 吗？")) return; if (!save()) { el.savePanelMessage.textContent = "存档写入失败，请检查浏览器存储空间。"; return; } window.MuseumTutorial.complete("save"); var saved = MuseumState.saveSlot(state, currentUser.id, index); if (!saved) { el.savePanelMessage.textContent = "存档写入失败，请重试。"; return; } el.savePanelMessage.textContent = "已保存到存档位 " + (index + 1) + "。"; renderSavePanel(); }); } else { action.textContent = "读取"; action.disabled = !entry; action.addEventListener("click", function () { loadSelected(MuseumState.loadSlot(currentUser.id, index), "存档位 " + (index + 1)); }); } actions.appendChild(action); if (!auto && entry) { var del = document.createElement("button"); del.type = "button"; del.className = "text-button danger-button"; del.textContent = "删除"; del.addEventListener("click", function () { if (!window.confirm("确定删除存档位 " + (index + 1) + " 吗？")) return; MuseumState.deleteSlot(currentUser.id, index); renderSavePanel(); }); actions.appendChild(del); } card.appendChild(actions); return card; }
+  function renderSavePanel() { if (!currentUser) return; el.savePanelTitle.textContent = savePanelMode === "save" ? "保存游戏" : "读取存档"; el.saveModeButton.classList.toggle("active", savePanelMode === "save"); el.loadModeButton.classList.toggle("active", savePanelMode === "load"); el.saveModeButton.setAttribute("aria-selected", String(savePanelMode === "save")); el.loadModeButton.setAttribute("aria-selected", String(savePanelMode === "load")); el.saveSlotList.textContent = ""; el.saveSlotList.appendChild(makeSlotCard("自动存档", MuseumState.load(currentUser.id), -1, true)); var checkpoint = MuseumState.loadCheckpoint(currentUser.id); if (checkpoint) { var checkpointCard = document.createElement("article"); checkpointCard.className = "save-slot occupied save-checkpoint"; var checkpointInfo = document.createElement("div"); checkpointInfo.className = "save-slot-info"; var checkpointTitle = document.createElement("strong"); checkpointTitle.textContent = "选择前检查点"; var checkpointDetail = document.createElement("span"); checkpointDetail.textContent = (checkpoint.checkpoint && checkpoint.checkpoint.label) || "重要选择前"; checkpointInfo.appendChild(checkpointTitle); checkpointInfo.appendChild(checkpointDetail); var checkpointButton = document.createElement("button"); checkpointButton.type = "button"; checkpointButton.className = "button button-small"; checkpointButton.textContent = savePanelMode === "load" ? "读取" : "仅供读取"; checkpointButton.disabled = savePanelMode !== "load"; checkpointButton.addEventListener("click", function () { if (savePanelMode === "load") loadSelected(MuseumState.loadCheckpoint(currentUser.id), "选择前检查点"); }); checkpointCard.append(checkpointInfo, checkpointButton); el.saveSlotList.appendChild(checkpointCard); } MuseumState.listSlots(currentUser.id).forEach(function (entry, index) { el.saveSlotList.appendChild(makeSlotCard("存档位 " + (index + 1), entry, index, false)); }); }
   function openTutorialSave() { openPauseMenu(); window.setTimeout(function () { if (el.pause && !el.pause.hidden) openSavePanel("save"); }, 0); }
   function openSavePanel(mode) { if (!currentUser) return showAuth("game"); window.MuseumTutorial.hide(); savePanelMode = mode; if (mode === "save") save(); el.saveUserName.textContent = currentUser.username; el.savePanelMessage.textContent = ""; renderSavePanel(); el.savePanel.hidden = false; }
   function loadSelected(loaded, label) {
@@ -393,7 +458,8 @@
   function applyBattleResult(result) {
     if (!result || !state) return;
     if (result.status === "win") {
-      state.hp = Math.max(0, Number(result.remainingHp) || state.hp);
+      var remainingHp = Number(result.remainingHp);
+      if (Number.isFinite(remainingHp)) state.hp = Math.max(0, remainingHp);
       state.flags.battleDemoCompleted = true; state.flags.waxDoorUnlocked = true; addClue("faceless-mask"); addUnique(state.unlockedRooms, "wax");
       var returnRoom = rooms[state.returnRoom] ? state.returnRoom : "hall";
       state.roomId = returnRoom; state.currentNode = returnRoom; state.chapter = rooms[returnRoom].chapter; state.playerX = Number(state.returnX) || rooms[returnRoom].spawn.x; state.playerY = Number(state.returnY) || rooms[returnRoom].spawn.y; state.task = tasks[returnRoom];
@@ -436,6 +502,7 @@
 
   function beginNewGame() {
     if (!currentUser) return showAuth("newGame");
+    if (MuseumState.hasSave(currentUser.id) && !window.confirm("开始新游戏会覆盖当前自动进度，手动存档仍会保留。确定继续吗？")) return;
     localStorage.removeItem("museum_novel_quick_" + currentUser.id);
     state = MuseumState.create(currentUser);
     window.MuseumTutorial.resetDismissed();
@@ -463,7 +530,12 @@
   document.getElementById("close-log-panel").addEventListener("click", function () { el.logPanel.hidden = true; });
   el.logPanel.addEventListener("click", function (event) { if (event.target === el.logPanel) el.logPanel.hidden = true; });
   el.resumeButton.addEventListener("click", closePauseMenu);
-  document.getElementById("back-to-cover-button").addEventListener("click", function () { if (state) state.mode = "explore"; save("已返回标题，进度已保存。"); showCover(); });
+  document.getElementById("back-to-cover-button").addEventListener("click", function () {
+    if (!state) { showCover(); return; }
+    state.mode = "explore";
+    if (!save()) { state.mode = "paused"; renderStats(); if (el.gameMessage) el.gameMessage.textContent = "保存失败，仍停留在暂停菜单。"; return; }
+    showCover("当前进度已保存。点击“继续游戏”可以从这里继续。");
+  });
   var logoutButton = document.getElementById("logout-button");
   if (logoutButton) logoutButton.addEventListener("click", function () { MuseumAuth.logout(); currentUser = null; state = null; showCover(); });
   document.getElementById("rules-close").addEventListener("click", function () { el.rules.hidden = true; if (state) state.mode = "explore"; renderAll(); save(); });
@@ -483,26 +555,25 @@
       keys[key] = false;
       return;
     }
+    if (event.repeat && (key === "e" || key === "E")) return;
     keys[key] = true;
     if ((key === "e" || key === "E") && state && state.mode === "explore") {
       event.preventDefault();
       interact(nearestObject());
     }
   });
+  window.addEventListener("blur", function () { keys = {}; heldTouch = null; avatarMoving = false; });
   document.addEventListener("keyup", function (event) { keys[event.key] = false; });
   el.canvas.addEventListener("click", function (event) {
-    if (!state || state.mode !== "explore") return;
+    if (!state || state.mode !== "explore" || overlaysOpen()) return;
+    var room = currentRoom();
     var rect = canvas.getBoundingClientRect();
-    var fitScale = Math.max(rect.width / canvas.width, rect.height / canvas.height);
-    var renderedWidth = canvas.width * fitScale;
-    var renderedHeight = canvas.height * fitScale;
-    var offsetX = (rect.width - renderedWidth) / 2;
-    var offsetY = (rect.height - renderedHeight) / 2;
-    var x = (event.clientX - rect.left - offsetX) / fitScale;
-    var y = (event.clientY - rect.top - offsetY) / fitScale;
-    var worldX = x + camera.x;
-    var worldY = y + camera.y;
-    var object = currentRoom().objects.slice().sort(function (a, b) { return Math.hypot(worldX - a.x, worldY - a.y) - Math.hypot(worldX - b.x, worldY - b.y); })[0];
+    var canvasX = (event.clientX - rect.left) * canvas.width / rect.width;
+    var canvasY = (event.clientY - rect.top) * canvas.height / rect.height;
+    var worldX = (canvasX - renderView.offsetX) / renderView.scale + camera.x;
+    var worldY = (canvasY - renderView.offsetY) / renderView.scale + camera.y;
+    if (worldX < 0 || worldY < 0 || worldX > room.width || worldY > room.height) return;
+    var object = room.objects.slice().sort(function (a, b) { return Math.hypot(worldX - a.x, worldY - a.y) - Math.hypot(worldX - b.x, worldY - b.y); })[0];
     if (!object || Math.hypot(worldX - object.x, worldY - object.y) >= object.r * 1.1) return;
     var playerDistance = Math.hypot(state.playerX - object.x, state.playerY - object.y);
     if (playerDistance < object.r) interact(object); else showToast("请先走近「" + object.label + "」再调查。");
@@ -517,6 +588,7 @@
   var openSavedGame = query.get("fromSave") === "1";
   var openNewGame = query.get("newGame") === "1";
   var openStoryReturn = query.get("fromStory") === "1";
+  var openMenuReturn = query.get("fromMenu") === "1";
   var openEndingReturn = query.get("fromEnding") === "1";
   if (currentUser && pendingResult) {
     showGame();
@@ -535,7 +607,9 @@
     showGame();
     state.mode = "explore";
     renderAll();
-    save("已自动保存：你已离开宿舍。");
+    save("已自动保存：你已返回" + roomName(state.roomId) + "。");
+  } else if (currentUser && openMenuReturn) {
+    showCover("当前进度已保存。点击“继续游戏”可以从这里继续。");
   } else if (currentUser && openEndingReturn) {
     showCover();
     showToast("结局已保存。可以开始新的探索或读取其他存档。");

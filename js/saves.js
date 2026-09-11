@@ -8,7 +8,7 @@
   var list = document.getElementById("manual-save-list");
 
   function roomLabel(state) {
-    return { dorm: "员工宿舍", hall: "中央大厅", wax: "蜡像馆" }[state && state.roomId] || "未知地点";
+    return { museum: "博物馆", classroom: "教室展厅", canteenPassage: "食堂门前走廊", dorm: "员工宿舍", hall: "中央大厅", corridor: "博物馆走廊", office: "馆长办公室", wax: "蜡像馆" }[state && state.roomId] || "未知地点";
   }
 
   function timeLabel(value) {
@@ -43,7 +43,7 @@
     saveButton.textContent = entry ? "覆盖" : "保存";
     saveButton.disabled = !state;
     saveButton.addEventListener("click", function () {
-      MuseumState.saveSlot(state, user.id, index);
+      if (!MuseumState.saveSlot(state, user.id, index)) { setMessage("保存失败，请检查浏览器存储空间后重试。"); return; }
       setMessage("已保存到存档位 " + (index + 1) + "。");
       render();
     });
@@ -55,7 +55,7 @@
     loadButton.textContent = "读取";
     loadButton.disabled = !entry;
     loadButton.addEventListener("click", function () {
-      MuseumState.save(entry.state, user.id);
+      if (!MuseumState.save(entry.state, user.id)) { setMessage("读取失败，当前进度未切换，请重试。"); return; }
       window.location.href = "../index.html?fromSave=1";
     });
     actions.appendChild(loadButton);
@@ -66,7 +66,7 @@
       deleteButton.className = "text-button danger-button";
       deleteButton.textContent = "删除";
       deleteButton.addEventListener("click", function () {
-        MuseumState.deleteSlot(user.id, index);
+        if (!MuseumState.deleteSlot(user.id, index)) { setMessage("删除失败，请重试。"); return; }
         setMessage("已删除存档位 " + (index + 1) + "。");
         render();
       });

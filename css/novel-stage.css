@@ -1,10 +1,17 @@
 /* Stage and dialogue share the viewport; images always retain their ratio. */
+.hotspot-investigation{position:relative;max-width:100%;width:min(100%,1050px);margin:auto;aspect-ratio:1649/954;max-height:100%;}
+.hotspot-investigation>img{width:100%;height:100%;object-fit:contain;display:block;}
+.hotspot-investigation>button{position:absolute;transform:translate(-50%,-50%);padding:10px 16px;color:#fff1ce;background:#13272ee8;border:1px solid #d4b77a;border-radius:4px;cursor:pointer;}
+.hotspot-investigation>button.examined{border-color:#78b9ad;}
+.investigation-feedback{margin:6px auto;color:#f6e5c4;text-align:center;background:#09171ce8;padding:8px;max-width:600px;}
+body[data-event="investigate"] .scene-events{display:flex;flex-direction:column;align-items:center;}
 :root { --dialogue-height: 194px; --stage-bottom: 222px; }
-body { --scene-background: url('../assets/images/dorm-map.png'); }
+body { --scene-background: linear-gradient(140deg,#101a1d,#071013 72%); }
 .novel-background { filter: none; }
-body[data-theme="dorm"],body[data-theme="wardrobe"] { --scene-background: url('../assets/images/dorm-map.png'); }
-body[data-theme="patrol"],body[data-theme="nightmare"] { --scene-background: url('../assets/images/corridor-map.png'); }
-body[data-theme="office"] { --scene-background: url('../assets/images/office-map.png'); }
+body[data-theme="dorm"],body[data-theme="wardrobe"] { --scene-background: linear-gradient(140deg,#182226,#081013 72%); }
+body[data-theme="patrol"] { --scene-background: linear-gradient(140deg,#152226,#071013 72%); }
+body[data-theme="nightmare"] { --scene-background: linear-gradient(140deg,#251317,#080c10 74%); }
+body[data-theme="office"] { --scene-background: linear-gradient(140deg,#201a18,#0b1013 72%); }
 .novel-toolbar { top: 22px; pointer-events:none; }
 .novel-location { padding: 7px 12px; background:#081014ac; border-left:2px solid #ceb38a; }
 .novel-dialogue { min-height:var(--dialogue-height); max-height:none; padding:24px 30px 63px; border-radius:10px; bottom:18px; background:linear-gradient(105deg,#0c1720ef,#111920ed); }
@@ -83,7 +90,7 @@ body[data-event="explore"] .novel-background,
 body[data-event="explore"] .novel-vignette { display:none; }
 body[data-event="explore"] .scene-events { inset:58px 24px 70px; padding-bottom:38px; }
 body[data-event="explore"] .novel-dialogue { height:48px; min-height:48px; bottom:10px; width:calc(100% - 48px); max-width:1450px; padding:0; border:0; background:#10191ee8; box-shadow:none; }
-body[data-event="explore"] .novel-dialogue::before { content:"WASD / 方向键移动 · E 调查 · 点击地面也可移动"; position:absolute; left:18px; top:17px; right:auto; bottom:auto; border:0; color:#919c9f; font:12px system-ui,sans-serif; }
+body[data-event="explore"] .novel-dialogue::before { content:"WASD / 方向键移动 · E 调查 · 点击地面也可移动 · Esc 暂停"; position:absolute; left:18px; top:17px; right:auto; bottom:auto; border:0; color:#919c9f; font:12px system-ui,sans-serif; }
 body[data-event="explore"] .novel-toolbar-actions { right:12px; bottom:7px; }
 body[data-event="explore"] #novel-back-button,
 body[data-event="explore"] #novel-auto-button,
@@ -106,7 +113,7 @@ body[data-event="explore"] #novel-skip-button { display:none; }
 .observation-panel p { margin:0 0 18px; }
 @media(max-width:850px) {
  body[data-event="explore"] .novel-dialogue { height:74px; min-height:74px; width:calc(100% - 24px); }
- body[data-event="explore"] .novel-dialogue::before { content:"方向键 / WASD 移动 · 靠近后调查"; left:0;right:0;top:10px;text-align:center;font-size:11px; }
+ body[data-event="explore"] .novel-dialogue::before { content:"方向键 / WASD 移动 · 靠近后调查 · Esc 暂停"; left:0;right:0;top:10px;text-align:center;font-size:11px; }
  body[data-event="explore"] .novel-toolbar-actions { left:8px;right:8px;bottom:6px;justify-content:center; }
  body[data-event="explore"] .scene-events { inset:55px 12px 95px; }
  .nearby-investigation { padding:5px 8px;font-size:11px; }
@@ -144,3 +151,20 @@ body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-even
  body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) .novel-toolbar-actions { left:auto;right:10px; }
  body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) .novel-tool { font-size:11px;padding:7px 6px; }
 }
+
+body[data-event="investigate"] .novel-background,body[data-event="investigate"] .novel-vignette{display:none;}
+body[data-event="investigate"] .novel-dialogue{height:88px;min-height:88px;padding:0;}
+body[data-event="investigate"] .scene-events{inset:70px 18px 125px;}
+body[data-event="investigate"] .hotspot-investigation{width:min(100%,calc((100dvh - 245px)*1.728));max-height:none;flex-shrink:0;}
+body[data-event="investigate"] .investigation-feedback{flex-shrink:0;font-size:14px;}
+
+body[data-event="incident"] .novel-background{filter:brightness(.35);}
+.ribbon-incident{overflow:hidden;background:radial-gradient(ellipse,transparent,#080b10c9);}
+.falling-ribbons{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
+.falling-ribbons i{position:absolute;top:-30px;width:8px;height:42px;animation:ribbon-fall 3s var(--delay) both;}
+.incident-caption{z-index:1;align-self:end;color:#e4d8bf;background:#080f16dc;padding:16px 24px;max-width:680px;line-height:1.8;}
+@keyframes ribbon-fall{from{transform:translateY(0) rotate(0deg);}to{transform:translateY(65vh) rotate(430deg);}}
+@media(prefers-reduced-motion:reduce){.falling-ribbons i{animation:none;top:40%;}}
+
+.hotspot-investigation>button{white-space:nowrap;}
+@media(max-width:600px){.hotspot-investigation>button{font-size:12px;padding:8px;}}
