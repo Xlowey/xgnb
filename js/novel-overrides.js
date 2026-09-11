@@ -17,6 +17,16 @@
     return index === -1 ? (fallback === undefined ? lines.length : fallback) : index;
   }
 
+  // ---------------------------------------------------------------------------
+  // Stage directions.
+  //
+  // novel-presentation.js deletes every line starting with △, because the prologue
+  // turns those into real cg/item/television events. Later scenes have no such
+  // conversion, and a story file cannot repair that itself: at this point the △
+  // lines still exist, so "is this scene empty?" is not yet answerable here. The
+  // repair lives in js/chapter-finalize.js, which runs after every mutator.
+  // ---------------------------------------------------------------------------
+
   // The television is an optional investigation after the blood note, not part of the note itself.
   var scene03 = scenes["scene-03"];
   var televisionAt = findLineIndex("scene-03", function (line) { return line.text.indexOf("打开电视") !== -1; });
@@ -61,7 +71,9 @@
   office.choices = [
     { id: "office-hide", label: "隐瞒：什么梦？我没做梦啊。", nextScene: "scene-09-a" },
     { id: "office-tell", label: "坦白桃树的梦", nextScene: "scene-09-b" },
-    { id: "office-ask", label: "反问馆长是否也梦见过桃树", nextScene: "scene-09-c" }
+    { id: "office-ask", label: "反问馆长是否也梦见过桃树", nextScene: "scene-09-c" },
+    // 新剧本第八场：提交后 flag.submitted = true，C 完美结局永久关闭，最终抉择只剩 A / B。
+    { id: "office-submit", label: "提交调查记录（站到系统这边）", effect: "submit-record" }
   ];
   scenes["scene-09-a"] = Object.assign({}, office, { id: "scene-09-a", title: "馆长办公室 · 隐瞒", lines: [officeAllLines[officeChoiceAt]].concat(officeAllLines.slice(officeAAt, officeBAt)), choices: null, flag: "officeHideSeen" });
   scenes["scene-09-b"] = Object.assign({}, office, { id: "scene-09-b", title: "馆长办公室 · 坦白", lines: [officeAllLines[officeChoiceAt + 1]].concat(officeAllLines.slice(officeBAt, officeCAt)), choices: null, flag: "officeTellSeen" });
@@ -90,14 +102,13 @@
   var maskChoiceAt = findLineIndex("scene-18", function (line) { return line.text.indexOf("分支选择") !== -1; });
   var silverA = silver.lines.slice(maskChoiceAt + 1, maskChoiceAt + 3).concat(silver.lines.slice(maskChoiceAt + 4));
   var silverB = silver.lines.slice(maskChoiceAt + 3, maskChoiceAt + 4).concat(silver.lines.slice(maskChoiceAt + 4));
-  var silverTail = silver.lines.slice(maskChoiceAt + 4).concat(scenes["scene-19"].lines, scenes["scene-20"].lines);
   silver.lines = silver.lines.slice(0, maskChoiceAt);
   silver.choices = [
     { id: "remove-mask", label: "摘下自己的面具", nextScene: "scene-18-mask" },
     { id: "keep-mask", label: "不摘面具，继续观察", nextScene: "scene-18-no-mask" }
   ];
-  cloneScene("scene-18-mask", "scene-18", { title: "银色的恋人 · 面具之后", lines: silverA.concat(silverTail), flag: "scene20Seen", choices: null });
-  cloneScene("scene-18-no-mask", "scene-18", { title: "银色的恋人 · 面具之后", lines: silverB.concat(silverTail), flag: "scene20Seen", choices: null });
+  cloneScene("scene-18-mask", "scene-18", { title: "银色的恋人 · 面具之后", lines: silverA.concat(scenes["scene-19"].lines, scenes["scene-20"].lines), flag: "scene20Seen", choices: null });
+  cloneScene("scene-18-no-mask", "scene-18", { title: "银色的恋人 · 面具之后", lines: silverB.concat(scenes["scene-19"].lines, scenes["scene-20"].lines), flag: "scene20Seen", choices: null });
 
   // Scene 26 keeps both written variants available, while the engine records the choice.
   var patrol = scenes["scene-26"];
@@ -116,27 +127,18 @@
   var endingTextAt = findLineIndex("scene-31", function (line) { return line.text.indexOf("结局 A") === 0; });
   finale.lines = finale.lines.slice(0, endingTextAt);
   finale.returnToMap = false;
+  // 新剧本第三十场：白光在身后明灭，屏上浮出选项；① 进入出口 ② 回头救赵灵 ③ 超时未选择。
+  // 超时由 novel.js 的 15 秒计时器结算为 ending-d，所以不再需要一个「等待到超时」按钮。
+  // ending-c（完美结局）只在没有提交调查记录时出现。
   finale.choices = [
-    { id: "ending-a", label: "回头救赵灵", nextScene: "ending-a" },
-    { id: "ending-b", label: "进入出口，执行系统建议", nextScene: "ending-b" },
-    { id: "ending-c", label: "拒绝系统，追问真相", nextScene: "ending-c" },
-    { id: "ending-d", label: "等待到超时", nextScene: "ending-d" }
+    { id: "ending-a", label: "回头救赵灵（拒绝系统建议）", nextScene: "ending-a" },
+    { id: "ending-b", label: "进入出口（执行系统建议）", nextScene: "ending-b" },
+    { id: "ending-c", label: "拒绝系统，追问真相", nextScene: "ending-c", availableIf: "notSubmitted" }
   ];
 
-  // Preserve the old map query names while pointing them to the new, complete text.
-  cloneScene("opening", "scene-01", { id: "opening" });
-  cloneScene("note-intro", "scene-03", { id: "note-intro" });
-  cloneScene("note-repeat", "scene-03", { id: "note-repeat", title: "员工宿舍 · 已读纸条", choices: null });
-  cloneScene("wardrobe-clue", "scene-02", { id: "wardrobe-clue" });
-  cloneScene("wardrobe-repeat", "scene-02", { id: "wardrobe-repeat", title: "员工宿舍 · 已查衣柜", choices: null });
-  cloneScene("terminal", "scene-03-tv", { id: "terminal" });
-  cloneScene("guard-intro", "scene-07", { id: "guard-intro" });
-  cloneScene("guard-repeat", "scene-07", { id: "guard-repeat", title: "中央大厅 · 已读记录", choices: null });
-  cloneScene("guard-after-battle", "scene-11-after", { id: "guard-after-battle" });
-  cloneScene("contract", "scene-15", { id: "contract" });
-  cloneScene("contract-repeat", "scene-15", { id: "contract-repeat", title: "蜡像馆 · 已读展台", choices: null });
-  cloneScene("ending-choice", "scene-31", { id: "ending-choice" });
-  cloneScene("ending-escape", "ending-b", { id: "ending-escape" });
-  cloneScene("ending-turn-back", "ending-a", { id: "ending-turn-back" });
-  cloneScene("ending-understand", "ending-c", { id: "ending-understand" });
+  // NOTE: the alias clones and the authored opening pages live in
+  // js/chapter-finalize.js, which loads LAST. Doing them here was the root cause of
+  // two bugs: clones made before chapter-story.js never inherited the events and
+  // backgrounds it adds, and a page authored here was deleted afterwards by
+  // novel-presentation.js's △ filter.
 }());

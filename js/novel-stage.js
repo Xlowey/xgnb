@@ -16,7 +16,7 @@
   }
   function syncRoomBackdrop(event,hooks) {
     var inDorm=hooks.scene && /员工宿舍/.test(hooks.scene.location || "");
-    var visible=inDorm && event && (!event.background || event.background === "dorm-map.png") && (["item","document"].includes(event.type) || (["dialogue","television"].includes(event.type) && hooks.state.flags.dormExplorationPosition));
+    var visible=inDorm && !(hooks.scene && hooks.scene.background) && event && (!event.background || event.background === "dorm-map.png") && (["item","document"].includes(event.type) || (["dialogue","television"].includes(event.type) && hooks.state.flags.dormExplorationPosition));
     document.body.classList.toggle("has-room-backdrop",!!visible);
     if(!visible){if(backdropObserver)backdropObserver.disconnect();if(backdrop)backdrop.remove();backdrop=null;return;}
     if(backdrop)return;

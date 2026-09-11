@@ -28,15 +28,24 @@
     { type: "television", action: "打开电视" }
   ];
   ["scene-01", "scene-02", "scene-03"].forEach(function (id, index) {
-    Object.assign(scenes[id], { choices: null, namePrompt: false, briefing: null, inspection: null, theme: "dorm", nextScene: index < 2 ? "scene-0" + (index + 2) : "scene-04" });
+    Object.assign(scenes[id], { choices: null, namePrompt: false, briefing: null, inspection: null, theme: "dorm", nextScene: index < 2 ? "scene-0" + (index + 2) : null });
   });
   scenes["scene-02"].title = "调查宿舍";
   scenes["scene-03"].title = "血字纸条";
   scenes["scene-03"].location = "员工宿舍 · 夜";
+  // Order matters: the alias block below copies the full prologue scene for the
+  // named map entries, so the dedicated short re-inspection scenes have to be
+  // defined afterwards.  Defining them first silently replaced them with the long
+  // prologue, which is what made "re-open the wardrobe" replay half of scene 03.
+  var aliases = {opening:"scene-01", "wardrobe-clue":"scene-02", "note-intro":"scene-03"};
+  Object.keys(aliases).forEach(function (id) { scenes[id] = Object.assign({}, scenes[aliases[id]], { id:id }); });
   scenes["rules-inspect"] = {id:"rules-inspect",title:"员工守则",location:"员工宿舍",theme:"dorm",events:[{type:"document",item:"rules",side:"front",action:"返回房间"}],lines:[],returnToMap:true};
   scenes["note-inspect"] = {id:"note-inspect",title:"血字纸条",location:"员工宿舍",theme:"dorm",events:[{type:"document",item:"note",side:"front",action:"翻到背面"},{type:"document",item:"note",side:"back",action:"返回房间"}],lines:[],returnToMap:true};
   scenes["tv-inspect"] = {id:"tv-inspect",title:"电视",location:"员工宿舍",theme:"dorm",events:[{type:"television"}],lines:[],returnToMap:true};
-  var aliases = {opening:"scene-01", "wardrobe-clue":"scene-02", "wardrobe-repeat":"scene-02", "note-intro":"scene-03", "note-repeat":"scene-03", mirror:"scene-03"};
-  Object.keys(aliases).forEach(function (id) { scenes[id] = Object.assign({}, scenes[aliases[id]], { id:id }); });
+  // Repeat visits are recorded inspections, not replays: cloning scene-02/scene-03
+  // here would re-run the whole prologue from the wardrobe or the note.  The map
+  // entries dorm-wardrobe / dorm-note / dorm-terminal / dorm-mirror open these.
+  var inspections = {"wardrobe-repeat":"rules-inspect", "note-repeat":"note-inspect", "mirror":"note-inspect"};
+  Object.keys(inspections).forEach(function (id) { scenes[id] = Object.assign({}, scenes[inspections[id]], { id:id }); });
   story.textRevision = 4;
 }());

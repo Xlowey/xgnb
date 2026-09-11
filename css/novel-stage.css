@@ -1,4 +1,10 @@
 /* Stage and dialogue share the viewport; images always retain their ratio. */
+/* .novel-background is absolute inset:0 and dream-push scales it to 1.16, which
+   overflowed the document: measured +75 px horizontal at 1366x768 (+21 at 390x844)
+   and window.scrollTo really scrolled, so the story page was draggable sideways.
+   Both animated layers are clipped back to the stage. */
+.novel-stage { overflow: hidden; }
+.novel-vignette, .novel-background { will-change: transform; }
 .hotspot-investigation{position:relative;max-width:100%;width:min(100%,1050px);margin:auto;aspect-ratio:1649/954;max-height:100%;}
 .hotspot-investigation>img{width:100%;height:100%;object-fit:contain;display:block;}
 .hotspot-investigation>button{position:absolute;transform:translate(-50%,-50%);padding:10px 16px;color:#fff1ce;background:#13272ee8;border:1px solid #d4b77a;border-radius:4px;cursor:pointer;}
@@ -14,8 +20,12 @@ body[data-theme="nightmare"] { --scene-background: linear-gradient(140deg,#25131
 body[data-theme="office"] { --scene-background: linear-gradient(140deg,#201a18,#0b1013 72%); }
 .novel-toolbar { top: 22px; pointer-events:none; }
 .novel-location { padding: 7px 12px; background:#081014ac; border-left:2px solid #ceb38a; }
-.novel-dialogue { min-height:var(--dialogue-height); max-height:none; padding:24px 30px 63px; border-radius:10px; bottom:18px; background:linear-gradient(105deg,#0c1720ef,#111920ed); }
-.novel-text { max-height:none; min-height:2.7em; overflow:visible; font-size:clamp(17px,1.6vw,24px); line-height:1.7; }
+/* The dialogue box is position:fixed and the page is not scrollable, so if a page's
+   text grows taller than the viewport the box is pushed off the TOP edge and the
+   text can never be reached. The shipped script's longest page fits today, but the
+   box must not depend on that: bound the text and let it scroll inside the box. */
+.novel-dialogue { min-height:var(--dialogue-height); max-height:calc(100dvh - var(--stage-bottom) - 24px); overflow:hidden; padding:24px 30px 63px; border-radius:10px; bottom:18px; background:linear-gradient(105deg,#0c1720ef,#111920ed); }
+.novel-text { max-height:min(7em, calc(100dvh - var(--stage-bottom) - 170px)); min-height:2.7em; overflow-y:auto; font-size:clamp(17px,1.6vw,24px); line-height:1.7; scrollbar-color:#917a55 #182125; }
 .novel-next { right:28px; bottom:53px; font-size:12px; pointer-events:none; }
 .novel-toolbar-actions { position:absolute; bottom:10px; right:20px; gap:4px; max-width:none; }
 .novel-tool { border:0; background:transparent; padding:7px 10px; font-size:13px; color:#b3c0c4; border-radius:16px; }

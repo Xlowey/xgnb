@@ -52,6 +52,15 @@
     save: function () { save(); }
   });
 
+  // 浮层焦点管理：打开时移入焦点、Tab 不逃逸、关闭时归还焦点。
+  // 原生 <dialog>（背包 / 成就）由浏览器自己处理，这里不接。
+  if (window.MuseumFocus) {
+    window.MuseumFocus.mark(el.pause, { initial: "#resume-button" });
+    window.MuseumFocus.mark(el.savePanel, { initial: "#save-mode-button" });
+    window.MuseumFocus.mark(el.logPanel, { initial: "#close-log-panel" });
+    window.MuseumFocus.mark(el.rules, { initial: "#rules-close" });
+  }
+
   function currentRoom() { return rooms[state && state.roomId] || rooms.dorm; }
   function addUnique(list, value) { if (list.indexOf(value) === -1) list.push(value); }
   function has(list, value) { return list.indexOf(value) !== -1; }
@@ -69,14 +78,24 @@
       window.MuseumTutorial.show("save", { kind: "save", title: "进度已经自动保存", body: "重要调查和场景切换会自动保存。第一次想保留节点时，可以打开暂停菜单保存一个手动存档。", action: function () { openTutorialSave(); }, actionLabel: "现在保存一次" });
     }
   }
-  function save(message) { if (!currentUser || !state) return false; var ok = MuseumState.save(state, currentUser.id); if (!ok) { if (message && el.gameMessage) el.gameMessage.textContent = "存档写入失败，请检查浏览器存储空间。"; return false; } lastSave = performance.now(); if (message && el.gameMessage) el.gameMessage.textContent = message; refreshContinue(); return true; }
+  function save(message) { if (!currentUser || !state) return false; var ok = window.MuseumState.saveGuarded ? MuseumState.saveGuarded(state, currentUser.id) : MuseumState.save(state, currentUser.id); if (!ok) { if (message && el.gameMessage) el.gameMessage.textContent = "存档写入失败，请检查浏览器存储空间。"; return false; } lastSave = performance.now(); if (message && el.gameMessage) el.gameMessage.textContent = message; refreshContinue(); return true; }
   function saveBeforeLeave() {
     if (!currentUser || !state || (el.game && el.game.hidden)) return;
+    // Guarded: if another tab wrote newer progress while this one sat idle, this
+    // unload must not overwrite it. The player keeps the newer save instead of
+    // silently losing it.
     save();
   }
   window.addEventListener("pagehide", saveBeforeLeave);
   window.addEventListener("beforeunload", saveBeforeLeave);
-  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") saveBeforeLeave(); });
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") { saveBeforeLeave(); return; }
+    // Coming back: adopt what the store holds now, so this tab cannot write a stale
+    // snapshot over progress that was made elsewhere in the meantime.
+    if (!currentUser) return;
+    var stored = MuseumState.load(currentUser.id);
+    if (stored && state && stored.savedAt && stored.savedAt !== state.savedAt) { state = stored; renderAll(); }
+  });
   function refreshContinue() { if (!el.continueButton) return; var ok = currentUser && MuseumState.hasSave(currentUser.id); el.continueButton.disabled = !ok; el.continueButton.classList.toggle("button-primary", Boolean(ok)); }
   function showAuth(next) {
     var target = "pages/login.html";
@@ -154,7 +173,7 @@
   function nearestObject() {
     if (!state) return null;
     var room = currentRoom(); var nearest = null; var distance = Infinity;
-    room.objects.forEach(function (object) { var d = Math.hypot(state.playerX - object.x, state.playerY - object.y); if (d < object.r && d < distance && (room.id !== "museum" || [0,.25,.5,.75,1].every(function (t) { return !blocked(room,state.playerX+(object.x-state.playerX)*t,state.playerY+(object.y-state.playerY)*t,2); }))) { nearest = object; distance = d; } });
+    room.objects.forEach(function (object) { if (!window.MuseumChapterMaps.visible(object,state)) return; var d = Math.hypot(state.playerX - object.x, state.playerY - object.y); if (d < object.r && (d < distance || (d === distance && object.type === "scene")) && (room.id !== "museum" || [0,.25,.5,.75,1].every(function (t) { return !blocked(room,state.playerX+(object.x-state.playerX)*t,state.playerY+(object.y-state.playerY)*t,2); }))) { nearest = object; distance = d; } });
     return nearest;
   }
   function interactionHint(object) {
@@ -198,9 +217,10 @@
       showToast("这段剧情已经完成，可以在文本回顾中查看。");
       return;
     }
+    var beforeStory = JSON.parse(JSON.stringify(state));
     window.MuseumTransition.enterStory(state,sceneId);
     if (!MuseumState.save(state, currentUser.id)) {
-      state.mode = "explore";
+      state = beforeStory;
       showToast("进度保存失败，请检查浏览器存储空间后重试。");
       return;
     }
@@ -235,7 +255,7 @@
   function openRules() {
     if (state.flags.rulesGameCompleted) { showToast("告示上的规则你已经记住了。"); return; }
     state.mode = "mini"; el.rules.hidden = false; el.rulesFeedback.textContent = ""; el.rulesOptions.textContent = "";
-    [{ id: "red", text: "远离红色制服的工作人员" }, { id: "smile", text: "面对游客时保持微笑" }, { id: "exit", text: "直接询问工作人员出口" }].forEach(function (option) { var button = document.createElement("button"); button.type = "button"; button.className = "modal-option"; button.textContent = option.text; button.addEventListener("click", function () { if (option.id === "red") { state.flags.rulesGameCompleted = true; addClue("rule-red"); state.systemTrust += 4; el.rulesFeedback.textContent = "判断正确。红制服员工的规则暂时可信，去观察他吧。"; state.task = "观察大厅里的红制服员工。"; save(); } else { state.hp = Math.max(0, state.hp - 3); el.rulesFeedback.textContent = "这条信息无法解释纸条中的矛盾。生存点 -3。"; save(); } }); el.rulesOptions.appendChild(button); });
+    [{ id: "red", text: "远离红色制服的工作人员" }, { id: "smile", text: "面对游客时保持微笑" }, { id: "exit", text: "直接询问工作人员出口" }].forEach(function (option) { var button = document.createElement("button"); button.type = "button"; button.className = "modal-option"; button.textContent = option.text; button.addEventListener("click", function () { if (state.flags.rulesGameCompleted) return; if (option.id === "red") { state.flags.rulesGameCompleted = true; addClue("rule-red"); state.systemTrust += 4; el.rulesFeedback.textContent = "判断正确。红制服员工的规则暂时可信，去观察他吧。"; state.task = "观察大厅里的红制服员工。"; save(); } else { state.hp = Math.max(0, state.hp - 3); el.rulesFeedback.textContent = "这条信息无法解释纸条中的矛盾。生存点 -3。"; save(); } }); el.rulesOptions.appendChild(button); });
   }
   function openContract() {
     markDiscovered("wax-contract");
@@ -247,7 +267,7 @@
     startNovel("ending-choice");
   }
   function interact(object) {
-    if (!object || !state || state.mode !== "explore") return;
+    if (!object || !state || state.mode !== "explore" || !window.MuseumChapterMaps.visible(object,state)) return;
     if (currentRoom().id === "museum" && nearestObject() !== object) return;
     if (object.type !== "travel" && !window.MuseumTutorial.isDone("investigation")) window.MuseumTutorial.complete("investigation");
     if (object.id === "dorm-door" && !state.flags.hasKey) {
@@ -346,6 +366,7 @@
   }
   function drawOverviewMarkers(room) {
     room.objects.forEach(function (object) {
+      if (!window.MuseumChapterMaps.visible(object,state)) return;
       var locked = object.requiredFlag && !state.flags[object.requiredFlag];
       var nearby = nearestObject() && nearestObject().id === object.id;
       ctx.save();
@@ -397,8 +418,8 @@
     camera.x = Math.max(0, Math.min(Math.max(0, room.width - viewWidth), state.playerX - viewWidth / 2));
     camera.y = Math.max(0, Math.min(Math.max(0, room.height - viewHeight), state.playerY - viewHeight / 2));
     renderView.scale = scale;
-    renderView.offsetX = (canvas.width - room.width * scale) / 2;
-    renderView.offsetY = (canvas.height - room.height * scale) / 2;
+    renderView.offsetX = Math.max(0, (canvas.width - room.width * scale) / 2);
+    renderView.offsetY = Math.max(0, (canvas.height - room.height * scale) / 2);
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     ctx.translate(renderView.offsetX, renderView.offsetY);
@@ -422,6 +443,8 @@
     drawPlayer(); ctx.restore(); drawMiniMap(room);
   }
   function drawPlayer() {
+    // 赵灵作为地图 NPC 站在主角之前，这样两人重叠时主角在前，符合"走向她"的观感。
+    if (window.MuseumNpc) window.MuseumNpc.draw(ctx, state.roomId, state);
     window.MuseumPlayerAvatar.draw(ctx, state.playerX, state.playerY, state.facing, avatarMoving && state.mode === "explore" && !overlaysOpen(), avatarTravelled, state.roomId);
   }
 
@@ -442,8 +465,16 @@
     if (!loaded) { el.savePanelMessage.textContent = "这个存档无法读取。"; return; }
     state = loaded;
     el.pause.hidden=true;keys={};heldTouch=null;avatarMoving=false;
-    if ((state.mode === "novel" || state.mode === "ending") && state.narrativeNode) { MuseumState.save(state, currentUser.id); window.location.href = "pages/novel.html?scene=" + encodeURIComponent(state.narrativeNode); return; }
-    state.mode = "explore"; MuseumState.save(state, currentUser.id); el.savePanel.hidden = true; showGame(); renderAll(); showToast("已读取" + label + "。");
+    // The write can fail (full or blocked storage). Reporting "已读取" while the store
+    // still holds the old save is worse than refusing: the player would only discover
+    // it after a reload. startNovel() and finishToMap() already check this return value.
+    if (!MuseumState.save(state, currentUser.id)) {
+      el.savePanelMessage.textContent = "存档写入失败，无法保存这次的读取结果。请检查浏览器存储空间后重试。";
+      showToast("读取失败：存档无法写入。");
+      return;
+    }
+    if ((state.mode === "novel" || state.mode === "ending") && state.narrativeNode) { window.location.href = "pages/novel.html?scene=" + encodeURIComponent(state.narrativeNode); return; }
+    state.mode = "explore"; el.savePanel.hidden = true; showGame(); renderAll(); showToast("已读取" + label + "。");
   }
   function renderLogPanel() {
     if (!currentUser || !el.logList) return;
@@ -463,7 +494,10 @@
       state.flags.battleDemoCompleted = true; state.flags.waxDoorUnlocked = true; addClue("faceless-mask"); addUnique(state.unlockedRooms, "wax");
       var returnRoom = rooms[state.returnRoom] ? state.returnRoom : "hall";
       state.roomId = returnRoom; state.currentNode = returnRoom; state.chapter = rooms[returnRoom].chapter; state.playerX = Number(state.returnX) || rooms[returnRoom].spawn.x; state.playerY = Number(state.returnY) || rooms[returnRoom].spawn.y; state.task = tasks[returnRoom];
-      state.mode = "novel"; state.narrativeNode = state.returnScene || "guard-after-battle"; state.narrativeIndex = 0; state.narrativeChoice = null; var nextScene = state.narrativeNode; state.returnScene = null; MuseumState.save(state, currentUser.id); window.location.href = "pages/novel.html?scene=" + encodeURIComponent(nextScene); return;
+      state.mode = "novel"; state.narrativeNode = state.returnScene || "guard-after-battle"; state.narrativeIndex = 0; state.narrativeChoice = null; var nextScene = state.narrativeNode; state.returnScene = null;
+      if (MuseumState.save(state, currentUser.id)) { window.location.href = "pages/novel.html?scene=" + encodeURIComponent(nextScene); }
+      else { state.mode = "explore"; showToast("战斗结果无法写入存档，请检查浏览器存储空间后重试。"); save(); renderAll(); }
+      return;
     }
     state.hp = Math.max(0, Number(result.remainingHp) || 0);
     if (state.hp <= 0) {
@@ -471,8 +505,8 @@
       state.narrativeNode = "ending-d";
       state.narrativeIndex = 0;
       state.narrativeChoice = "ending-d";
-      MuseumState.save(state, currentUser.id);
-      window.location.href = "pages/novel.html?scene=ending-d";
+      if (MuseumState.save(state, currentUser.id)) { window.location.href = "pages/novel.html?scene=ending-d"; }
+      else { state.mode = "explore"; showToast("结局无法写入存档，请检查浏览器存储空间后重试。"); renderAll(); }
       return;
     }
     state.mode = "explore";
@@ -540,7 +574,7 @@
   if (logoutButton) logoutButton.addEventListener("click", function () { MuseumAuth.logout(); currentUser = null; state = null; showCover(); });
   document.getElementById("rules-close").addEventListener("click", function () { el.rules.hidden = true; if (state) state.mode = "explore"; renderAll(); save(); });
   document.addEventListener("keydown", function (event) {
-    var key = event.key;
+    var key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
     if (key === "Escape") {
       if (el.savePanel && !el.savePanel.hidden) el.savePanel.hidden = true;
       else if (el.logPanel && !el.logPanel.hidden) el.logPanel.hidden = true;
@@ -563,7 +597,7 @@
     }
   });
   window.addEventListener("blur", function () { keys = {}; heldTouch = null; avatarMoving = false; });
-  document.addEventListener("keyup", function (event) { keys[event.key] = false; });
+  document.addEventListener("keyup", function (event) { keys[event.key.length === 1 ? event.key.toLowerCase() : event.key] = false; });
   el.canvas.addEventListener("click", function (event) {
     if (!state || state.mode !== "explore" || overlaysOpen()) return;
     var room = currentRoom();
@@ -573,7 +607,7 @@
     var worldX = (canvasX - renderView.offsetX) / renderView.scale + camera.x;
     var worldY = (canvasY - renderView.offsetY) / renderView.scale + camera.y;
     if (worldX < 0 || worldY < 0 || worldX > room.width || worldY > room.height) return;
-    var object = room.objects.slice().sort(function (a, b) { return Math.hypot(worldX - a.x, worldY - a.y) - Math.hypot(worldX - b.x, worldY - b.y); })[0];
+    var object = room.objects.filter(function(o){return window.MuseumChapterMaps.visible(o,state);}).sort(function (a, b) { return Math.hypot(worldX - a.x, worldY - a.y) - Math.hypot(worldX - b.x, worldY - b.y) || (a.type === "scene" ? -1 : 0) - (b.type === "scene" ? -1 : 0); })[0];
     if (!object || Math.hypot(worldX - object.x, worldY - object.y) >= object.r * 1.1) return;
     var playerDistance = Math.hypot(state.playerX - object.x, state.playerY - object.y);
     if (playerDistance < object.r) interact(object); else showToast("请先走近「" + object.label + "」再调查。");

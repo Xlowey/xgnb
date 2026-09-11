@@ -41,7 +41,9 @@ xgnb/
 
 课堂展示可直接打开 `pages/showcase.html`，选择“连续体验前三场”。流程为桃树梦境、蓝色系统提示、宿舍物件调查、衣柜特写、员工守则、血字纸条正反面、电视录像，随后进入第四场。展示无需登录，使用临时状态，不覆盖正式账号存档；每次从展示目录进入会重新开始。
 
-剧情数据按 `novel-data.js → novel-overrides.js → novel-presentation.js → novel-prologue.js` 加载。三角形说明保留在 `MuseumStory.productionNotes`；前三场由 `novel-prologue.js` 转成镜头、系统、调查和物品事件，`novel-stage.js` 负责呈现，不作为角色对白。原始剧本保留供对照。旧版剧情进度首次进入时回到当前场次开头，以免索引错位，物品和地图进度保留。
+剧情数据按 `novel-data.js → novel-overrides.js → novel-presentation.js → novel-prologue.js → chapter-story.js → chapter-finalize.js` 加载。三角形说明保留在 `MuseumStory.productionNotes`；前三场由 `novel-prologue.js` 转成镜头、系统、调查和物品事件，`novel-stage.js` 负责呈现，不作为角色对白。原始剧本保留供对照。旧版剧情进度首次进入时回到当前场次开头，以免索引错位，物品和地图进度保留。
+
+新剧本（`docs/009-文学剧本最新版.docx`）的场号尚未迁移，当前程序沿用既有场次 id。多结局已按新剧本第七、三十场接线：馆长办公室新增「提交调查记录」选项，提交后 `flags.submitted = true`，`ending-c`（完美结局）在最终抉择中永久消失，只剩回头与进入出口两条路；不作选择则 15 秒后结算为死亡结局。
 
 前三场以《详细剧情线第一部分（待更新）》为准，取消额外的命名中断、钥匙与规则信任选项。对白框右下方提供上一句、回顾、保存、读取、自动、快进已读、物品和返回。自动播放在调查、物品及选择处停止；快进只通过已读对白；Esc 关闭浮层或停止自动，不打开回顾菜单。保存是独立快照，不会被自动进度覆盖。
 
@@ -67,7 +69,41 @@ xgnb/
 
 成就入口在地图右上角和对白框右下角，也可按 J 打开或关闭，Esc 关闭。正式列表在 `js/achievements-data.js`，目前为空；旧测试成就的展示与触发已移除，旧档记录保留但不计入当前列表。面板支持全部、已解锁、未解锁筛选，打开时暂停移动和自动播放。成就随本账号当前存档保存，读取较早存档会恢复当时的成就进度；课堂预览与正式账号分开。
 
-后续在配置中添加 `{id, name, description, target: 1, hidden: false}`。一次性成就调用 `MuseumAchievements.unlock(state, id, {save: persist})`；累计成就调用 `increment(state, id, 1, {save: persist})` 或 `setProgress(state, id, progress, {save: persist})`。未知 ID 不会解锁，重复解锁不再提示；解锁时间和进度保存在 `achievements` 与 `achievementRecords`。隐藏成就解锁前不显示名称、条件或进度。框架校验可运行 `node tests/achievements.test.cjs`，测试定义仅在测试进程中注册。
+后续在配置中添加 `{id, name, description, target: 1, hidden: false}`。一次性成就调用 `MuseumAchievements.unlock(state, id, {save: persist})`；累计成就调用 `increment(state, id, 1, {save: persist})` 或 `setProgress(state, id, progress, {save: persist})`。未知 ID 不会解锁，重复解锁不再提示；解锁时间和进度保存在 `achievements` 与 `achievementRecords`。隐藏成就解锁前不显示名称、条件或进度。框架校验可运行 `node docs/tests/achievements.test.cjs`，测试定义仅在测试进程中注册。
+
+## 测试
+
+全部为自包含脚本，自己起静态服务、用隔离的浏览器账号，不需要预先启动服务器。
+
+```bash
+node tests/world-data.cjs          # 路线、碰撞、场次引用、隐藏规则（纯 Node，无依赖）
+node tests/world-flow-browser.cjs  # 地图↔剧情往返、存读档、课堂预览隔离（真浏览器）
+node tests/story-endings.cjs       # 多结局：提交关闸、最终三选一、超时、空白页
+node tests/story-logic-fixes.cjs   # 镜子指错、战斗提前记通关、上一句抹进度
+node tests/save-multi-tab.cjs      # 双开标签页不得覆盖更新的进度
+node tests/layout-responsive.cjs   # 6 种视口下的 16:9 映射、点击命中、触屏方向键
+node tests/layout-text-fit.cjs     # 对白框不溢出视口、剧情页不可横向拖动
+node tests/a11y-focus.cjs          # 6 个浮层的焦点移入、Tab 不逃逸、关闭归还焦点
+node tests/characters-portraits.cjs # 新角色立绘的映射、加载与手机端不重叠
+node tests/characters-npc.cjs      # 赵灵 NPC 贴图在地图上出现且带脚底锚点
+node tests/deploy-clone.cjs        # 导出暂存区并验证 clone 后可直接游玩、无缺失素材
+```
+
+浏览器类测试需要 Playwright 与 Chrome。脚本按 `PLAYWRIGHT_MODULE`、codex 运行时缓存、`playwright` 的顺序查找；找不到时用环境变量指定：
+
+```bash
+PLAYWRIGHT_MODULE=<playwright 路径> CHROME_PATH=<chrome.exe> node tests/story-endings.cjs
+```
+
+## 剧情数据的加载顺序
+
+```text
+novel-data → novel-overrides → novel-presentation → novel-prologue
+           → chapter-story → chapter-finalize
+```
+
+**`chapter-finalize.js` 必须最后加载**，它负责两件前面无法完成的事：把别名副本（`guard-intro`/`contract`/`ending-choice`/`note-repeat` 等）指向已经补齐 `events` 与 `background` 的正式场次；以及给被 △ 过滤清空的场次补开场页。在这之前克隆会丢掉 `chapter-story.js` 后加的演出，而在这之前补的页面会被 `novel-presentation.js` 的 △ 过滤删掉。
+
 
 ## 和剧情、美术、小游戏同学的协作方式
 

@@ -1,6 +1,11 @@
 (function(){
   'use strict';
   function destinationObject(map, roomId){
+    if(roomId==="dorm")return map.objects.find(function(o){return o.id==="overview-dorm";});
+    // "宿舍外走廊" is entered through the dorm gate; a second gate at the corridor
+    // position was removed so the minimap cannot highlight the wrong entrance.
+    if(roomId==="corridor")return map.objects.find(function(o){return o.id==="overview-dorm";});
+    if(roomId==="canteen")roomId="canteenPassage";
     return map.objects.find(function(object){return object.target===roomId;}) || null;
   }
   function drawLabel(ctx, text, x, y, active){
@@ -24,6 +29,7 @@
       var localObjective=(rooms[objective.room].objects || []).find(function(o){return o.id===objective.entrance;});
       if(localObjective && localObjective.scene)objectiveTarget=map.objects.find(function(o){return o.scene===localObjective.scene;});
     }
+    if(!objectiveTarget && objective.room!=="museum")objectiveTarget=destinationObject(map,objective.room);
     var target=state.roomId==='museum' ? objectiveTarget : destinationObject(map,state.roomId);
     // Labels are derived from the same entrance objects used for movement.
     // This keeps the minimap correct when a map coordinate or room name is
@@ -43,7 +49,7 @@
     var value='当前位置：'+(state.roomId==='museum'?'馆内总览':(room ? room.title : '未知地点'));
     if(state.roomId==='museum' && objectiveTarget)value+=' · 目标：'+objectiveTarget.label;
     else if(state.roomId!=='museum'){
-      var exit=room && (room.objects || []).find(function(o){return o.type==='door' || (o.type==='travel' && o.target==='museum');});
+      var exit=room && (room.objects || []).find(function(o){return o.type==='door' || (o.type==='travel' && (o.target==='museum' || o.target==='corridor' || o.target==='canteenPassage'));});
       if(localTarget)value+=' · 当前目标：'+localTarget.label;
       else if(objectiveTarget && objectiveTarget.target===state.roomId)value+=' · 当前目标：'+(exit ? exit.label : '完成本地点调查');
       else if(objectiveTarget)value+=' · 出口：'+(exit ? exit.label : '返回馆内总览')+' · 下一目标：'+objectiveTarget.label;

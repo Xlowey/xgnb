@@ -56,7 +56,7 @@
   var finalChoiceTimer = null;
   var finalChoiceRemaining = null;
   var finalChoiceSeconds = 15;
-  var automatic = false, autoTimer = null, revealTimer = null, revealTextValue = "", revealIndex = 0, revealComplete = true, eventAdvance = true, seenBeforeRender = false, pageHistory = {};
+  var automatic = false, autoTimer = null, revealTimer = null, revealTextValue = "", revealIndex = 0, revealComplete = true, eventAdvance = true, seenBeforeRender = false;
   var stage = window.MuseumStage;
   var eventNext = document.getElementById("event-next");
   function pausePlayback() {
@@ -126,6 +126,12 @@
   window.MuseumTutorial.bind({getState:function(){return state;},save:persist});
   window.MuseumInventory.bind({getState:function(){return state;},save:persist,canOpen:function(){return els.review.hidden && els.end.hidden && els.pause.hidden && !stage.isOpen();},onOpen:function(){pausePlayback();window.MuseumTutorial.complete("inventory");},onClose:function(){schedulePlayback();}});
   window.MuseumAchievements.bind({getState:function(){return state;},save:persist,canOpen:function(){return els.review.hidden && els.end.hidden && els.pause.hidden && !stage.isOpen();},onOpen:pausePlayback,onClose:function(){schedulePlayback();}});
+
+  // 浮层焦点管理：剧情暂停与文本回顾原先打开后焦点留在工具栏，Tab 会跑到浮层背后。
+  if (window.MuseumFocus) {
+    window.MuseumFocus.mark(els.pause, { initial: "#novel-resume-button" });
+    window.MuseumFocus.mark(els.review, { initial: "#novel-review-close" });
+  }
 
   function getScene(sceneId) {
     return story.scenes[sceneId] || story.scenes[story.fallback];
@@ -230,14 +236,24 @@
     schedulePlayback();
   }
 
+  // Replayable entries (repeat/inspect aliases, the mirror) show recorded text
+  // again.  They must not write a "scene seen" flag, otherwise re-reading a
+  // note or re-opening the wardrobe would be recorded as progress through the
+  // main script.  scene-09 is excluded for the same reason it always was: its
+  // completion is decided by the branch scene, not by the parent dialogue.
+  function isReplayScene(id) {
+    return id === "scene-09" || /(?:-repeat|-inspect)$/.test(id) || id === "mirror";
+  }
+
   function completeCurrentScene() {
-    if(currentSceneId!=="scene-09") MuseumState.completeScene(state, currentSceneId);
-    if (currentScene.flag) state.flags[currentScene.flag] = true;
+    if (!isReplayScene(currentSceneId)) MuseumState.completeScene(state, currentSceneId);
+    if (!isReplayScene(currentSceneId) && currentScene.flag) state.flags[currentScene.flag] = true;
     // The wardrobe scene is the player's first usable progression item. The
     // data file contains the inspection text but no separate choice node, so
     // completing that scene must award the key explicitly; otherwise the
-    // newly connected dorm door can never be opened.
-    if (currentScene.flag === "scene02Seen" && !state.flags.hasKey) {
+    // newly connected dorm door can never be opened.  Keyed on the real scene
+    // id, so re-opening the wardrobe cannot hand out a second key.
+    if (currentSceneId === "scene-02" && !state.flags.hasKey) {
       state.flags.cabinetKeyTaken = true;
       state.flags.hasKey = true;
       if (state.inventory.indexOf("dorm-key") === -1) state.inventory.push("dorm-key");
@@ -246,14 +262,17 @@
     }
     window.MuseumChapterProgress.complete(state,currentSceneId);
     if (currentSceneId === "scene-03") {
+      // Scene 03 is the blood note inside the dorm.  Finishing it must put the
+      // player back in the dorm where the story started, so the set objective
+      // ("leave through the dorm door") is something the player actually walks.
+      // Setting the return point to the museum overview here teleported the
+      // player out of the dorm and past the corridor, which is the shortcut
+      // map-art.js and chapter-maps.js explicitly removed.  The museum and hall
+      // are unlocked by the dorm door, not by reading the note.
       state.flags.prologueComplete = true;
       state.flags.readNote = true;
-      state.task = "从博物馆总地图开始午夜巡逻。";
-      state.returnRoom = "museum";
-      state.returnX = 615;
-      state.returnY = 610;
-      if (state.unlockedRooms.indexOf("museum") < 0) state.unlockedRooms.push("museum");
-      if (state.unlockedRooms.indexOf("hall") < 0) state.unlockedRooms.push("hall");
+      state.task = window.MuseumChapterProgress.objective(state).text;
+      state.returnRoom = state.returnRoom || "dorm";
     }
   }
 
@@ -335,7 +354,11 @@
       if (finalChoiceRemaining <= 0) {
         window.clearInterval(finalChoiceTimer);
         finalChoiceTimer = null;
-        var timeoutChoice = currentScene.choices && currentScene.choices.filter(function (choice) { return choice.id === "ending-d"; })[0];
+        // 新剧本第三十场：③ 超时未选择 → ending-d。Prefer the authored choice and fall
+        // back to it by id, so the timeout still resolves if that option is not offered.
+        var offered = currentScene.choices || [];
+        var timeoutChoice = offered.filter(function (choice) { return choice.id === "ending-d"; })[0]
+          || (currentSceneId === "scene-31" || currentSceneId === "ending-choice" ? { id: "ending-d", nextScene: "ending-d" } : null);
         if (timeoutChoice) choose(timeoutChoice);
       }
     }, 1000);
@@ -392,6 +415,15 @@
     }
     if (!Array.isArray(currentScene.choices) || !currentScene.choices.length) return;
 
+    // A choice can be gated on progress. `availableIf: "notSubmitted"` is the script's
+    // rule that submitting the investigation record closes the perfect ending for the
+    // rest of the run, so the option must not merely be disabled - it must be gone.
+    var offered = currentScene.choices.filter(function (choice) {
+      if (choice.availableIf === "notSubmitted" && state.flags.submitted) return false;
+      return true;
+    });
+    if (!offered.length) return;
+
     els.choices.hidden = false;
     saveChoiceCheckpoint();
     if (!state.flags.tutorialChoiceSaved) {
@@ -400,7 +432,7 @@
       showToast("选择前已自动保存。你可以按自己的判断行动。");
     }
     if (!window.MuseumTutorial.isDone("branch")) window.MuseumTutorial.show("branch", { kind: "branch", title: "这里的选择会留下记录", body: "没有选项说明是正确答案。按照你掌握的线索行动，之后仍然可以读取选择前的存档。" });
-    currentScene.choices.forEach(function (choice) {
+    offered.forEach(function (choice) {
       var button = document.createElement("button");
       button.type = "button";
       button.className = "novel-choice";
@@ -473,7 +505,6 @@
     });
     window.MuseumPortraits.render(currentScene,line);
     if(line.type === "system") { finishTextReveal(); els.text.textContent = ""; }
-    pageHistory[currentSceneId + ":" + lineIndex] = JSON.parse(JSON.stringify(state));
     document.getElementById("novel-back-button").disabled = lineIndex === 0;
     schedulePlayback();
     if ((!line.type || line.type === "dialogue") && !window.MuseumTutorial.isDone("dialogue")) window.MuseumTutorial.show("dialogue", { kind: "dialogue", title: "对白可以这样推进", body: "点击屏幕任意空白处，或按 E 继续。第一次推进后，这条提示会消失。" });
@@ -502,6 +533,14 @@
       state.flags.foundContract = true;
       if (state.clues.indexOf("contract") === -1) state.clues.push("contract");
     }
+    // 新剧本第八场：提交调查记录。此后 C 完美结局永久关闭，最终抉择只剩 A / B。
+    if (choice.effect === "submit-record") {
+      state.flags.submitted = true;
+      state.flags.refusedSubmit = false;
+      if (state.clues.indexOf("submitted-record") === -1) state.clues.push("submitted-record");
+      state.systemTrust += 6;
+      state.task = "按系统的安排继续行动。";
+    }
     if (choice.id === "remove-mask" || choice.id === "reveal-name") state.flags.removedMask = true;
     if (choice.id === "keep-mask" || choice.id === "keep-name-secret") state.flags.remainedMasked = true;
     if (["ending-a", "ending-b", "ending-c", "ending-d"].indexOf(choice.id) !== -1) state.ending = choice.id;
@@ -513,7 +552,6 @@
     currentScene = getScene(sceneId);
     currentPages = buildPages(currentScene);
     lineIndex = 0;
-    pageHistory = {};
     endingChoice = currentScene.endingId || endingChoice;
     els.end.hidden = true;
     window.history.replaceState({}, "", "?scene=" + encodeURIComponent(sceneId) + (preview ? "&preview=1" : ""));
@@ -521,13 +559,14 @@
   }
 
   function startBattle(choice) {
+    var beforeBattle=JSON.parse(JSON.stringify(state));
     state.returnRoom = state.returnRoom || state.roomId;
     state.returnX = state.returnX == null ? state.playerX : state.returnX;
     state.returnY = state.returnY == null ? state.playerY : state.returnY;
     state.returnScene = choice.afterBattle || "guard-after-battle";
     state.mode = "battle";
     state.narrativeNode = state.returnScene;
-    persist();
+    if (!persist()) { state=beforeBattle; render(); showToast("保存失败，暂未进入战斗，请重试。"); return; }
     var battleUrl = "../demos/battle/index.html?from=novel&user=" + encodeURIComponent(user.id) + "&returnScene=" + encodeURIComponent(state.returnScene);
     if (preview) battleUrl += "&preview=1&resume=1";
     window.location.href = battleUrl;
@@ -535,7 +574,11 @@
 
   function choose(choice) {
     if (!window.MuseumTutorial.isDone("branch")) window.MuseumTutorial.complete("branch");
-    completeCurrentScene();
+    // A battle choice must NOT complete the scene yet: doing so awarded scene11Seen and
+    // completed:scene-11 the moment 战斗 was clicked, so losing the fight still unlocked
+    // scene-12. The outcome is decided by the battle itself, and the after-battle scene
+    // (scene-11-after / guard-after-battle) is what records the completion.
+    if (choice.action !== "battle") completeCurrentScene();
     applyChoice(choice);
     clearChoices();
     if (choice.effect === "take-key") { persist(); render(); showToast("获得物品：宿舍钥匙"); return; }
@@ -634,7 +677,6 @@
       return;
     }
     state = loaded;persist();
-    pageHistory = {};
     if (state.mode === "novel" || state.mode === "ending") {
       currentSceneId = state.narrativeNode || story.fallback;
       currentScene = getScene(currentSceneId);
@@ -679,11 +721,15 @@
   eventNext.addEventListener("click",function(e){e.stopPropagation();advance();});
   document.getElementById("novel-back-button").addEventListener("click",function(){
     pausePlayback();
-    if(lineIndex>0){
-      var previous=pageHistory[currentSceneId+":"+(lineIndex-1)];
-      if(previous) state=previous;
-      lineIndex-=1;render();
-    }
+    if (lineIndex <= 0) return;
+    // Rewind the CURSOR only. This used to restore a whole-state snapshot taken per
+    // page, which also rolled back everything the page changed: at scene-05, stepping
+    // back after investigating both hotspots reset investigation:hospital:bed and :tv
+    // to false, rewound progress to 1/13 and rewrote the auto save with them wiped, so
+    // the player had to redo the investigation. Progress belongs to the save, not to
+    // the reading position.
+    lineIndex -= 1;
+    render();
   });
   document.getElementById("novel-auto-button").addEventListener("click",function(){automatic=!automatic;this.setAttribute("aria-pressed",String(automatic));this.textContent=automatic?"自动中":"自动";schedulePlayback();});
   document.getElementById("novel-skip-button").addEventListener("click",function(){

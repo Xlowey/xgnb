@@ -19,6 +19,9 @@
     waxDoorUnlocked: false,
     foundContract: false,
     understoodTruth: false,
+    // 新剧本第八场：提交调查记录后永久关闭 C 完美结局（见 novel.js renderChoices）。
+    submitted: false,
+    refusedSubmit: false,
     tutorialChoiceSaved: false
   };
   var DEFAULT_TUTORIAL = {
@@ -105,8 +108,8 @@
     state.narrativeLogKeys = Array.isArray(state.narrativeLogKeys) ? state.narrativeLogKeys : [];
     if (state.mode === "dialogue" || state.mode === "mini" || state.mode === "battle" || state.mode === "paused") state.mode = "explore";
     if (loaded.currentNode && !loaded.roomId) state.roomId = loaded.currentNode;
-    if (typeof state.playerX !== "number") state.playerX = state.roomId === "hall" ? 260 : 300;
-    if (typeof state.playerY !== "number") state.playerY = state.roomId === "dorm" ? 520 : 460;
+    if (!Number.isFinite(state.playerX)) state.playerX = state.roomId === "hall" ? 260 : 300;
+    if (!Number.isFinite(state.playerY)) state.playerY = state.roomId === "dorm" ? 520 : 460;
     return state;
   }
   function parse(raw, fallback) {
@@ -184,10 +187,55 @@
   function clear(userId) { if (!userId) return; remove(userKey(AUTO_PREFIX, userId)); remove(userKey(SLOTS_PREFIX, userId)); remove(userKey(CHECKPOINT_PREFIX, userId)); remove(userKey(READ_PREFIX, userId)); LEGACY_PREFIXES.concat(LEGACY_SLOT_PREFIXES).forEach(function (prefix) { remove(userKey(prefix, userId)); }); }
   function hasSave(userId) { if (!userId) return false; return Boolean(localStorage.getItem(userKey(AUTO_PREFIX, userId)) || LEGACY_PREFIXES.some(function (prefix) { return localStorage.getItem(userKey(prefix, userId)); }) || readSlots(userId).some(Boolean)); }
 
+  // ---------------------------------------------------------------------------
+  // 自动存档的写入保护（多标签页 / 切后台）。
+  //
+  // 地图页只在加载时读一次 state，之后每 6 秒和 pagehide 都会把那份快照写回去。
+  // 开了两个标签页时，停着不动的那一个会把另一个标签页的新进度整份覆盖掉——实测：
+  // B 页推进到剧情页，A 页闲置 7 秒后存档退回旧状态，进度直接丢失。
+  //
+  // 这里在自动档之外记一个 guard 键，保存"这个存档是谁写的、什么时候"。每次写入前
+  // 比对：如果存档比本标签页上次见到的新，说明别处写过，就放弃本次写入而不是覆盖。
+  // 这只影响自动档；手动档位、检查点和读档标记不受影响。
+  // ---------------------------------------------------------------------------
+  var GUARD_PREFIX = "museum_save_guard_v1_";
+
+  function readGuard(userId) {
+    var raw = localStorage.getItem(userKey(GUARD_PREFIX, userId));
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch (error) { return null; }
+  }
+  function writeGuard(userId, stamp) {
+    write(userKey(GUARD_PREFIX, userId), JSON.stringify({ savedAt: stamp, at: Date.now() }));
+  }
+  function autoSavedAt(userId) {
+    var raw = localStorage.getItem(userKey(AUTO_PREFIX, userId));
+    if (!raw) {
+      var legacy = null;
+      LEGACY_PREFIXES.some(function (prefix) { legacy = localStorage.getItem(userKey(prefix, userId)); return Boolean(legacy); });
+      raw = legacy;
+    }
+    return parse(raw, null) ? parse(raw, null).savedAt || null : null;
+  }
+  // Save only when this snapshot is not older than what the store already holds.
+  function saveGuarded(state, userId) {
+    var id = userId || state.userId;
+    if (!id) return false;
+    var seen = readGuard(id);
+    // This tab has been writing; the store must still hold what this tab last wrote.
+    if (seen && seen.savedAt && seen.savedAt !== state.savedAt) {
+      var stored = autoSavedAt(id);
+      if (stored && stored !== seen.savedAt && stored !== state.savedAt) return false;
+    }
+    if (!save(state, id)) return false;
+    writeGuard(id, state.savedAt);
+    return true;
+  }
+
   // Map entry checks share the same canonical scene ids as completion records.
   var sceneAliases = {
     opening: "scene-01", "note-intro": "scene-03", "note-repeat": "scene-03",
-    "wardrobe-clue": "scene-02", "wardrobe-repeat": "scene-02", mirror: "scene-03",
+    "wardrobe-clue": "scene-02", "wardrobe-repeat": "scene-02", mirror: "mirror-inspect",
     terminal: "scene-03-tv", "guard-intro": "scene-07", "guard-repeat": "scene-07",
     contract: "scene-15", "contract-repeat": "scene-15", "ending-choice": "scene-31"
   };
@@ -205,5 +253,5 @@
     state.flags["completed:" + canonicalScene(id)] = true;
   }
 
-  window.MuseumState = { sceneCompleted: sceneCompleted, completeScene: completeScene, SLOT_LIMIT: SLOT_LIMIT, create: createState, save: save, load: load, saveSlot: saveSlot, loadSlot: loadSlot, saveCheckpoint: saveCheckpoint, loadCheckpoint: loadCheckpoint, markRead: markRead, hasRead: hasRead, deleteSlot: deleteSlot, listSlots: listSlots, clear: clear, hasSave: hasSave };
+  window.MuseumState = { sceneCompleted: sceneCompleted, completeScene: completeScene, SLOT_LIMIT: SLOT_LIMIT, create: createState, save: save, saveGuarded: saveGuarded, load: load, saveSlot: saveSlot, loadSlot: loadSlot, saveCheckpoint: saveCheckpoint, loadCheckpoint: loadCheckpoint, markRead: markRead, hasRead: hasRead, deleteSlot: deleteSlot, listSlots: listSlots, clear: clear, hasSave: hasSave };
 }());

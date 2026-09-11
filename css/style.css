@@ -1521,12 +1521,21 @@ input:focus {
     width: 28%;
   }
 
+  /* The pad must overlay the map instead of following it in flow: the map panel is
+     height:100% of a 100vh screen, so an in-flow pad was laid out BELOW the
+     viewport (top 852 in an 844-tall window) and could not be tapped at all -
+     and on a phone it is the only movement input. */
   .touch-controls {
     display: grid;
     justify-items: center;
     gap: 3px;
     width: 130px;
-    margin: 8px auto 0;
+    position: absolute;
+    z-index: 6;
+    left: 50%;
+    bottom: 12px;
+    margin: 0;
+    transform: translateX(-50%);
   }
 
   .touch-controls div {
@@ -1582,7 +1591,14 @@ input:focus {
 .explore-layout { display: block; width: 100%; height: 100%; margin: 0; }
 .map-panel, .map-viewport { width: 100%; height: 100%; min-height: 100%; }
 .map-viewport { display: grid; place-items: center; border: 0; box-shadow: none; background: #0b1014; }
-#explore-canvas { display: block; width: 100%; height: 100%; min-height: 0; object-fit: cover; object-position: center; }
+/* The bitmap is 960x540 (16:9) and js/game.js maps a click with
+   (clientX - rect.left) * canvas.width / rect.width, which assumes the bitmap
+   fills the element box exactly.  So the BOX must be 16:9 and contain the bitmap
+   without cropping: `cover` cropped it (the click inverse was then wrong by up to
+   460 world px and only the middle 26% of the map was visible), and a stretched
+   box would distort the art.  aspect-ratio keeps box == bitmap at every size, so
+   the existing inverse stays correct. */
+#explore-canvas { display: block; width: auto; height: auto; min-height: 0; max-width: 100%; max-height: 100%; aspect-ratio: 16 / 9; margin: auto; object-fit: contain; object-position: center; }
 .save-checkpoint { border-color: #b99a62; background: rgba(44, 55, 54, .85); }
 #mini-map { display: none !important; }
 .map-room-label { position: absolute; z-index: 3; top: 24px; left: 28px; max-width: min(420px, 70vw); pointer-events: none; text-shadow: 0 2px 16px rgba(0, 0, 0, .85); }
@@ -1633,3 +1649,30 @@ input:focus {
 }
 
 .chapter-objective{position:absolute;top:98px;left:24px;max-width:min(420px,75vw);margin:0;padding:8px 12px;background:#0a171de3;color:#ddcda7;font-size:14px;pointer-events:none;}
+
+/* ===== 窄屏 HUD 整理 =====
+   Measured at 390x844 before this block: the 导览 minimap panel took 190 of 390 px
+   and covered the room title's second line; the interaction prompt landed on that
+   same title; the keyboard hint bar overlapped the D-pad; 背包/成就 sat at the same
+   height as the D-pad. On a phone the keyboard hints are false information and the
+   minimap is redundant (the objective is already in #chapter-objective), so both go
+   away and the remaining HUD gets its own band. */
+@media (max-width: 700px) {
+  .map-guide { display: none; }
+  .map-controls { display: none; }
+  .map-room-label { top: 12px; left: 12px; right: 12px; max-width: none; }
+  .map-room-label h1 { font-size: clamp(1.05rem, 5vw, 1.5rem); }
+  .chapter-objective { top: 78px; left: 12px; right: 12px; max-width: none; font-size: 12px; }
+  /* The toast is centred at top:16px by default, which on a narrow screen lands on
+     the room title. It follows the objective instead, keeping the top band stacked. */
+  .map-toast { top: 118px; max-width: calc(100% - 24px); }
+  .interaction-prompt { left: 12px; right: 12px; bottom: 104px; max-width: none; text-align: center; }
+  .map-quick-actions { top: auto; bottom: 62px; right: 12px; }
+  .game-message { bottom: 150px; max-width: calc(100vw - 24px); }
+}
+/* Short viewports (phone landscape): the D-pad would sit on the middle of the map,
+   so it moves to the lower-left where a thumb can reach it. */
+@media (max-height: 520px) and (pointer: coarse) {
+  .touch-controls { left: 12px; bottom: 10px; transform: none; }
+  .map-quick-actions { bottom: 10px; }
+}
