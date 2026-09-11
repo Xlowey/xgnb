@@ -89,6 +89,8 @@ node tests/characters-npc.cjs      # 赵灵 NPC 贴图在地图上出现且带�
 node tests/deploy-clone.cjs        # 导出暂存区并验证 clone 后可直接游玩、无缺失素材
 node tests/walkable-audit.cjs      # 每个房间的出生点/物件/入口可达性与可走区域越界
 node tests/reported-bugs.cjs       # 地图铺满视口、导览面板开关、调查录像、走廊边界
+node tests/perf-lazy-maps.cjs      # 只加载当前房间的地图，且不会重复请求
+node tests/perf-lazy-wardrobe.cjs  # 衣柜特写不在地图页下载，交互提示照旧
 ```
 
 ## 地图绘制约定
@@ -98,6 +100,19 @@ node tests/reported-bugs.cjs       # 地图铺满视口、导览面板开关、�
 **不要在 CSS 里给 `#explore-canvas` 加 `aspect-ratio` 或 `object-fit:contain`。** 那会让画出来的位图小于它所在的盒子，于是地图看起来缩小（2560×1380 这类非 16:9 窗口最明显），并且点击坐标整体偏移。渲染器自己会把每个**房间**按比例放进缓冲区，所以窗口比例不需要被约束。
 
 可走区域按画面像素实测，不靠估：房间地图的地板是偏蓝的灰（`b >= r`），墙是棕/墨绿。走廊那组数字（`js/map-art.js` 的 `rooms.corridor.walkable`）就是从 `走廊示意图1.png` 量出来的——地板 x 960..1774、y 337..565，下墙门口凹口 x 1256..1478 直到 y 608。旧的估算值上边缘高出地板约 60px，人物头部会插进上方的墙（看起来像穿模），下边缘又够不到门口（看起来像卡住）。
+
+## 素材按需加载
+
+`js/lazy-image.js` 提供 `create(name, category, onReady)`：返回的 `Image` 形状与原来一致，只是 `src` 推迟到绘制时才设置，加载完成后回调 `MuseumGameRedraw()` 重绘一次。使用方式是在画之前 `art.load()`（见 `js/game.js` 的 `drawRoom`）。
+
+原来 `js/map-art.js` 与 `js/chapter-maps.js` 在脚本求值阶段就给**全部 9 张地图**设 src，开局（还在主菜单）就要下 14.5 MB，而实际只会画 1 张。现在只有当前房间那张会请求：
+
+| | 地图页首屏下载 |
+|---|---|
+| 改前 | 14,551 KB（全部地图，外加 1,924 KB 的衣柜特写） |
+| 改后 | 1,864 KB（只有当前房间地图；衣柜特写 0） |
+
+衣柜特写之所以能完全不下：`js/game.js` 里调用 `drawWardrobe` 的 `room.objects` 渲染分支**不可达**（`drawRoom` 在 `if (room.art)` 分支里就 return 了，而每个房间都有美术）。用 `drawImage` 包装实测，站在衣柜旁边画出次数为 **0**。衣柜的交互本身完好（提示与剧情照旧），放大图由剧情页的物品预览显示。
 
 浏览器类测试需要 Playwright 与 Chrome。脚本按 `PLAYWRIGHT_MODULE`、codex 运行时缓存、`playwright` 的顺序查找；找不到时用环境变量指定：
 

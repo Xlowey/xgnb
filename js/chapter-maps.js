@@ -1,7 +1,11 @@
 (function(){
   "use strict";
   window.MuseumChapterMaps=function(rooms){
-    function art(name){var image=new Image();image.src=window.MuseumAssets ? window.MuseumAssets.url(name,"maps") : "assets/images/maps/"+name;return image;}
+    // 地图按需加载：只有真正要画的房间才请求素材（见 js/lazy-image.js）。
+    function art(name){
+      if (window.MuseumLazyImage) return window.MuseumLazyImage.create(name, "maps", function () { if (window.MuseumGameRedraw) window.MuseumGameRedraw(); });
+      var image=new Image();image.src=window.MuseumAssets ? window.MuseumAssets.url(name,"maps") : "assets/images/maps/"+name;return image;
+    }
     function travel(id,label,x,y,target){return {id:id,label:label,x:x,y:y,r:75,type:"travel",target:target};}
     var classroom={id:"classroom",title:"教室展厅",chapter:"第一幕",width:1647,height:955,spawn:{x:820,y:740},art:art("教室展厅背景.jpeg"),colliders:[
       {x:0,y:0,w:1647,h:280},{x:0,y:0,w:130,h:955},{x:1540,y:0,w:107,h:955},

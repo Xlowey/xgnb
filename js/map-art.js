@@ -12,12 +12,16 @@
       }, {});
     });
     function room(id,title,image,spawn,colliders,objects,chapter, cameraZoom) {
-      var img=new Image();img.src=window.MuseumAssets ? window.MuseumAssets.url(image,"maps") : "assets/images/maps/"+image;
-      rooms[id]={id:id,title:title,chapter:chapter || "第一幕",width:1670,height:942,spawn:spawn,colliders:colliders,objects:objects,art:img,cameraZoom:cameraZoom || 1};
+      rooms[id]={id:id,title:title,chapter:chapter || "第一幕",width:1670,height:942,spawn:spawn,colliders:colliders,objects:objects,art:art(image),cameraZoom:cameraZoom || 1};
     }
     function overviewRoom(id,title,image,spawn,colliders,objects) {
-      var img=new Image();img.src=window.MuseumAssets ? window.MuseumAssets.url(image,"maps") : "assets/images/maps/"+image;
-      rooms[id]={id:id,title:title,chapter:"馆内总览",width:1280,height:853,spawn:spawn,colliders:colliders,objects:objects,art:img,cameraZoom:1.22};
+      rooms[id]={id:id,title:title,chapter:"馆内总览",width:1280,height:853,spawn:spawn,colliders:colliders,objects:objects,art:art(image),cameraZoom:1.22};
+    }
+    // 地图按房间按需加载：开局不再把 9 张地图（实测 14.5 MB）全部拉下来，只有真正要画的
+    // 那一张会请求。加载完成后重绘一次，避免背景空白等到下一帧。
+    function art(image) {
+      return window.MuseumLazyImage ? window.MuseumLazyImage.create(image, "maps", function () { if (window.MuseumGameRedraw) window.MuseumGameRedraw(); })
+        : (function () { var img = new Image(); img.src = window.MuseumAssets ? window.MuseumAssets.url(image, "maps") : "assets/images/maps/" + image; return img; }());
     }
     function gate(id,label,x,y,target,requiredFlag){return{id:id,type:"travel",label:label,x:x,y:y,r:90,target:target,requiredFlag:requiredFlag};}
     function scene(id,label,x,y,target,flag){return{id:id,type:"scene",label:label,x:x,y:y,r:100,scene:target,requiredFlag:flag};}

@@ -8,12 +8,11 @@
   var ctx = canvas ? canvas.getContext("2d") : null;
   var miniCanvas = document.getElementById("mini-map");
   var miniCtx = miniCanvas ? miniCanvas.getContext("2d") : null;
-  var wardrobeImages = {
-    closed: new Image(),
-    open: new Image()
-  };
-  wardrobeImages.closed.src = window.MuseumAssets ? window.MuseumAssets.url("wardrobe-detail.png","items") : "assets/images/items/closeups/wardrobe-detail.png";
-  wardrobeImages.open.src = window.MuseumAssets ? window.MuseumAssets.url("wardrobe-detail.png","items") : "assets/images/items/closeups/wardrobe-detail.png";
+  // 衣柜特写是 1.9 MB，而它只在宿舍画衣柜时才用得上。改成一个按需加载的 Image：
+  // 走到衣柜旁边才请求，避免开局为主菜单/第一个房间多拉 1.9 MB。
+  var wardrobeImage = window.MuseumLazyImage
+    ? window.MuseumLazyImage.create("wardrobe-detail.png", "items", function () { if (window.MuseumGameRedraw) window.MuseumGameRedraw(); })
+    : (function () { var img = new Image(); img.src = "assets/images/items/closeups/wardrobe-detail.png"; return img; }());
   var keys = {};
   var heldTouch = null;
   var camera = { x: 0, y: 0 };
@@ -321,7 +320,9 @@
   function drawText(text, x, y, size, color, align) { ctx.fillStyle = color; ctx.font = "600 " + size + "px system-ui, sans-serif"; ctx.textAlign = align || "left"; ctx.textBaseline = "middle"; ctx.fillText(text, x, y); }
   function drawFurniture(rect, color, label) { ctx.fillStyle = color; ctx.fillRect(rect.x, rect.y, rect.w, rect.h); ctx.strokeStyle = "rgba(25,39,45,.55)"; ctx.lineWidth = 4; ctx.strokeRect(rect.x, rect.y, rect.w, rect.h); if (label) drawText(label, rect.x + rect.w / 2, rect.y + rect.h / 2, 22, "rgba(245,241,232,.82)", "center"); }
   function drawWardrobe(object) {
-    var image = state.flags.cabinetOpen ? wardrobeImages.open : wardrobeImages.closed;
+    // 只有真的要画衣柜时才请求那 1.9 MB 的特写素材。
+    if (typeof wardrobeImage.load === "function") wardrobeImage.load();
+    var image = wardrobeImage;
     var width = 155;
     var height = 232;
     var x = object.x - width / 2;
@@ -403,6 +404,9 @@
     });
   }
   function drawRoom(room) {
+    // 地图按需加载：进入房间时才请求这张地图（见 js/lazy-image.js）。加载完成后
+    // lazy-image 会回调 MuseumGameRedraw，所以这里每帧调用也不会重复发请求。
+    if (room.art && typeof room.art.load === "function") room.art.load();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     // Room coordinates are authored in the source-map pixels (1670x942,
     // 1774x887, ...), while the display canvas is only 960x540. The old
@@ -472,6 +476,10 @@
     if (state) drawRoom(currentRoom());
   }
   var resizeTimer = null;
+  // 地图素材加载完成后重绘一次，让背景立刻出现而不是等到下一帧。
+  window.MuseumGameRedraw = function () {
+    if (state && el.game && !el.game.hidden) drawRoom(currentRoom());
+  };
   window.addEventListener("resize", function () {
     window.clearTimeout(resizeTimer);
     // 拖动窗口时不必每帧重建缓冲区，停稳后再同步一次。
