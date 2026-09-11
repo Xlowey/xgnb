@@ -26,13 +26,24 @@
     right: [[1025, 16, 168, 268, 84.0], [1041, 284, 161, 284, 80.5], [1042, 568, 163, 278, 81.5]]
   };
 
-  // 赵灵在地图上的站位与朝向按剧情推进；空数组表示此房间不显示她。
+  // 赵灵在地图上的站位与朝向按剧情推进；返回 null 表示此房间不显示她。
   // 新剧本第二十五场：赵灵在宿舍外的走廊等主角；第五场（病房）之前她还在。
+  // 站位贴走廊上半边（地板实测 y 337..565），让她站在靠门的一侧等主角。
   function placeFor(roomId, state) {
     if (!state) return null;
-    if (roomId === "corridor" && !state.flags.scene05Seen) return { x: 1360, y: 520, facing: "down" };
+    if (roomId === "corridor" && !state.flags.scene05Seen) {
+      // 朝向选正面对着玩家的那一帧（美术在行走图底部标注了两个背向帧与两个面向帧；
+      // 表里 down 行的帧是面向玩家的姿态，所以这里用 down）。
+      // height 与主角在同一房间的显示高度对齐：player-avatar.js 的 roomHeights 没有
+      // corridor 条目，主角在走廊按 145 世界像素回退。两者一致才不会一个像大人一个像小人。
+      return { x: 1085, y: 360, facing: "down", height: 145 };
+    }
     return null;
   }
+
+  // 地图 NPC 的显示高度（世界像素）。主角在宿舍按 210 校准，走廊地板更窄，NPC 略小一点
+  // 才不会顶到上方的墙。
+  var DEFAULT_HEIGHT = 200;
 
   // Drawn inside the room transform (ctx is already translated+scaled by game.js), so
   // this works in WORLD pixels exactly like window.MuseumPlayerAvatar.draw does.
@@ -42,12 +53,17 @@
     if (!place) return false;
     var frame = FRAMES[place.facing] && FRAMES[place.facing][1];
     if (!frame) return false;
-    // 脚底锚点与主角一致：脚站在 (x, y)，中线对准 x。
-    var left = place.x - frame[4];
-    var top = place.y - frame[3];
+    // 按目标高度等比缩放，而不是直接用素材原始像素（原始帧高达 284px，在走廊里过大）。
+    var targetH = place.height || DEFAULT_HEIGHT;
+    var k = targetH / frame[3];
+    var drawW = frame[2] * k;
+    var drawH = frame[3] * k;
+    // 脚底锚点：脚站在 (x, y)，中线对准 x。
+    var left = place.x - frame[4] * k;
+    var top = place.y - drawH;
     ctx.save();
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(sheet, frame[0], frame[1], frame[2], frame[3], left, top, frame[2], frame[3]);
+    ctx.drawImage(sheet, frame[0], frame[1], frame[2], frame[3], left, top, drawW, drawH);
     ctx.restore();
     return true;
   }

@@ -3,9 +3,9 @@
   var scenes=window.MuseumStory.scenes;
   function dialogue(line,background){return {type:/MOSS|系统/.test(line.speaker)?"system":"dialogue",speaker:line.speaker,text:line.text,background:background};}
   var hospital="病房场景黑夜版.png";
-  scenes["scene-05"].events=[{type:"investigate",background:"病房场景黑夜版（电视机关闭）.png",title:"调查病房展厅",key:"hospital",hotspots:[
-    {id:"bed",label:"调查病床",afterLabel:"病床已调查",x:26,y:70,text:"床单下空无一物。"},
-    {id:"tv",label:"打开电视",afterLabel:"查看录像",x:86,y:71,text:"电视正在播放一段录像。",background:hospital}
+  scenes["scene-05"].events=[{type:"investigate",background:"病房场景黑夜版（电视机关闭）.png",title:"调查病房展厅",key:"hospital",intro:"病房里只有一张床和一台老电视。点击画面中的标记调查。",hotspots:[
+    {id:"bed",label:"调查病床",afterLabel:"病床已调查",x:26,y:70,text:"床单下空无一物。床架内侧有几道很深的抓痕，像是有人被按在这里挣扎过。"},
+    {id:"tv",label:"打开电视",afterLabel:"查看录像",x:86,y:71,text:"电视自己亮了。屏幕上是一段夜间监控录像。",background:hospital,video:"rabbits-recording.png",videoLabel:"病房电视录像",videoCaption:"录像 · 巨型兔子在城市中横冲直撞"}
   ],action:"继续剧情"}].concat(scenes["scene-05"].lines.map(function(l){return dialogue(l,/（录像）/.test(l.speaker)?"病房电视机.png":hospital);}));
   // 剧情播放器只引用剧情背景；地图由探索页和地图数据单独加载。
   var backgrounds={"scene-04":null,"scene-06":null,"scene-07":null,"scene-08":"食堂走廊背景.png","scene-09":null,"scene-09-a":null,"scene-09-b":null,"scene-09-c":null};

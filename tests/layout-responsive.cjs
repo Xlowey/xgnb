@@ -64,6 +64,8 @@ const SIZES = [[1366, 768], [2560, 1440], [1920, 1200], [1024, 768], [390, 844],
           rect: { w: +r.width.toFixed(1), h: +r.height.toFixed(1), left: +r.left.toFixed(1), top: +r.top.toFixed(1) },
           bitmap: { w: c.width, h: c.height },
           ratio: +(r.width / r.height).toFixed(3),
+          fill: getComputedStyle(c).objectFit,
+          dpr: devicePixelRatio,
           overlap: document.documentElement.scrollWidth - document.documentElement.clientWidth,
           pad: (() => {
             const p = document.querySelector('.touch-controls button');
@@ -76,8 +78,16 @@ const SIZES = [[1366, 768], [2560, 1440], [1920, 1200], [1024, 768], [390, 844],
           })()
         };
       });
-      const fits = Math.abs(geo.ratio - 16 / 9) < 0.02;
-      check(`${w}x${h}: map box stays 16:9 (no cropping)`, fits, geo);
+      // The map must FILL the window, and the drawing buffer must equal the box times DPR.
+      // The old assertion required a 16:9 box; that model made CSS letterbox a fixed
+      // 960x540 bitmap, so the map rendered shrunk on non-16:9 windows (visible at
+      // 2560x1380) and the click inverse missed its target. The invariant that matters is
+      // buffer == box, because that is what both the renderer's scale and the click
+      // handler assume.
+      const fills = Math.abs(geo.rect.w - w) <= 2 && Math.abs(geo.rect.h - h) <= 2;
+      const bufferMatches = Math.abs(geo.bitmap.w - geo.rect.w * geo.dpr) <= 2 && Math.abs(geo.bitmap.h - geo.rect.h * geo.dpr) <= 2;
+      check(`${w}x${h}: the map fills the viewport`, fills, geo);
+      check(`${w}x${h}: the drawing buffer matches the box x DPR`, bufferMatches, geo);
       check(`${w}x${h}: no horizontal overflow`, geo.overlap <= 1, geo.overlap);
       if (geo.pad && geo.pad.shown) {
         check(`${w}x${h}: touch pad is inside the viewport`, geo.pad.bottom <= h && geo.pad.top >= 0, geo.pad);

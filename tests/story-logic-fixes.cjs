@@ -80,6 +80,15 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
       if (!hs) break;
       await page.evaluate(() => { const b = Array.from(document.querySelectorAll('.hotspot-investigation > button')).filter(x => !x.classList.contains('examined'))[0]; if (b) b.click(); });
       await page.waitForTimeout(400);
+      // 病房的"打开电视"热点现在会播放录像浮层（正文里的反馈），先关掉它再继续。
+      const closedRecording = await page.evaluate(() => {
+        const rec = document.getElementById('recording');
+        if (!rec) return false;
+        const close = Array.from(rec.querySelectorAll('button')).find(x => /关闭录像/.test(x.textContent));
+        if (close) close.click();
+        return true;
+      });
+      if (closedRecording) await page.waitForTimeout(300);
       const close = await page.evaluate(() => { const b = Array.from(document.querySelectorAll('.observation-panel button, .document-modal button')).find(x => /返回|关闭/.test(x.textContent)); if (b) { b.click(); return true; } return false; });
       await page.waitForTimeout(400);
     }

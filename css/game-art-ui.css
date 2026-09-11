@@ -1,6 +1,9 @@
 /* Shared skin from the supplied museum UI atlas; layout stays in each module. */
 .map-guide { position:absolute;right:20px;top:18px;width:320px;z-index:4;padding:10px;border:8px solid transparent;border-image:url('../assets/images/ui/menus/menu-panel.png') 70 fill / 8px stretch;color:#e8d4ad;pointer-events:none; }
 .map-guide #mini-map { display:block!important;position:static;width:100%;height:auto;max-width:none;margin:6px 0;border:0; }
+/* 馆内总览页收起导览面板：面板内容与该页重复，而且会盖住地图靠右上的房间。
+   开关由 game.js 的 renderAll() 按房间设置。 */
+body.hide-map-guide .map-guide { display:none !important; }
 .map-guide small { font-size:11px; }
 .map-guide p { margin:6px 0 0;font-size:12px;line-height:1.5; }
 .map-quick-actions { top:auto;bottom:58px;right:24px; }

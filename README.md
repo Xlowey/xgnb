@@ -87,7 +87,17 @@ node tests/a11y-focus.cjs          # 6 个浮层的焦点移入、Tab 不逃逸�
 node tests/characters-portraits.cjs # 新角色立绘的映射、加载与手机端不重叠
 node tests/characters-npc.cjs      # 赵灵 NPC 贴图在地图上出现且带脚底锚点
 node tests/deploy-clone.cjs        # 导出暂存区并验证 clone 后可直接游玩、无缺失素材
+node tests/walkable-audit.cjs      # 每个房间的出生点/物件/入口可达性与可走区域越界
+node tests/reported-bugs.cjs       # 地图铺满视口、导览面板开关、调查录像、走廊边界
 ```
+
+## 地图绘制约定
+
+`js/game.js` 的 `syncCanvasToBox()` 是画布几何的唯一来源：它把绘制缓冲区设成 **CSS 盒子 × devicePixelRatio**，所以地址栏窗口什么比例都行，地图永远铺满。
+
+**不要在 CSS 里给 `#explore-canvas` 加 `aspect-ratio` 或 `object-fit:contain`。** 那会让画出来的位图小于它所在的盒子，于是地图看起来缩小（2560×1380 这类非 16:9 窗口最明显），并且点击坐标整体偏移。渲染器自己会把每个**房间**按比例放进缓冲区，所以窗口比例不需要被约束。
+
+可走区域按画面像素实测，不靠估：房间地图的地板是偏蓝的灰（`b >= r`），墙是棕/墨绿。走廊那组数字（`js/map-art.js` 的 `rooms.corridor.walkable`）就是从 `走廊示意图1.png` 量出来的——地板 x 960..1774、y 337..565，下墙门口凹口 x 1256..1478 直到 y 608。旧的估算值上边缘高出地板约 60px，人物头部会插进上方的墙（看起来像穿模），下边缘又够不到门口（看起来像卡住）。
 
 浏览器类测试需要 Playwright 与 Chrome。脚本按 `PLAYWRIGHT_MODULE`、codex 运行时缓存、`playwright` 的顺序查找；找不到时用环境变量指定：
 

@@ -448,9 +448,47 @@
     window.MuseumPlayerAvatar.draw(ctx, state.playerX, state.playerY, state.facing, avatarMoving && state.mode === "explore" && !overlaysOpen(), avatarTravelled, state.roomId);
   }
 
+  // ---------------------------------------------------------------------------
+  // 画布几何：唯一来源。
+  //
+  // 这里必须让「绘制缓冲区」严格等于「CSS 盒子」，因为别处都依赖这一点：
+  //   - 命中测试 (event.clientX - rect.left) * canvas.width / rect.width 只有在缓冲区
+  //     与盒子同尺寸时才等于 clientX - rect.left；
+  //   - 反过来，盒子若被 CSS 拉伸成 aspect-ratio + object-fit:contain，画出来的位图就
+  //     比盒子小，于是地图看起来缩水（2560x1380 这类非 16:9 窗口最明显），点击坐标也
+  //     会整体偏移。
+  // 同时按 devicePixelRatio 提高缓冲区分辨率，HiDPI 下地图不再发虚。
+  // ---------------------------------------------------------------------------
+  function syncCanvasToBox() {
+    if (!canvas || !el.game || el.game.hidden) return;
+    var rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var nextW = Math.round(rect.width * dpr);
+    var nextH = Math.round(rect.height * dpr);
+    if (canvas.width === nextW && canvas.height === nextH) return;
+    canvas.width = nextW;
+    canvas.height = nextH;
+    if (state) drawRoom(currentRoom());
+  }
+  var resizeTimer = null;
+  window.addEventListener("resize", function () {
+    window.clearTimeout(resizeTimer);
+    // 拖动窗口时不必每帧重建缓冲区，停稳后再同步一次。
+    resizeTimer = window.setTimeout(syncCanvasToBox, 120);
+  });
+  if (window.ResizeObserver) {
+    try { new ResizeObserver(function () { syncCanvasToBox(); }).observe(canvas); } catch (error) { /* 老浏览器忽略 */ }
+  }
+
   function renderRooms() { el.rooms.textContent = ""; Object.keys(rooms).forEach(function (id) { if (!rooms[id]) return; var button = document.createElement("button"); button.type = "button"; var unlocked = has(state.unlockedRooms, id); button.className = "room-button" + (state.roomId === id ? " current" : ""); button.disabled = true; button.innerHTML = "<strong>" + roomName(id) + "</strong><small>" + (unlocked ? (state.roomId === id ? "当前位置" : "已探索") : "尚未开放") + "</small>";  el.rooms.appendChild(button); }); }
   function renderStats() { var objective=window.MuseumChapterProgress.objective(state); state.task=objective.text; var hint=document.getElementById("chapter-objective"); if(hint)hint.textContent=objective.text;  el.hp.textContent = String(state.hp); el.trust.textContent = String(state.systemTrust); el.clues.textContent = String(state.clues.length); el.task.textContent = objective.text || tasks[state.roomId] || "继续探索。"; window.MuseumAchievements.refresh(); }
-  function renderAll() { if (!state) return; var room = currentRoom();
+  function renderAll() {
+    if (!state) return; var room = currentRoom();
+    // 馆内导览面板只在"需要靠它找路"的房间里显示：在馆内总览（museum）本身，
+    // 面板里的当前位置就是"馆内总览"，目标文字又已经由任务条给出，属于重复信息，
+    // 而且实测它盖住了地图靠窗的房间。所以总览页收起来，其余房间保留。
+    document.body.classList.toggle("hide-map-guide", state.roomId === "museum");
     if (!Number.isFinite(state.playerX) || !Number.isFinite(state.playerY) || blocked(room,state.playerX,state.playerY,room.id === "museum" ? 10 : 22)) {
       state.playerX=room.spawn.x; state.playerY=room.spawn.y;
     } el.roomTitle.textContent = room.title; el.roomChapter.textContent = room.chapter; renderRooms(); renderStats(); drawRoom(room); interactionHint(nearestObject()); showMapTutorial(); }
@@ -524,6 +562,9 @@
     var overlayOpen = overlaysOpen();
     avatarMoving = false;
     if (gameVisible && !overlayOpen && state && state.mode === "explore") {
+      // 每帧确认一次画布几何：从剧情页返回、切换房间、窗口变化都靠它收敛，
+      // 保证地图始终按当前窗口尺寸铺满，不会缩成 960x540 的原始尺寸。
+      syncCanvasToBox();
       var dir = playerDirection();
       if (dir.x || dir.y) movePlayer(dir.x, dir.y, delta);
       interactionHint(nearestObject());

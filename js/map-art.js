@@ -99,7 +99,16 @@
     // New artwork has a horizontal corridor; the dorm facade has no doorway.
     // Do not retain old vertical-map door locations or allow walking through it.
     rooms.corridor.width=1774;rooms.corridor.height=887;
-    rooms.corridor.walkable=[{x:995,y:280,w:745,h:225},{x:1190,y:495,w:210,h:65}];
+    // 可走区域按画面像素实测而来（不是估的）：走廊地板 x 960..1774、y 337..565，
+    // 下墙的门口凹口在 x 1256..1478 直到 y 608。
+    // 旧的 {x:995,y:280,w:745,h:225} 上边缘比地板高出约 60px，所以人物头部会插进上方的墙
+    // （看起来像"穿模"）；下边缘又停在 505，够不到门口（看起来像"下方会卡"）。
+    // 人物质心（脚底）允许走的范围比地板略高一点，因为脚底站在地板下沿时身体本来就会
+    // 盖住上方的墙面，这是俯视视角的正常表现。
+    rooms.corridor.walkable=[
+      {x:950,y:222,w:820,h:388},
+      {x:1256,y:560,w:222,h:72}
+    ];
     room("office","馆长办公室","office-map.png",{x:830,y:780},[
       {x:0,y:0,w:1670,h:315},{x:0,y:0,w:180,h:942},{x:1455,y:0,w:215,h:942},{x:550,y:300,w:520,h:180},{x:440,y:495,w:780,h:125},{x:0,y:885,w:730,h:57},{x:935,y:885,w:735,h:57}
     ],[scene("office-director","馆长",1130,390,"scene-09","scene08Seen"),gate("office-exit","返回馆内总览",835,865,"museum")],"第一幕",1);

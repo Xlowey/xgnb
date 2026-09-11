@@ -30,6 +30,32 @@
     function fit(){var b=backdrop.getBoundingClientRect(),scale=Math.min(b.width/1670,Math.max(0,b.height-38)/942);frame.style.width=(1670*scale)+"px";frame.style.height=(942*scale)+"px";}
     backdropObserver=new ResizeObserver(fit);backdropObserver.observe(backdrop);fit();
   }
+  // 录像播放：宿舍电视事件与病房的"打开电视"热点共用同一段演出。
+  // 以前只有电视事件能播，病房的调查热点只能把按钮文字改成"查看录像"，素材用不上。
+  function playRecording(options) {
+    var opts = options || {};
+    var existing = document.getElementById("recording");
+    if (existing) existing.remove();
+    var recording = node("div", "recording-overlay"); recording.id = "recording";
+    var screen = node("div", "recording-screen");
+    screen.appendChild(picture(opts.image || "rabbits-recording.png", opts.label || "录像"));
+    screen.appendChild(node("span", "recording-light", "● REC"));
+    screen.appendChild(node("span", "recording-caption", opts.caption || "录像正在播放"));
+    var close = button("关闭录像", function () { recording.remove(); });
+    recording.appendChild(screen); recording.appendChild(close);
+    // 录像浮层自己处理 Esc，不依赖 novel.js 的 Esc 分支顺序。
+    recording.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") { event.stopPropagation(); event.preventDefault(); recording.remove(); }
+      if (event.key === "Tab") {
+        // 浮层内只有一个按钮，Tab 不该把焦点丢到背后的工具栏。
+        event.preventDefault(); close.focus();
+      }
+    });
+    document.querySelector(".novel-stage").appendChild(recording);
+    close.focus();
+    return recording;
+  }
+
   function paragraphText(value) { return String(value || "").replace(/([一二三四五六七八九十]+)，/g, "\n$1，").replace(/」「/g, "」\n「").trim(); }
   function closeModal() { modal.hidden = true; modal.textContent = ""; if (currentHooks) currentHooks.resume(); }
   function showDocument(item, side, inModal) {
@@ -135,5 +161,5 @@
   }
   modal.addEventListener("click",function(e){if(e.target===modal)closeModal();});
   modal.addEventListener("keydown",function(e){if(e.key!=="Tab")return;var controls=Array.from(modal.querySelectorAll('button, [tabindex="0"]'));var first=controls[0],last=controls[controls.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}});
-  window.MuseumStage={render:render,bag:bag,close:closeModal,isOpen:function(){return (window.MuseumSaveDialog && window.MuseumSaveDialog.isOpen()) || !modal.hidden || window.MuseumInventory.isOpen() || window.MuseumAchievements.isOpen();}};
+  window.MuseumStage={render:render,bag:bag,close:closeModal,playRecording:playRecording,isOpen:function(){return (window.MuseumSaveDialog && window.MuseumSaveDialog.isOpen()) || !modal.hidden || window.MuseumInventory.isOpen() || window.MuseumAchievements.isOpen();}};
 }());
