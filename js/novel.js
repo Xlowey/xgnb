@@ -418,8 +418,12 @@
     // A choice can be gated on progress. `availableIf: "notSubmitted"` is the script's
     // rule that submitting the investigation record closes the perfect ending for the
     // rest of the run, so the option must not merely be disabled - it must be gone.
+    // An unrecognised value is logged rather than silently ignored: a typo here would
+    // quietly hand the player a choice the story means to lock.
     var offered = currentScene.choices.filter(function (choice) {
-      if (choice.availableIf === "notSubmitted" && state.flags.submitted) return false;
+      if (!choice.availableIf) return true;
+      if (choice.availableIf === "notSubmitted") return !state.flags.submitted;
+      console.warn("未知的 availableIf 取值，已按可用处理：" + choice.availableIf + "（选项 " + choice.id + "）");
       return true;
     });
     if (!offered.length) return;

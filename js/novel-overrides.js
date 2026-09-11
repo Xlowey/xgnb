@@ -98,10 +98,18 @@
   });
 
   // The mask decision in the Silver Lovers scene is represented as a real choice.
+  // The two lines that only labelled the branches in the script ("A摘下" / "B没摘…") are
+  // authoring notes, not dialogue, so they are replaced with the action each branch is.
   var silver = scenes["scene-18"];
   var maskChoiceAt = findLineIndex("scene-18", function (line) { return line.text.indexOf("分支选择") !== -1; });
-  var silverA = silver.lines.slice(maskChoiceAt + 1, maskChoiceAt + 3).concat(silver.lines.slice(maskChoiceAt + 4));
-  var silverB = silver.lines.slice(maskChoiceAt + 3, maskChoiceAt + 4).concat(silver.lines.slice(maskChoiceAt + 4));
+  var maskBranchLines = silver.lines.slice(maskChoiceAt + 1, maskChoiceAt + 4).map(function (line) {
+    var text = String(line.text || "");
+    if (text.indexOf("A摘下") === 0) return Object.assign({}, line, { speaker: "旁白", text: "你伸手摘下了面具。" });
+    if (text.indexOf("B没摘") === 0) return Object.assign({}, line, { speaker: "旁白", text: "你没有动，继续戴着面具观察。" });
+    return line;
+  });
+  var silverA = maskBranchLines.slice(0, 2).concat(silver.lines.slice(maskChoiceAt + 4));
+  var silverB = maskBranchLines.slice(2, 3).concat(silver.lines.slice(maskChoiceAt + 4));
   silver.lines = silver.lines.slice(0, maskChoiceAt);
   silver.choices = [
     { id: "remove-mask", label: "摘下自己的面具", nextScene: "scene-18-mask" },

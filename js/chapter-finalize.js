@@ -45,14 +45,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // 1. 开场页：被 △ 过滤清空的场次
-  // ---------------------------------------------------------------------------
-  ensureOpeningPage("scene-11", "玩家可选择——");
-  ensureOpeningPage("scene-31", "白光在身后明灭。屏上浮出三个选项，静静等待。");
-  ensureOpeningPage("scene-07", "玩家可选择——");
-
-  // ---------------------------------------------------------------------------
-  // 2. 别名副本（放在最后，才会带上 events 与 background）
+  // 1. 别名副本（放在最后，才会带上 events 与 background）
   // ---------------------------------------------------------------------------
   cloneScene("opening", "scene-01", { id: "opening" });
   cloneScene("note-intro", "scene-03", { id: "note-intro" });
@@ -65,11 +58,21 @@
   cloneScene("guard-after-battle", "scene-11-after", { id: "guard-after-battle" });
   cloneScene("contract", "scene-15", { id: "contract" });
   cloneScene("contract-repeat", "scene-15", { id: "contract-repeat", title: "蜡像馆 · 已读展台", choices: null });
-  // ending-choice 是最终抉择的唯一入口，必须带上 scene-31 的开场页与四个背景。
+  // ending-choice 是最终抉择的唯一入口（博物馆出口那个物件就打开它）。必须在
+  // ensureOpeningPage 之前克隆，才能带上 scene-31 的三选一与开场页。
   cloneScene("ending-choice", "scene-31", { id: "ending-choice" });
   cloneScene("ending-escape", "ending-b", { id: "ending-escape" });
   cloneScene("ending-turn-back", "ending-a", { id: "ending-turn-back" });
   cloneScene("ending-understand", "ending-c", { id: "ending-understand" });
+
+  // ---------------------------------------------------------------------------
+  // 2. 开场页：被 △ 过滤清空的场次
+  //
+  // 这两个 id 是同一场戏的两条入口，都要补。scene-11 不需要补页：它的 choices 在第 0 页
+  // 就能点，补一句"玩家可选择"反而把剧本的写作标记念给玩家听。
+  // ---------------------------------------------------------------------------
+  ensureOpeningPage("scene-31", "白光在身后明灭。屏上浮出三个选项，静静等待。");
+  ensureOpeningPage("ending-choice", "白光在身后明灭。屏上浮出三个选项，静静等待。");
 
   // The mirror hotspot must not open the blood note. novel-prologue.js aliases
   // `mirror` to `note-inspect`, which made 墙上的镜子 show 血字纸条 - a real
@@ -104,4 +107,23 @@
   }
   asInspection("wardrobe-repeat", "rules-inspect", "员工宿舍 · 已查衣柜");
   asInspection("note-repeat", "note-inspect", "员工宿舍 · 已读纸条");
+  // ---------------------------------------------------------------------------
+  // 4. 最后一道保险：任何残留在可读文本里的写作标记都清掉。
+  //    剧本里有少量作者注（例如"（配一个CG？）"），它们不是给玩家看的。
+  // ---------------------------------------------------------------------------
+  var RESIDUE = /（配一个CG[^）]*）|（设计分支[^）]*）|（若不[^）]*）|（摘面具[^）]*）|^A摘下$|^B没摘[^）]*）?$/;
+  var cleaned = 0;
+  function scrub(text) {
+    var value = String(text == null ? "" : text);
+    if (!RESIDUE.test(value)) return value;
+    cleaned += 1;
+    return value.replace(RESIDUE, "").trim();
+  }
+  Object.keys(scenes).forEach(function (id) {
+    var scene = scenes[id];
+    if (!scene) return;
+    (scene.lines || []).forEach(function (line) { line.text = scrub(line.text); });
+    (scene.events || []).forEach(function (event) { if (typeof event.text === "string") event.text = scrub(event.text); });
+  });
+  if (cleaned) console.info("chapter-finalize: 清理了 " + cleaned + " 处写作标记。");
 }());
