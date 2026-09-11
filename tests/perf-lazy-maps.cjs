@@ -64,8 +64,12 @@ const KB = n => Math.round(n / 1024);
     // Stand on the dorm door (835,860, r82) so pressing E walks into the corridor.
     let page = await openAs('dorm', 835, 795);
     console.log('dorm screen fetched:', mapNames().join(', ') || '(none)');
-    check('only the dorm map is requested', mapNames().length === 1 && /dorm-map/.test(mapNames()[0]), mapNames());
-    check('map payload is far below the eager 14.5 MB', mapBytes() > 0 && mapBytes() < 3500 * 1024, { kb: KB(mapBytes()) });
+    // Two maps are expected, and no more: the current room, plus the overview that the
+    // 导览 minimap paints as its background (see perf-guide-background.cjs).
+    const roomMaps = mapNames().filter(n => /rooms\//.test(n));
+    check('only the current room map is requested from rooms/', roomMaps.length === 1 && /dorm-map/.test(roomMaps[0]), mapNames());
+    check('the only other map is the overview the guide needs', mapNames().filter(n => /world\//.test(n)).length <= 1, mapNames());
+    check('map payload is far below the eager 14.5 MB', mapBytes() > 0 && mapBytes() < 4200 * 1024, { kb: KB(mapBytes()) });
     const state = await page.evaluate(() => {
       // Inspect the LIVE room data the game itself built, not a fresh copy.
       const out = [];

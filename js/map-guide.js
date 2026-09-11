@@ -21,6 +21,9 @@
     var sx=canvas.width/map.width,sy=canvas.height/map.height;
     ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.fillStyle='#141718';ctx.fillRect(0,0,canvas.width,canvas.height);
+    // 小地图的背景就是馆内总览那张图。它现在按需加载，而 drawRoom 只会为**当前房间**调
+    // load()——玩家在宿舍/大厅时总览图从未被请求，导览面板就会失去底图。这里补一次。
+    if(map.art && typeof map.art.load === "function")map.art.load();
     if(map.art && map.art.complete && map.art.naturalWidth)ctx.drawImage(map.art,0,0,canvas.width,canvas.height);
     ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
     var objective=window.MuseumChapterProgress.objective(state);

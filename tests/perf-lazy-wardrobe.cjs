@@ -67,10 +67,11 @@ const MAP_MAP = { 'dorm-map.png': 1864, 'hall-map.png': 2156, '食堂地图.png'
 
     console.log('map screen fetched:', [...fetched.entries()].map(([k, v]) => k + ' ' + KB(v) + 'KB').join(', '));
     check('the wardrobe close-up is NOT downloaded on the map screen', ![...fetched.keys()].some(k => /wardrobe-detail/.test(k)), [...fetched.keys()]);
-    check('only one room map is downloaded', [...fetched.keys()].filter(k => /^maps\//.test(k)).length === 1, [...fetched.keys()]);
+    // Only the current room map from rooms/, plus the overview the 导览 minimap needs.
+    check('only one room map is downloaded', [...fetched.keys()].filter(k => /^maps\/rooms\//.test(k)).length === 1, [...fetched.keys()]);
     const draws = await page.evaluate(() => window.__wardrobeDraws || 0);
     check('the wardrobe image is never drawn on the map (its render path is dead)', draws === 0, { draws });
-    check('the map screen stays small', totalKB() < 6500, { kb: totalKB() });
+    check('the map screen stays small', totalKB() < 8000, { kb: totalKB() });
 
     // The interaction itself must be untouched. The prompt text is the assertion: it is
     // produced by the same nearestObject()/visible() path the E key uses. (Pressing E is not
