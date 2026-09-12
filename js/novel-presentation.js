@@ -48,6 +48,56 @@
       return !annotation;
     });
   });
+  // ---------------------------------------------------------------------------
+  // 说话人提示行（"赵灵（迷离）"、"馆长（扫视全场）"）不是给玩家读的台词。
+  //
+  // 剧本的写法是：先一行人物加括号提示，下一行才是他说的话。抽取时两行都留成了
+  // 旁白，于是玩家看到的是——旁白念出"赵灵（迷离）"，然后旁白再念出赵灵说的话，
+  // 赵灵本人始终没有名字。实测影响 13 处，包括 ending-c（完美结局）里的
+  // "赵灵（轻声）"、scene-07 的"馆长（扫视全场）"、scene-27 的"赵灵（急促拍门）"。
+  //
+  // 这里把提示行收进 productionNotes（不再出现在对话里），并把它认出的说话人
+  // 贴到下一行上。这样"赵灵说的话"就真的是赵灵说的。
+  // ---------------------------------------------------------------------------
+  var SPEAKER_CUE = /^([\u4e00-\u9fa5A-Za-z]{2,8})（([^）]{1,16})）\s*$/;
+  function unifySpeaker(name, note) {
+    var rename = { "画面": "旁白", "镜头": "旁白", "字幕": "旁白" };
+    if (rename[name]) return rename[name];
+    // 主角（独白）与 主角（呢喃）是同一个人的不同语气，统一成剧本里的称呼。
+    if (/^主角/.test(name)) return "主角";
+    return note ? name + "（" + note + "）" : name;
+  }
+  Object.keys(scenes).forEach(function (id) {
+    var lines = scenes[id].lines || [];
+    var out = [];
+    lines.forEach(function (entry) {
+      var text = String(entry.text == null ? "" : entry.text).trim();
+      var cue = SPEAKER_CUE.exec(text);
+      // "进入战斗（可选择使用系统提供的帮助）" 是流程提示，不是人物提示。
+      if (cue && /战斗|界面|选项|玩家|系统提示/.test(cue[2])) {
+        story.productionNotes[id].push({ kind: "direction", text: text });
+        return;
+      }
+      if (cue) {
+        story.productionNotes[id].push({ kind: "speaker-cue", text: text });
+        out.push({ __cue: unifySpeaker(cue[1], cue[2]) });
+        return;
+      }
+      var previous = out[out.length - 1];
+      if (previous && previous.__cue && (entry.speaker === "旁白" || !entry.speaker)) {
+        out.push({ speaker: previous.__cue, text: entry.text });
+        out[out.length - 2] = null;   // drop the cue placeholder
+        return;
+      }
+      out.push(entry);
+    });
+    scenes[id].lines = out.filter(Boolean);
+    // 相邻重复的舞台指示（抽取时同一段 △ 被写了两遍）
+    scenes[id].lines = scenes[id].lines.filter(function (entry, index, all) {
+      var prev = all[index - 1];
+      return !(prev && prev.text === entry.text && /^\s*[△▲▼▽]/.test(String(entry.text)));
+    });
+  });
   // Stage directions and authoring annotations from old saves must not reappear
   // as spoken text. Empty scenes are handled by the inspection UI.
 }());
