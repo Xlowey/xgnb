@@ -538,9 +538,10 @@
       if (state.clues.indexOf("contract") === -1) state.clues.push("contract");
     }
     // 新剧本第八场：提交调查记录。此后 C 完美结局永久关闭，最终抉择只剩 A / B。
+    // 判定只看 state.flags.submitted（选项用 availableIf:"notSubmitted" 问它）。
+    // 这里曾经还写一个 refusedSubmit，但全仓没有任何地方读它，属于只写不读的死旗标，已去掉。
     if (choice.effect === "submit-record") {
       state.flags.submitted = true;
-      state.flags.refusedSubmit = false;
       if (state.clues.indexOf("submitted-record") === -1) state.clues.push("submitted-record");
       state.systemTrust += 6;
       state.task = "按系统的安排继续行动。";
