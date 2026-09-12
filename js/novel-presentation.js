@@ -91,7 +91,12 @@
       }
       out.push(entry);
     });
-    scenes[id].lines = out.filter(Boolean);
+    // 未被消费的提示行占位（下一行本来就有说话人）与空的空行都要丢掉，
+    // 否则它们会变成没有文字也没有说话人的空页。
+    scenes[id].lines = out.filter(function (entry) {
+      if (!entry) return false;
+      return String(entry.text == null ? "" : entry.text).trim().length > 0;
+    });
     // 相邻重复的舞台指示（抽取时同一段 △ 被写了两遍）
     scenes[id].lines = scenes[id].lines.filter(function (entry, index, all) {
       var prev = all[index - 1];
