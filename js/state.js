@@ -122,10 +122,83 @@
     catch (error) { console.warn("存档写入失败。", error); return false; }
   }
   function remove(key) { try { localStorage.removeItem(key); } catch (error) { console.warn("存档清理失败。", error); } }
+
+  // ---------------------------------------------------------------------------
+  // 自动存档的写入保护（多标签页 / 切后台）。
+  //
+  // 地图页只在加载时读一次 state，之后每 6 秒和 pagehide 都会把那份快照写回去，
+  // 于是停着不动的那一个标签页会把另一个标签页的新进度整份覆盖掉。
+  //
+  // 做法：给存档配一个**单调递增的修订号**（REVISION_PREFIX）。任何一次写入都推进它。
+  // 每个页面加载时取一个 writerId；写入前比较：
+  //   存档修订号 > 我自己写过的最大修订号 -> 别人写过，放弃本次写入
+  //   否则                                -> 正常写入，基线前移
+  //
+  // 注意：**不能**用 savedAt 时间戳判断新旧。第一版就是这么写的，有两个致命缺陷：
+  //   a) 被拒绝时什么都不更新，同一个拒绝会永远重复——该标签页的自动存档、pagehide、
+  //      保存面板、"保存并返回标题"全部失效，还会误报"存储空间不足"。
+  //   b) savedAt 只在自己写入时更新，别人写的新档反而可能看起来更旧。
+  // 修订号由每次写入推进，所以基线永远不会卡住，也永远能发现别人的写入。
+  // ---------------------------------------------------------------------------
+  var GUARD_PREFIX = "museum_save_guard_v1_";
+  var REVISION_PREFIX = "museum_save_rev_v1_";
+  var WRITER_ID = "w_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7);
+
+  function readRevision(userId) {
+    var value = Number(localStorage.getItem(userKey(REVISION_PREFIX, userId)));
+    return Number.isFinite(value) ? value : 0;
+  }
+  function bumpRevision(userId) {
+    var next = readRevision(userId) + 1;
+    write(userKey(REVISION_PREFIX, userId), String(next));
+    return next;
+  }
+  function readGuard(userId) {
+    var raw = localStorage.getItem(userKey(GUARD_PREFIX, userId));
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch (error) { return null; }
+  }
+  function writeGuard(userId, revision) {
+    write(userKey(GUARD_PREFIX, userId), JSON.stringify({ writerId: WRITER_ID, revision: revision, at: Date.now() }));
+  }
+  // 本页最后一次"见过"的修订号。**必须存在内存里**，不能每次去读 guard 键：
+  // guard 键在存档里，别的页面会覆盖它，于是"别的页面写过了"这件事会被它自己的写入抹掉，
+  // 判断就永远放行。这是第三版之前的 bug。
+  // 页面加载时用见到的修订号初始化（见 initGuard），之后每次本页写入都前移。
+  var BASELINE = null;
+
+  function baselineFor(userId) {
+    if (BASELINE !== null && BASELINE.id === userId) return BASELINE.revision;
+    var seen = readGuard(userId);
+    var revision = (seen && Number.isFinite(seen.revision)) ? seen.revision : 0;
+    BASELINE = { id: userId, revision: revision };
+    return revision;
+  }
+  function setBaseline(userId, revision) { BASELINE = { id: userId, revision: revision }; }
+
   function save(state, userId) {
     var id = userId || state.userId; if (!id) return false;
     var data = snapshot(state, id); if (!write(userKey(AUTO_PREFIX, id), JSON.stringify(data))) return false;
-    state.savedAt = data.savedAt; return data.savedAt;
+    state.savedAt = data.savedAt;
+    // 每一次写入都推进修订号，别处才能发现"这个存档变了"；并把本页基线前移。
+    var revision = bumpRevision(id);
+    writeGuard(id, revision);
+    setBaseline(id, revision);
+    return data.savedAt;
+  }
+  // 只在没有别的页面写过更新的快照时才写入。
+  function saveGuarded(state, userId) {
+    var id = userId || state.userId;
+    if (!id) return false;
+    var stored = readRevision(id);
+    var seen = baselineFor(id);
+    if (stored > seen) return false;   // 别处写过更新的进度，交给它
+    return save(state, id);
+  }
+  // 页面切回前台/重新可见时调用：接受当前存档版本，之后本页才有权继续写入。
+  function adoptRevision(userId) {
+    if (!userId) return;
+    setBaseline(userId, readRevision(userId));
   }
   function load(userId) {
     if (!userId) return null;
@@ -184,53 +257,8 @@
   function hasRead(userId, key) { return readKeys(userId).indexOf(key) !== -1; }
   function deleteSlot(userId, slotIndex) { if (!userId || slotIndex < 0 || slotIndex >= SLOT_LIMIT) return false; var slots = readSlots(userId); if (!slots[slotIndex]) return false; slots[slotIndex] = null; return write(userKey(SLOTS_PREFIX, userId), JSON.stringify(slots)); }
   function listSlots(userId) { return clone(readSlots(userId)); }
-  function clear(userId) { if (!userId) return; remove(userKey(AUTO_PREFIX, userId)); remove(userKey(SLOTS_PREFIX, userId)); remove(userKey(CHECKPOINT_PREFIX, userId)); remove(userKey(READ_PREFIX, userId)); LEGACY_PREFIXES.concat(LEGACY_SLOT_PREFIXES).forEach(function (prefix) { remove(userKey(prefix, userId)); }); }
+  function clear(userId) { if (!userId) return; remove(userKey(AUTO_PREFIX, userId)); remove(userKey(SLOTS_PREFIX, userId)); remove(userKey(CHECKPOINT_PREFIX, userId)); remove(userKey(READ_PREFIX, userId)); remove(userKey(GUARD_PREFIX, userId)); remove(userKey(REVISION_PREFIX, userId)); LEGACY_PREFIXES.concat(LEGACY_SLOT_PREFIXES).forEach(function (prefix) { remove(userKey(prefix, userId)); }); }
   function hasSave(userId) { if (!userId) return false; return Boolean(localStorage.getItem(userKey(AUTO_PREFIX, userId)) || LEGACY_PREFIXES.some(function (prefix) { return localStorage.getItem(userKey(prefix, userId)); }) || readSlots(userId).some(Boolean)); }
-
-  // ---------------------------------------------------------------------------
-  // 自动存档的写入保护（多标签页 / 切后台）。
-  //
-  // 地图页只在加载时读一次 state，之后每 6 秒和 pagehide 都会把那份快照写回去。
-  // 开了两个标签页时，停着不动的那一个会把另一个标签页的新进度整份覆盖掉——实测：
-  // B 页推进到剧情页，A 页闲置 7 秒后存档退回旧状态，进度直接丢失。
-  //
-  // 这里在自动档之外记一个 guard 键，保存"这个存档是谁写的、什么时候"。每次写入前
-  // 比对：如果存档比本标签页上次见到的新，说明别处写过，就放弃本次写入而不是覆盖。
-  // 这只影响自动档；手动档位、检查点和读档标记不受影响。
-  // ---------------------------------------------------------------------------
-  var GUARD_PREFIX = "museum_save_guard_v1_";
-
-  function readGuard(userId) {
-    var raw = localStorage.getItem(userKey(GUARD_PREFIX, userId));
-    if (!raw) return null;
-    try { return JSON.parse(raw); } catch (error) { return null; }
-  }
-  function writeGuard(userId, stamp) {
-    write(userKey(GUARD_PREFIX, userId), JSON.stringify({ savedAt: stamp, at: Date.now() }));
-  }
-  function autoSavedAt(userId) {
-    var raw = localStorage.getItem(userKey(AUTO_PREFIX, userId));
-    if (!raw) {
-      var legacy = null;
-      LEGACY_PREFIXES.some(function (prefix) { legacy = localStorage.getItem(userKey(prefix, userId)); return Boolean(legacy); });
-      raw = legacy;
-    }
-    return parse(raw, null) ? parse(raw, null).savedAt || null : null;
-  }
-  // Save only when this snapshot is not older than what the store already holds.
-  function saveGuarded(state, userId) {
-    var id = userId || state.userId;
-    if (!id) return false;
-    var seen = readGuard(id);
-    // This tab has been writing; the store must still hold what this tab last wrote.
-    if (seen && seen.savedAt && seen.savedAt !== state.savedAt) {
-      var stored = autoSavedAt(id);
-      if (stored && stored !== seen.savedAt && stored !== state.savedAt) return false;
-    }
-    if (!save(state, id)) return false;
-    writeGuard(id, state.savedAt);
-    return true;
-  }
 
   // Map entry checks share the same canonical scene ids as completion records.
   var sceneAliases = {
@@ -253,5 +281,5 @@
     state.flags["completed:" + canonicalScene(id)] = true;
   }
 
-  window.MuseumState = { sceneCompleted: sceneCompleted, completeScene: completeScene, SLOT_LIMIT: SLOT_LIMIT, create: createState, save: save, saveGuarded: saveGuarded, load: load, saveSlot: saveSlot, loadSlot: loadSlot, saveCheckpoint: saveCheckpoint, loadCheckpoint: loadCheckpoint, markRead: markRead, hasRead: hasRead, deleteSlot: deleteSlot, listSlots: listSlots, clear: clear, hasSave: hasSave };
+  window.MuseumState = { sceneCompleted: sceneCompleted, completeScene: completeScene, SLOT_LIMIT: SLOT_LIMIT, create: createState, save: save, saveGuarded: saveGuarded, adoptRevision: adoptRevision, load: load, saveSlot: saveSlot, loadSlot: loadSlot, saveCheckpoint: saveCheckpoint, loadCheckpoint: loadCheckpoint, markRead: markRead, hasRead: hasRead, deleteSlot: deleteSlot, listSlots: listSlots, clear: clear, hasSave: hasSave };
 }());

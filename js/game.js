@@ -89,11 +89,20 @@
   window.addEventListener("beforeunload", saveBeforeLeave);
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "hidden") { saveBeforeLeave(); return; }
-    // Coming back: adopt what the store holds now, so this tab cannot write a stale
-    // snapshot over progress that was made elsewhere in the meantime.
+    // 回到前台：先接受当前存档版本，之后本页才有权继续写入。
+    // 然后把别人的进度载进来——但只在它也是"探索中"的时候。如果那份快照是剧情中
+    // （mode novel/ending），直接套用会让地图页卡住：地图的一切行为都以
+    // state.mode === "explore" 为前提（frame 循环、暂停菜单都会静默失效），
+    // 那种情况应当交给剧情页继续。
     if (!currentUser) return;
+    MuseumState.adoptRevision(currentUser.id);
     var stored = MuseumState.load(currentUser.id);
-    if (stored && state && stored.savedAt && stored.savedAt !== state.savedAt) { state = stored; renderAll(); }
+    if (!stored) return;
+    if (stored.mode === "novel" || stored.mode === "ending") {
+      if (stored.narrativeNode) window.location.href = "pages/novel.html?scene=" + encodeURIComponent(stored.narrativeNode);
+      return;
+    }
+    if (state && (stored.savedAt !== state.savedAt || stored.roomId !== state.roomId)) { state = stored; renderAll(); }
   });
   function refreshContinue() { if (!el.continueButton) return; var ok = currentUser && MuseumState.hasSave(currentUser.id); el.continueButton.disabled = !ok; el.continueButton.classList.toggle("button-primary", Boolean(ok)); }
   function showAuth(next) {
@@ -493,10 +502,6 @@
   function renderStats() { var objective=window.MuseumChapterProgress.objective(state); state.task=objective.text; var hint=document.getElementById("chapter-objective"); if(hint)hint.textContent=objective.text;  el.hp.textContent = String(state.hp); el.trust.textContent = String(state.systemTrust); el.clues.textContent = String(state.clues.length); el.task.textContent = objective.text || tasks[state.roomId] || "继续探索。"; window.MuseumAchievements.refresh(); }
   function renderAll() {
     if (!state) return; var room = currentRoom();
-    // 馆内导览面板只在"需要靠它找路"的房间里显示：在馆内总览（museum）本身，
-    // 面板里的当前位置就是"馆内总览"，目标文字又已经由任务条给出，属于重复信息，
-    // 而且实测它盖住了地图靠窗的房间。所以总览页收起来，其余房间保留。
-    document.body.classList.toggle("hide-map-guide", state.roomId === "museum");
     if (!Number.isFinite(state.playerX) || !Number.isFinite(state.playerY) || blocked(room,state.playerX,state.playerY,room.id === "museum" ? 10 : 22)) {
       state.playerX=room.spawn.x; state.playerY=room.spawn.y;
     } el.roomTitle.textContent = room.title; el.roomChapter.textContent = room.chapter; renderRooms(); renderStats(); drawRoom(room); interactionHint(nearestObject()); showMapTutorial(); }

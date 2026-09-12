@@ -59,9 +59,11 @@ const SHAPES = [[2560, 1380], [1366, 768], [3440, 1440], [1024, 768], [390, 844]
       if (w === 390) await page.screenshot({ path: 'tmp/audit-fix-390x844.png' });
     }
 
-    // 2. the guide panel: hidden on the overview, shown elsewhere
+    // 2. The guide panel is shown in EVERY room, the overview included. It was briefly
+    //    hidden there and the player read that as a bug ("why is there no minimap here but
+    //    there is one in the corridor"), so it is shown everywhere again.
     await page.setViewportSize({ width: 1366, height: 768 });
-    for (const [room, expectShown] of [['corridor', true], ['museum', false]]) {
+    for (const room of ['corridor', 'museum', 'dorm', 'hall']) {
       await page.goto('http://127.0.0.1:8816/index.html?fromSave=1');
       await page.waitForTimeout(300);
       await page.evaluate(r => { const u = MuseumAuth.getCurrentUser().id; const s = MuseumState.load(u); s.roomId = r; s.playerX = 1300; s.playerY = 420; MuseumState.save(s, u); }, room);
@@ -72,7 +74,7 @@ const SHAPES = [[2560, 1380], [1366, 768], [3440, 1440], [1024, 768], [390, 844]
       await fresh.waitForSelector('#game-screen:not([hidden])', { timeout: 8000 });
       await fresh.waitForTimeout(700);
       const shown = await fresh.evaluate(() => { const g = document.querySelector('.map-guide'); return !!g && getComputedStyle(g).display !== 'none'; });
-      check(`提示面板在 ${room} 房间${expectShown ? '显示' : '隐藏'}`, shown === expectShown, { room, shown });
+      check(`提示面板在 ${room} 房间显示`, shown === true, { room, shown });
       if (room === 'museum') await fresh.screenshot({ path: 'tmp/audit-fix-museum.png' });
       await fresh.close();
     }

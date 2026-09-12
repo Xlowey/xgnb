@@ -32,11 +32,11 @@
   function placeFor(roomId, state) {
     if (!state) return null;
     if (roomId === "corridor" && !state.flags.scene05Seen) {
-      // 朝向选正面对着玩家的那一帧（美术在行走图底部标注了两个背向帧与两个面向帧；
-      // 表里 down 行的帧是面向玩家的姿态，所以这里用 down）。
+      // 朝向：行走图底部把「向下(后)」标成背向、「向上(前)」标成正面，所以玩家看到的
+      // 正面帧在 up 行。先前用 down，画出来是背对玩家。
       // height 与主角在同一房间的显示高度对齐：player-avatar.js 的 roomHeights 没有
       // corridor 条目，主角在走廊按 145 世界像素回退。两者一致才不会一个像大人一个像小人。
-      return { x: 1085, y: 360, facing: "down", height: 145 };
+      return { x: 1085, y: 360, facing: "up", height: 145 };
     }
     return null;
   }

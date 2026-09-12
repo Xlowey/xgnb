@@ -10,7 +10,9 @@
   // Calibrate against furniture/doors; overview art has a much smaller scale.
   // Both the standalone map and the novel investigation use this same table.
   var roomHeights=Object.freeze({
-    museum:48,       // Overview corridors and small room entrances.
+    // 馆内总览的走廊在画面里只有 24-30px 宽（见 js/map-art.js 的 walkable），
+    // 所以 48 会让角色比走廊还高、看起来在穿墙。按画面比例取 26。
+    museum:26,       // Overview corridors are ~24-30px wide in the artwork.
     dorm:210,        // Desk/chair and single bed: 100 made the hero toy-sized.
     hall:140,       // Large reception counter and stairs.
     corridor:135,   // Side doors are approximately 150 px tall.

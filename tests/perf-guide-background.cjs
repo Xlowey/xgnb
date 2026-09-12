@@ -77,8 +77,11 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     // And in the overview itself the guide is hidden, so its art is only needed as the room map.
     const { page, reqs } = await openIn('museum');
     const inMuseum = await page.evaluate(() => { const g = document.querySelector('.map-guide'); return !!g && getComputedStyle(g).display !== 'none'; });
-    check('the guide is hidden on the overview page', inMuseum === false, { guideVisible: inMuseum });
-    check('the overview map is loaded as the current room', reqs.some(r => /museum-overview-map/.test(r)), reqs);
+    // The guide is shown on the overview too (the player expects a minimap in every room).
+    // There it is ALSO the current room's map, so it must still be requested exactly once.
+    check('the guide is also shown on the overview page', inMuseum === true, { guideVisible: inMuseum });
+    check('the overview map is loaded there', reqs.some(r => /museum-overview-map/.test(r)), reqs);
+    check('the overview map is requested exactly once', reqs.filter(r => /museum-overview-map/.test(r)).length === 1, reqs);
     await page.close();
   } finally { await b.close(); server.close(); }
   console.log(fails ? '\n' + fails + ' FAILED' : '\nOK');
