@@ -2368,10 +2368,7 @@
   "guard-after-battle": "scene-11",
   "contract": "scene-15",
   "contract-repeat": "scene-15",
-  "ending-choice": "scene-31",
-  "ending-escape": "ending-b",
-  "ending-turn-back": "ending-a",
-  "ending-understand": "ending-c"
+  "ending-choice": "scene-31"
 };
   Object.keys(aliases).forEach(function (id) {
     var base = scenes[aliases[id]];

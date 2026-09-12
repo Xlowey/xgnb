@@ -61,9 +61,10 @@
   // ending-choice 是最终抉择的唯一入口（博物馆出口那个物件就打开它）。必须在
   // ensureOpeningPage 之前克隆，才能带上 scene-31 的三选一与开场页。
   cloneScene("ending-choice", "scene-31", { id: "ending-choice" });
-  cloneScene("ending-escape", "ending-b", { id: "ending-escape" });
-  cloneScene("ending-turn-back", "ending-a", { id: "ending-turn-back" });
-  cloneScene("ending-understand", "ending-c", { id: "ending-understand" });
+  // 曾经还有 ending-escape / ending-turn-back / ending-understand 三个副本，分别是
+  // ending-a/b/c 的克隆，但**没有任何代码会打开它们**（全仓 grep 0 处引用）。它们是
+  // 永远播不到的死内容，还让"一共有几个结局"数不清。已删除。
+  // 现在的结局入口：a/b/c 来自最终抉择，d 来自超时或战斗失败，e 来自读取"选择前检查点"。
 
   // ---------------------------------------------------------------------------
   // 2. 开场页：被 △ 过滤清空的场次
