@@ -187,12 +187,16 @@
     return data.savedAt;
   }
   // 只在没有别的页面写过更新的快照时才写入。
+  // 返回值区分三种情况，调用方才能给出正确的提示：
+  //   时间戳字符串 = 写入成功
+  //   "stale"     = 别的页面写了更新的进度，本次**故意不写**（不是错误，不该报存储空间）
+  //   false       = 真的写不进去（存储满、被禁用等）
   function saveGuarded(state, userId) {
     var id = userId || state.userId;
     if (!id) return false;
     var stored = readRevision(id);
     var seen = baselineFor(id);
-    if (stored > seen) return false;   // 别处写过更新的进度，交给它
+    if (stored > seen) return "stale";
     return save(state, id);
   }
   // 页面切回前台/重新可见时调用：接受当前存档版本，之后本页才有权继续写入。

@@ -77,7 +77,19 @@
       window.MuseumTutorial.show("save", { kind: "save", title: "进度已经自动保存", body: "重要调查和场景切换会自动保存。第一次想保留节点时，可以打开暂停菜单保存一个手动存档。", action: function () { openTutorialSave(); }, actionLabel: "现在保存一次" });
     }
   }
-  function save(message) { if (!currentUser || !state) return false; var ok = window.MuseumState.saveGuarded ? MuseumState.saveGuarded(state, currentUser.id) : MuseumState.save(state, currentUser.id); if (!ok) { if (message && el.gameMessage) el.gameMessage.textContent = "存档写入失败，请检查浏览器存储空间。"; return false; } lastSave = performance.now(); if (message && el.gameMessage) el.gameMessage.textContent = message; refreshContinue(); return true; }
+  function save(message) {
+    if (!currentUser || !state) return false;
+    var result = window.MuseumState.saveGuarded ? MuseumState.saveGuarded(state, currentUser.id) : MuseumState.save(state, currentUser.id);
+    // "stale" 表示另一个窗口写了更新的进度，本页故意不覆盖它——这是设计行为，不是错误。
+    // 以前这里统一按失败处理，于是每 6 秒弹一次"检查浏览器存储空间"，把玩家吓一跳，
+    // 而且原因完全不对。
+    if (result === "stale") { return false; }
+    if (!result) { if (message && el.gameMessage) el.gameMessage.textContent = "存档写入失败，请检查浏览器存储空间。"; return false; }
+    lastSave = performance.now();
+    if (message && el.gameMessage) el.gameMessage.textContent = message;
+    refreshContinue();
+    return true;
+  }
   function saveBeforeLeave() {
     if (!currentUser || !state || (el.game && el.game.hidden)) return;
     // Guarded: if another tab wrote newer progress while this one sat idle, this
@@ -303,14 +315,13 @@
         switchRoomAt("museum", point);
       } else {
         switchRoomAt(object.target, object.entry);
-        // Scene 04 belongs to the first patrol in the corridor. It should
-        // begin after the player has actually left the dorm, not while the
-        // door is teleporting directly to the hall.
-        if (object.target === "corridor" && !state.flags.scene04Seen) startNovel("scene-04");
+        // 走廊那段剧情（scene-04）不再在走出宿舍门时自动播放：剧本里它是赵灵的自我
+        // 介绍，应当由玩家走到她身边按 E 触发（见下面的 npc 分支与 js/map-npc.js）。
       }
       return;
     }
     if (object.type === "note") openNote();
+    else if (object.type === "npc") startNovel(object.scene);
     else if (object.type === "wardrobe") openWardrobe();
     else if (object.type === "terminal") openTerminal();
     else if (object.type === "mirror") openMirror();

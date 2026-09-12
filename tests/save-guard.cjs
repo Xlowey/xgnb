@@ -73,7 +73,10 @@ function otherPageWrites(store, id, snapshot) {
   const otherStore = store.get(autoKey(id));
   u.mode = 'explore'; u.playerX = 835;
   const refused = S.saveGuarded(u, id);
-  check('别人写了更新的存档时拒绝覆盖', refused === false, { refused: String(refused) });
+  // "stale" is the deliberate refusal (another page owns a newer save) and is distinct from
+  // `false`, which means the write genuinely failed (quota etc.). game.js relies on that
+  // difference so it does not tell the player "storage full" when nothing is wrong.
+  check('别人写了更新的存档时拒绝覆盖', refused === 'stale', { refused: String(refused) });
   check('被拒绝时没有改动存档', store.get(autoKey(id)) === otherStore, { same: store.get(autoKey(id)) === otherStore });
 
   // 4. after seeing that version the page can write again (no permanent mute).

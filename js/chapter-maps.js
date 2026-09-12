@@ -75,6 +75,8 @@
   };
   // Shared by rendering, pointer selection and keyboard interaction.
   window.MuseumChapterMaps.visible=function(object,state){
+    // NPC 的可见条件与绘制它的 js/map-npc.js 用同一份判断，避免"看得见却点不到"。
+    if(object.type==="npc")return !window.MuseumNpc || window.MuseumNpc.visibleFor(state.roomId,state);
     if(object.type!=="scene")return true;
     return (!object.requiredFlag || state.flags[object.requiredFlag]) && !window.MuseumState.sceneCompleted(state,object.scene);
   };

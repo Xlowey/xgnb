@@ -126,11 +126,13 @@ function listen(port) {
     check('the startup save stays in the dorm', s.returnRoom !== 'museum', s.returnRoom);
     check('the hall is not unlocked by reading the note', s.unlockedRooms.indexOf('hall') === -1, s.unlockedRooms);
 
-    // 2. The dorm door is the only exit and it must start midnight patrol.
+    // 2. The dorm door is the only exit. Walking out must NOT auto-play scene-04 any more:
+    //    that scene is 赵灵 introducing herself, so it starts by talking to her in the
+    //    corridor (the npc object). See tests/corridor-npc.cjs.
     await press('e');
     s = await state();
     check('the dorm door walks into the corridor', s.roomId === 'corridor', s.roomId);
-    check('scene-04 starts on that walk', s.narrativeNode === 'scene-04' && s.mode === 'novel', { node: s.narrativeNode, mode: s.mode });
+    check('leaving the dorm does not auto-play scene-04', s.narrativeNode !== 'scene-04' && s.mode === 'explore', { node: s.narrativeNode, mode: s.mode });
 
     // 3. The overview -> corridor -> dorm -> corridor round trip, through real pages.
     await seed('museum', 320, 330, { scene03Seen: true, scene04Seen: true, hasKey: true });

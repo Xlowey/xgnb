@@ -98,7 +98,11 @@
     ].filter(Boolean),"第一幕",1);
     room("corridor","宿舍外走廊","走廊示意图1.png",{x:1360,y:450},[],[
       gate("corridor-dorm","返回员工宿舍",1000,400,"dorm"),
-      gate("corridor-hall","前往馆内总览",1690,420,"museum")
+      gate("corridor-hall","前往馆内总览",1690,420,"museum"),
+      // 赵灵在走廊左侧等主角。走廊那段剧情（scene-04 · 午夜巡逻）应当是"和她对话"，
+      // 而不是走出宿舍门就自动播放——剧本里那段正是她自我介绍（"赵灵。""师……师父……"）。
+      // 出现条件与 js/map-npc.js 的 sequenceFor() 一致：还没谈过才显示。
+      {id:"corridor-zhaoling",type:"npc",x:1060,y:445,r:95,label:"赵灵",scene:"scene-04",npc:"zhaoling"}
     ],"第一幕",1);
     // New artwork has a horizontal corridor; the dorm facade has no doorway.
     // Do not retain old vertical-map door locations or allow walking through it.

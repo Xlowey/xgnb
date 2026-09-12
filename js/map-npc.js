@@ -30,17 +30,36 @@
     right: [[1025, 16, 168, 268, 84.0], [1041, 284, 161, 284, 80.5], [1042, 568, 163, 278, 81.5]]
   };
 
-  // 赵灵在地图上的站位与朝向按剧情推进；返回 null 表示此房间不显示她。
-  // 新剧本第二十五场：赵灵在宿舍外的走廊等主角；第五场（病房）之前她还在。
-  // 站位贴走廊上半边（地板实测 y 337..565），让她站在靠门的一侧等主角。
+  // 赵灵在地图上的出现条件与站位。返回 null 表示此房间不显示她。
+  //
+  // 走廊那段剧情（scene-04 · 午夜巡逻）本来在走出宿舍门时自动播放；现在改成走到赵灵
+  // 身边按 E 才触发——剧本里那段就是她自我介绍（"赵灵。""师……师父……"），所以应当是
+  // 一次对话。map-art.js 里的 npc 交互对象用的是同一份条件，两边不会走偏。
+  function sequenceFor(roomId) {
+    if (roomId !== "corridor") return null;
+    return {
+      room: "corridor",
+      // 站位要落在玩家真正能站的地方（walkable x 950..1770, y 222..610）。原来放 x=1085
+      // 时她的可交互半径越过了可行走区左边界，玩家站在旁边的宿舍门边时提示会被门抢走。
+      x: 1060,
+      y: 445,
+      height: 145,
+      facing: "front",
+      scene: "scene-04",
+      flag: "scene04Seen",
+      label: "赵灵"
+    };
+  }
   function placeFor(roomId, state) {
     if (!state) return null;
-    if (roomId === "corridor" && !state.flags.scene05Seen) {
-      // 朝向：图集第 1 列是能看到脸的正面帧（美术在图底的「向上(前)」标注与实际画面
-      // 并不一致，实测 up/left 行画出来都是背影或侧身），所以 NPC 用 front 组。
-      return { x: 1085, y: 360, facing: "front", height: 145 };
-    }
-    return null;
+    var sequence = sequenceFor(roomId);
+    if (!sequence) return null;
+    // 谈过话她就先走了；第五场之前她都还在走廊上等主角。
+    if (state.flags[sequence.flag]) return null;
+    return { x: sequence.x, y: sequence.y, facing: sequence.facing, height: sequence.height };
+  }
+  function visibleFor(roomId, state) {
+    return !!placeFor(roomId, state);
   }
 
   // 地图 NPC 的显示高度（世界像素）。主角在宿舍按 210 校准，走廊地板更窄，NPC 略小一点
@@ -73,5 +92,5 @@
   var readyResolved = false;
   ready.then(function (ok) { readyResolved = ok; if (!ok) console.warn("赵灵行走素材加载失败，地图上不显示该 NPC。"); });
 
-  window.MuseumNpc = { code: NPC_CODE, draw: draw, placeFor: placeFor, ready: ready, frames: FRAMES };
+  window.MuseumNpc = { code: NPC_CODE, draw: draw, placeFor: placeFor, visibleFor: visibleFor, sequenceFor: sequenceFor, ready: ready, frames: FRAMES };
 }());
