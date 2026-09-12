@@ -31,34 +31,57 @@
      * the walkable route.  Entrances are deliberately placed in the door
      * openings so the player can read the labels on the artwork while moving.
      */
+    // 碰撞与可走区域都按画面像素实测重标（tmp/measure-museum-runs.cjs 的扫描结果）：
+    // 走廊石地在 y≈300-380 与 y≈420-540 两条横带、x≈455-540 / 690-765 两条纵带上，
+    // 中央大厅是 x 425-800 / y 390-580 的大片石地。
+    //
+    // 上一版只有 8 个窄矩形（可走区仅占全图 15.9%），教室展厅与蜡像馆两处的通道只有
+    // 16px，放不下半径 10 的碰撞圆，只能横向接近；玩家感受到的"看起来能走却走不过去"
+    // 就来自这里。这一版把走廊加宽到 60-110px，并把各房间的墙做成碰撞体，
+    // 让"画面上是墙的地方真的挡人"，而不是靠可走区反推。
     overviewRoom("museum","博物馆","museum-overview-map.png",{x:615,y:610},[
+      // 各展厅的四壁（房间内部的石地不再被当成走廊）。
+      // 左列三个房间的右边界收到 x=380：实测那里是通往它们的纵向走廊（x≈306-380），
+      // 原来收到 350 会把走廊压掉一半，标记就再也走不到了。
+      {x:168,y:150,w:250,h:118},   // 病房展厅（下边界 268）
+      {x:420,y:160,w:288,h:120},   // 教室展厅
+      {x:762,y:168,w:280,h:120},   // 蜡像馆
+      {x:172,y:288,w:128,h:130},   // 宿舍（右边界 300，走廊从 300 起）
+      {x:172,y:428,w:128,h:130},   // 王钢蛋宿舍
+      {x:172,y:566,w:128,h:120},   // 馆长办公室
+      {x:930,y:288,w:250,h:180},   // 食堂展厅
+      {x:930,y:606,w:250,h:120},   // 银色恋人展厅（下移，给上方的走廊留出 >=28px 通道）
+      // 舞台、雕像等地面障碍
       {x:565,y:340,w:80,h:100},
       {x:425,y:400,w:40,h:65},
       {x:700,y:555,w:36,h:46}
     ],[
-      gate("overview-dorm","员工宿舍",320,330,"dorm"),
+      // 标记放在各自房间**门外的走廊石地上**，而且位置由脚本在附近搜索"能站住、通道够宽"
+      // 的点得到（tmp/fix-museum-markers.cjs），不是估的。原来它们落在房间内部
+      // （例如病房展厅在 335,240），而那里是墙，于是碰撞体把标记整个盖住、玩家永远走不到。
+      gate("overview-dorm","员工宿舍",345,330,"dorm"),
       gate("overview-corridor","宿舍外走廊",465,570,"corridor"),
-      scene("overview-hospital","病房展厅",335,240,"scene-05"),
-      scene("overview-class","教室展厅",650,250,"scene-06","scene05Seen"),
-      gate("overview-wax","蜡像馆",835,250,"wax","scene07Seen"),
+      scene("overview-hospital","病房展厅",345,300,"scene-05"),
+      scene("overview-class","教室展厅",650,298,"scene-06","scene05Seen"),
+      gate("overview-wax","蜡像馆",799,300,"wax","scene07Seen"),
       gate("overview-hall","大厅",615,465,"hall"),
-      scene("overview-canteen","食堂展厅",805,430,"scene-08","scene07Seen"),
-      gate("overview-office","馆长办公室",350,480,"office"),
-      scene("overview-wang-dorm","王钢蛋宿舍",285,440,"scene-11","scene10Seen"),
+      scene("overview-canteen","食堂展厅",769,430,"scene-08","scene07Seen"),
+      gate("overview-office","馆长办公室",345,480,"office"),
+      scene("overview-wang-dorm","王钢蛋宿舍",345,440,"scene-11","scene10Seen"),
       scene("overview-silver","银色恋人展厅",700,625,"scene-18","scene17Seen"),
       scene("overview-exit","离开博物馆",610,642,"ending-choice","scene30Seen")
     ]);
-    // Only these connected floor strips are walkable. Unmarked pixels,
-    // including the south door facade and the exterior, are solid.
+    // 可走区域 = 画面上的石地走廊。四条互相重叠的带子覆盖整张图的通路，
+    // 重叠是必须的：碰撞判定要求半径圆上的四个探点都落在某个可走矩形内，
+    // 只是首尾相接的矩形会让玩家在接缝处被卡住。
     rooms.museum.walkable = [
-      {x:425,y:390,w:375,h:190},
-      {x:500,y:570,w:215,h:85},
-      {x:470,y:220,w:65,h:185},
-      {x:175,y:228,w:670,h:30},
-      {x:310,y:240,w:65,h:250},
-      {x:245,y:390,w:90,h:100},
-      {x:765,y:245,w:55,h:340},
-      {x:530,y:240,w:315,h:24}
+      {x:392,y:264,w:420,h:80},    // 上横带：病房展厅 → 教室展厅 → 蜡像馆 门前的走廊（实测 y 262-340）
+      {x:440,y:392,w:340,h:80},    // 大厅上层（实测 y 380-460）
+      {x:440,y:460,w:340,h:120},   // 大厅下层（实测 y 460-577）
+      {x:480,y:576,w:240,h:76},    // 南侧出口通道
+      {x:320,y:268,w:100,h:244},   // 通往宿舍 / 王钢蛋宿舍 / 馆长办公室的纵带（右边界 420，与上横带和大厅重叠才能走通）
+      {x:672,y:300,w:88,h:100},    // 通往食堂展厅
+      {x:672,y:420,w:88,h:100}     // 通往银色恋人展厅
     ];
     rooms.museum.objects.forEach(function (object) {
       object.r = 24;

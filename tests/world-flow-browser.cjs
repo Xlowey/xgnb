@@ -135,7 +135,10 @@ function listen(port) {
     check('leaving the dorm does not auto-play scene-04', s.narrativeNode !== 'scene-04' && s.mode === 'explore', { node: s.narrativeNode, mode: s.mode });
 
     // 3. The overview -> corridor -> dorm -> corridor round trip, through real pages.
-    await seed('museum', 320, 330, { scene03Seen: true, scene04Seen: true, hasKey: true });
+    // Seed on a confirmed standing spot inside the overview dorm gate's radius (the
+    // reachability test prints these); (320,330) is on the walkable band's edge and is
+    // blocked, so the prompt never appears there.
+    await seed('museum', 345, 352, { scene03Seen: true, scene04Seen: true, hasKey: true });
     await enterGame();
     await press('e'); check('the overview dorm gate walks into the corridor', (await state()).roomId === 'corridor', (await state()).roomId);
     await press('e'); check('the corridor gate walks into the dorm', (await state()).roomId === 'dorm', (await state()).roomId);
