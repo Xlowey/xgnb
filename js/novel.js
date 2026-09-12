@@ -572,7 +572,11 @@
     state.mode = "battle";
     state.narrativeNode = state.returnScene;
     if (!persist()) { state=beforeBattle; render(); showToast("保存失败，暂未进入战斗，请重试。"); return; }
-    var battleUrl = "../demos/battle/index.html?from=novel&user=" + encodeURIComponent(user.id) + "&returnScene=" + encodeURIComponent(state.returnScene);
+    // 最终 boss 战走像素地牢（demos/pixel-dungeon-html），普通交涉走回合制 demo。
+    // 两边与主游戏的约定完全一样（写法相同：写 museum_pending_battle_v1 后回
+    // index.html?fromBattle=1），所以 game.js 的结算逻辑不用分叉。
+    var demo = choice.demo === "pixel-dungeon" ? "pixel-dungeon-html" : "battle";
+    var battleUrl = "../demos/" + demo + "/index.html?from=novel&user=" + encodeURIComponent(user.id) + "&returnScene=" + encodeURIComponent(state.returnScene);
     if (preview) battleUrl += "&preview=1&resume=1";
     window.location.href = battleUrl;
   }

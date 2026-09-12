@@ -1,0 +1,45 @@
+暗影地牢 / Pixel Dungeon — HTML + CSS + JavaScript 离线版
+
+【怎么运行】
+1. 对 pixel-dungeon-html.zip 右键，选择“全部解压”。
+2. 打开解压后的 pixel-dungeon-html 文件夹。
+3. 双击 index.html，用 Microsoft Edge 或 Google Chrome 打开。
+
+不需要安装 Node.js，不需要 npm，不需要网络，不需要运行命令，
+不需要 localhost:3000，也不需要安装包或开发工具。
+注意：先完整解压；不要只从压缩包里打开 index.html。
+不要单独移动 index.html；请保留同文件夹里的 CSS、JS 文件。
+如果 HTML 默认被编辑器打开：右键 index.html → 打开方式 → Edge / Chrome。
+
+【操作】
+W / A / S / D：移动。鼠标：控制枪口。左键点击或按住：攻击。
+Q：切换能量枪 / 手刀。手刀最快每 0.15 秒攻击一次。
+空格：开启双倍攻速，持续 5 秒，冷却 20 秒（不会突破手刀速度上限）。
+Esc / 右上角按钮：暂停或继续。暂停界面可以重新开始。
+触屏：左半屏拖动控制移动，右半屏拖动控制瞄准与攻击。
+手机 / 平板请横屏。切换到其他窗口会自动暂停，回来后继续即可。
+
+【文件组成】
+index.html：页面、两块画布、状态栏、小地图、按钮和暂停 / 结算界面。
+style.css：原有界面样式、像素风、HUD 大小、横屏与触屏适配。
+game.js：完整地图、所有战斗参数、游戏状态、绘制、输入与游戏循环。
+fonts.css：内嵌的两套原字体；断网和直接打开 HTML 时也能使用。
+assets：原字体文件，供学习与修改使用。
+favicon.svg：原有游戏图标。
+licenses：原字体、按钮图标和样式重置的开源许可。
+转换核对说明.txt：迁移范围和检查结果。
+
+【作业提交】
+直接提交 pixel-dungeon-html.zip。
+压缩包中包含可运行游戏和可阅读源码，不包含 node_modules、框架、
+服务器、构建工具或缓存。老师解压后双击 index.html 即可进入游戏。
+本版本已加入 2026-09-09 紧急平衡调整：手刀最快每 0.15 秒攻击一次。
+原 React / TypeScript 项目保留在原处，并同步了本次手刀调整。
+
+【修改源码】
+用记事本或 VS Code 打开 HTML、CSS、JS 即可编辑；保存后刷新游戏。
+game.js 的 DungeonMap 区域是房间、走廊、障碍物和出生点；
+DungeonCombat 区域是数值、伤害、敌人攻击和碰撞规则；
+startDungeon 区域是游戏状态、界面同步、输入、更新和 Canvas 绘制。
+
+这是单局游戏，不保存局内进度；刷新或重新开始会回到起点。

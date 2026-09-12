@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="暗影地牢：鼠标瞄准、手刀、双摇杆、四类怪物与首领挑战的离线像素小游戏。">
+  <title>暗影地牢｜像素射击小游戏</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="stylesheet" href="./fonts.css">
+  <link rel="stylesheet" href="./style.css">
+  <script src="./game.js" defer></script>
+</head>
+<body>
+  <main class="game-page">
+    <section class="game-shell" aria-label="暗影地牢游戏区域">
+      <canvas id="game-canvas" width="960" height="540" class="game-canvas" tabindex="0" aria-label="像素地牢战斗画面"></canvas>
+      <div class="hud-panel">
+        <div class="bar-row"><span class="bar-icon heart">♥</span><div class="meter"><i id="hp-fill" class="health-fill" style="width:100%"></i><b id="hp-value">7/7</b></div></div>
+        <div class="bar-row"><span class="bar-icon shield">◆</span><div class="meter"><i id="armor-fill" class="armor-fill" style="width:100%"></i><b id="armor-value">5/5</b></div></div>
+        <div class="bar-row"><span class="bar-icon energy">✦</span><div class="meter"><i id="energy-fill" class="energy-fill" style="width:100%"></i><b id="energy-value">200/200</b></div></div>
+      </div>
+      <div class="top-tools">
+        <div class="coin"><span>●</span><output id="coin-value">0</output></div>
+        <button id="pause-button" class="pixel-button pause" aria-label="暂停"><span id="pause-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pause" aria-hidden="true"><rect x="14" y="3" width="5" height="18" rx="1"></rect><rect x="5" y="3" width="5" height="18" rx="1"></rect></svg></span><span id="play-icon" hidden><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="true"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"></path></svg></span></button>
+        <div class="mini-wrap" aria-label="关卡小地图：绿色起点，灰色中间关卡，紫色首领关卡，白色当前关卡"><canvas id="minimap" width="150" height="96"></canvas></div>
+      </div>
+      <div class="mode-tools">
+        <div class="mode active"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-crosshair" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="22" x2="18" y1="12" y2="12"></line><line x1="6" x2="2" y1="12" y2="12"></line><line x1="12" x2="12" y1="6" y2="2"></line><line x1="12" x2="12" y1="22" y2="18"></line></svg>鼠标控制枪口</div>
+        <button id="weapon-button" class="mode"><span id="hand-icon" hidden><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-hand" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"></path><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"></path><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"></path><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path></svg></span><span id="swords-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-swords" aria-hidden="true"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"></polyline><line x1="13" x2="19" y1="19" y2="13"></line><line x1="16" x2="20" y1="16" y2="20"></line><line x1="19" x2="21" y1="21" y2="19"></line><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"></polyline><line x1="5" x2="9" y1="14" y2="18"></line><line x1="7" x2="4" y1="17" y2="20"></line><line x1="3" x2="5" y1="19" y2="21"></line></svg></span><span id="weapon-label">能量枪</span> <kbd>Q</kbd></button>
+      </div>
+      <div class="touch-hint left-hint"><span>移动</span></div><div class="touch-hint right-hint"><span>瞄准攻击</span></div>
+      <button id="skill-button" class="skill-button" aria-label="大招：双倍攻击速度"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-zap" aria-hidden="true"><path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z"></path></svg><small id="skill-label">大招</small></button>
+      <div id="result-card" class="result-card" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path><path d="M20 2v4"></path><path d="M22 4h-4"></path><circle cx="4" cy="20" r="2"></circle></svg><h1 id="result-title">冒险结束</h1><p id="result-message">调整走位，再试一次。</p>
+        <!-- 作为最终 boss 战时（URL 带 returnScene）用这个按钮回剧情，见文件末尾的接入代码。 -->
+        <button id="result-continue" hidden><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>返回剧情</button>
+        <button id="result-restart"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>重新开始</button>
+      </div>
+      <div id="pause-card" class="pause-card" hidden>
+        <h1>游戏暂停</h1><p>WASD 移动 · 鼠标控制枪口 · Q 切换手刀 · 空格开启双倍攻速</p>
+        <div class="pause-actions"><button id="resume-button"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="true"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"></path></svg>继续战斗</button><button id="pause-restart"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rotate-ccw" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>重新开始</button></div>
+      </div>
+      <div class="portrait-note">请横屏游玩</div>
+    </section>
+    <footer><span>WASD 移动</span><span>鼠标控制枪口 / 点击攻击</span><span>空格开启双倍攻速</span><span>触屏双摇杆</span></footer>
+  </main>
+  <noscript>请在浏览器中启用 JavaScript 后重新打开游戏。</noscript>
+</body>
+</html>

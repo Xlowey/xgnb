@@ -295,7 +295,7 @@ button:disabled {
   display: grid;
   place-items: center;
   padding: 24px;
-  background-image: linear-gradient(90deg, rgba(7, 11, 10, .35), rgba(7, 11, 10, .12) 48%, rgba(7, 11, 10, .32)), radial-gradient(ellipse at 50% 25%, #34403a, #0b1014 75%);
+  background-image: linear-gradient(90deg, rgba(7, 11, 10, .78), rgba(7, 11, 10, .38) 48%, rgba(7, 11, 10, .78)), linear-gradient(180deg, rgba(7, 11, 10, .22), rgba(7, 11, 10, .62)), url("../assets/images/story-backgrounds/locations/hall/大厅背景.png");
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;

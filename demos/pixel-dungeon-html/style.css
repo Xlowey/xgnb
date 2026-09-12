@@ -1,0 +1,421 @@
+/* Native browser reset, equivalent to the original Tailwind preflight. */
+/*
+  1. Prevent padding and border from affecting element width. (https://github.com/mozdevs/cssremedy/issues/4)
+  2. Remove default margins and padding
+  3. Reset all borders.
+*/
+
+*,
+::after,
+::before,
+::backdrop,
+::file-selector-button {
+  box-sizing: border-box; /* 1 */
+  margin: 0; /* 2 */
+  padding: 0; /* 2 */
+  border: 0 solid; /* 3 */
+}
+
+/*
+  1. Use a consistent sensible line-height in all browsers.
+  2. Prevent adjustments of font size after orientation changes in iOS.
+  3. Use a more readable tab size.
+  4. Use the user's configured `sans` font-family by default.
+  5. Use the user's configured `sans` font-feature-settings by default.
+  6. Use the user's configured `sans` font-variation-settings by default.
+  7. Disable tap highlights on iOS.
+*/
+
+html,
+:host {
+  line-height: 1.5; /* 1 */
+  -webkit-text-size-adjust: 100%; /* 2 */
+  tab-size: 4; /* 3 */
+  font-family: ui-sans-serif,
+    system-ui,
+    sans-serif,
+    'Apple Color Emoji',
+    'Segoe UI Emoji',
+    'Segoe UI Symbol',
+    'Noto Color Emoji'
+  ; /* 4 */
+  font-feature-settings: normal; /* 5 */
+  font-variation-settings: normal; /* 6 */
+  -webkit-tap-highlight-color: transparent; /* 7 */
+}
+
+/*
+  1. Add the correct height in Firefox.
+  2. Correct the inheritance of border color in Firefox. (https://bugzilla.mozilla.org/show_bug.cgi?id=190655)
+  3. Reset the default border style to a 1px solid border.
+*/
+
+hr {
+  height: 0; /* 1 */
+  color: inherit; /* 2 */
+  border-top-width: 1px; /* 3 */
+}
+
+/*
+  Add the correct text decoration in Chrome, Edge, and Safari.
+*/
+
+abbr:where([title]) {
+  -webkit-text-decoration: underline dotted;
+  text-decoration: underline dotted;
+}
+
+/*
+  Remove the default font size and weight for headings.
+*/
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+/*
+  Reset links to optimize for opt-in styling instead of opt-out.
+*/
+
+a {
+  color: inherit;
+  -webkit-text-decoration: inherit;
+  text-decoration: inherit;
+}
+
+/*
+  Add the correct font weight in Edge and Safari.
+*/
+
+b,
+strong {
+  font-weight: bolder;
+}
+
+/*
+  1. Use the user's configured `mono` font-family by default.
+  2. Use the user's configured `mono` font-feature-settings by default.
+  3. Use the user's configured `mono` font-variation-settings by default.
+  4. Correct the odd `em` font sizing in all browsers.
+*/
+
+code,
+kbd,
+samp,
+pre {
+  font-family: ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    'Liberation Mono',
+    'Courier New',
+    monospace
+  ; /* 1 */
+  font-feature-settings: normal; /* 2 */
+  font-variation-settings: normal; /* 3 */
+  font-size: 1em; /* 4 */
+}
+
+/*
+  Add the correct font size in all browsers.
+*/
+
+small {
+  font-size: 80%;
+}
+
+/*
+  Prevent `sub` and `sup` elements from affecting the line height in all browsers.
+*/
+
+sub,
+sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+sub {
+  bottom: -0.25em;
+}
+
+sup {
+  top: -0.5em;
+}
+
+/*
+  1. Remove text indentation from table contents in Chrome and Safari. (https://bugs.chromium.org/p/chromium/issues/detail?id=999088, https://bugs.webkit.org/show_bug.cgi?id=201297)
+  2. Correct table border color inheritance in all Chrome and Safari. (https://bugs.chromium.org/p/chromium/issues/detail?id=935729, https://bugs.webkit.org/show_bug.cgi?id=195016)
+  3. Remove gaps between table borders by default.
+*/
+
+table {
+  text-indent: 0; /* 1 */
+  border-color: inherit; /* 2 */
+  border-collapse: collapse; /* 3 */
+}
+
+/*
+  Use the modern Firefox focus style for all focusable elements.
+*/
+
+:-moz-focusring {
+  outline: auto;
+}
+
+/*
+  Add the correct vertical alignment in Chrome and Firefox.
+*/
+
+progress {
+  vertical-align: baseline;
+}
+
+/*
+  Add the correct display in Chrome and Safari.
+*/
+
+summary {
+  display: list-item;
+}
+
+/*
+  Make lists unstyled by default.
+*/
+
+ol,
+ul,
+menu {
+  list-style: none;
+}
+
+/*
+  1. Make replaced elements `display: block` by default. (https://github.com/mozdevs/cssremedy/issues/14)
+  2. Add `vertical-align: middle` to align replaced elements more sensibly by default. (https://github.com/jensimmons/cssremedy/issues/14#issuecomment-634934210)
+      This can trigger a poorly considered lint error in some tools but is included by design.
+*/
+
+img,
+svg,
+video,
+canvas,
+audio,
+iframe,
+embed,
+object {
+  display: block; /* 1 */
+  vertical-align: middle; /* 2 */
+}
+
+/*
+  Constrain images and videos to the parent width and preserve their intrinsic aspect ratio. (https://github.com/mozdevs/cssremedy/issues/14)
+*/
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+/*
+  1. Inherit font styles in all browsers.
+  2. Remove border radius in all browsers.
+  3. Remove background color in all browsers.
+  4. Ensure consistent opacity for disabled states in all browsers.
+*/
+
+button,
+input,
+select,
+optgroup,
+textarea,
+::file-selector-button {
+  font: inherit; /* 1 */
+  font-feature-settings: inherit; /* 1 */
+  font-variation-settings: inherit; /* 1 */
+  letter-spacing: inherit; /* 1 */
+  color: inherit; /* 1 */
+  border-radius: 0; /* 2 */
+  background-color: transparent; /* 3 */
+  opacity: 1; /* 4 */
+}
+
+/*
+  Restore default font weight.
+*/
+
+:where(select:is([multiple], [size])) optgroup {
+  font-weight: bolder;
+}
+
+/*
+  Restore indentation.
+*/
+
+:where(select:is([multiple], [size])) optgroup option {
+  padding-inline-start: 20px;
+}
+
+/*
+  Restore space after button.
+*/
+
+::file-selector-button {
+  margin-inline-end: 4px;
+}
+
+/*
+  Reset the default placeholder opacity in Firefox. (https://github.com/tailwindlabs/tailwindcss/issues/3300)
+*/
+
+::placeholder {
+  opacity: 1;
+}
+
+/*
+  Set the default placeholder color to a semi-transparent version of the current text color in browsers that do not
+  crash when using `color-mix(…)` with `currentcolor`. (https://github.com/tailwindlabs/tailwindcss/issues/17194)
+*/
+
+@supports (not (-webkit-appearance: -apple-pay-button)) /* Not Safari */ or
+  (contain-intrinsic-size: 1px) /* Safari 17+ */ {
+  ::placeholder {
+    color: color-mix(in oklab, currentcolor 50%, transparent);
+  }
+}
+
+/*
+  Prevent resizing textareas horizontally by default.
+*/
+
+textarea {
+  resize: vertical;
+}
+
+/*
+  Remove the inner padding in Chrome and Safari on macOS.
+*/
+
+::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+/*
+  1. Ensure date/time inputs have the same height when empty in iOS Safari.
+  2. Ensure text alignment can be changed on date/time inputs in iOS Safari.
+*/
+
+::-webkit-date-and-time-value {
+  min-height: 1lh; /* 1 */
+  text-align: inherit; /* 2 */
+}
+
+/*
+  Prevent height from changing on date/time inputs in macOS Safari when the input is set to `display: block`.
+*/
+
+::-webkit-datetime-edit {
+  display: inline-flex;
+}
+
+/*
+  Remove excess padding from pseudo-elements in date/time inputs to ensure consistent height across browsers.
+*/
+
+::-webkit-datetime-edit-fields-wrapper {
+  padding: 0;
+}
+
+::-webkit-datetime-edit,
+::-webkit-datetime-edit-year-field,
+::-webkit-datetime-edit-month-field,
+::-webkit-datetime-edit-day-field,
+::-webkit-datetime-edit-hour-field,
+::-webkit-datetime-edit-minute-field,
+::-webkit-datetime-edit-second-field,
+::-webkit-datetime-edit-millisecond-field,
+::-webkit-datetime-edit-meridiem-field {
+  padding-block: 0;
+}
+
+/*
+  Center dropdown marker shown on inputs with paired `<datalist>`s in Chrome. (https://github.com/tailwindlabs/tailwindcss/issues/18499)
+*/
+
+::-webkit-calendar-picker-indicator {
+  line-height: 1;
+}
+
+/*
+  Remove the additional `:invalid` styles in Firefox. (https://github.com/mozilla/gecko-dev/blob/2f9eacd9d3d995c937b4251a5557d95d494c9be1/layout/style/res/forms.css#L728-L737)
+*/
+
+:-moz-ui-invalid {
+  box-shadow: none;
+}
+
+/*
+  Correct the inability to style the border radius in iOS Safari.
+*/
+
+button,
+input:where([type='button'], [type='reset'], [type='submit']),
+::file-selector-button {
+  appearance: button;
+}
+
+/*
+  Correct the cursor style of increment and decrement buttons in Safari.
+*/
+
+::-webkit-inner-spin-button,
+::-webkit-outer-spin-button {
+  height: auto;
+}
+
+/*
+  Make elements with the HTML hidden attribute stay hidden by default.
+*/
+
+[hidden]:where(:not([hidden='until-found'])) {
+  display: none !important;
+}
+
+/* Original game styles, unchanged. */
+
+
+
+
+:root { --ink:#111018; --panel:#2a2230; --edge:#887255; --gold:#ffd659; color-scheme:dark; }
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#0b0910;color:#f7efd9;font-family:var(--font-geist-mono),monospace;overflow:hidden}button{font:inherit;color:inherit}
+.game-page{width:100vw;height:100dvh;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,#243340 0,#101923 48%,#05080d 100%);padding:8px 10px 38px;user-select:none;touch-action:none}
+.game-shell{position:relative;width:min(calc((100dvh - 54px)*16/9),calc(100vw - 20px));aspect-ratio:16/9;overflow:hidden;border:4px solid #26333b;border-radius:7px;box-shadow:0 0 0 3px #05090d,0 28px 70px #000b;background:#0b1119}
+.game-canvas{display:block;width:100%;height:100%;image-rendering:pixelated;cursor:crosshair;touch-action:none}
+.game-canvas:focus{outline:none}
+.hud-panel{position:absolute;left:1.6%;top:2.2%;width:118px;padding:4px;background:#a28c69e8;border:2px solid #45382e;box-shadow:2px 3px 0 #071019;border-radius:3px}.bar-row{display:flex;align-items:center;gap:3px;margin:1px 0}.bar-icon{width:10px;text-align:center;font-size:9px;text-shadow:1px 1px #432}.heart{color:#ee5363}.shield{color:#d2d9e4}.energy{color:#4da6ff}.meter{position:relative;height:13px;flex:1;background:#302b2e;border:2px solid #554536;box-shadow:inset 0 1px #171216}.meter i{position:absolute;inset:0 auto 0 0}.health-fill{background:#d83b45}.armor-fill{background:#a9b4c2}.energy-fill{background:#397ec7}.meter b{position:absolute;inset:0;display:grid;place-items:center;color:white;font-size:7px;line-height:1;text-shadow:1px 1px #13111a}
+.top-tools{position:absolute;right:1.6%;top:2.2%;display:grid;grid-template-columns:auto 38px;gap:6px;align-items:start}.coin{height:30px;display:flex;align-items:center;gap:6px;padding:0 9px;background:#101822dc;border:2px solid #3d505b;border-radius:3px;font-size:13px;text-shadow:2px 2px #000}.coin span{color:#ffe14f}.pixel-button{border:2px solid #574536;background:#927858;box-shadow:inset 0 0 0 2px #bca27c,2px 3px #091016;border-radius:4px;height:38px;display:grid;place-items:center;cursor:pointer}.pixel-button:hover{filter:brightness(1.12)}.pixel-button svg{width:18px}.mini-wrap{grid-column:1/3;background:#0b141edb;border:2px solid #4e6671;box-shadow:2px 3px #05090e;padding:3px}.mini-wrap span{display:block;padding:2px 3px 4px;color:#d8edf0;font-size:9px}.mini-wrap canvas{display:block;width:132px;height:84px;image-rendering:pixelated}
+.mode-tools{position:absolute;left:1.7%;bottom:2.5%;display:flex;gap:5px}.mode{border:2px solid #526975;background:#101b24db;border-radius:4px;padding:5px 7px;display:flex;align-items:center;gap:5px;font-size:9px;cursor:pointer;box-shadow:2px 3px #05090d}.mode svg{width:14px;height:14px}.mode.active{border-color:#59cae5;color:#a9f2ff;background:#17313cdd}.mode.melee.active{border-color:#f0c05d;color:#ffe29a;background:#3a2b1bdd}.mode kbd{color:#9c91a3;border:1px solid #6f6476;padding:1px 3px;border-radius:3px}
+.touch-hint{position:absolute;bottom:4%;width:112px;height:112px;border:2px dashed #ffffff20;border-radius:50%;display:none;place-items:center;color:#ffffff3b;font-size:10px}.left-hint{left:7%}.right-hint{right:7%}.skill-button{position:absolute;right:2.4%;bottom:3.5%;width:56px;height:56px;border-radius:50%;border:3px solid #9daeb7;background:#304653dc;box-shadow:inset 0 0 0 4px #54707b,2px 4px #071016;display:grid;place-items:center;cursor:pointer}.skill-button svg{width:22px;height:22px;fill:#f4e9ff}.skill-button small{font-size:8px;margin-top:-7px}.skill-button:disabled{opacity:.45}
+.result-card,.pause-card{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#100d18d9;backdrop-filter:blur(4px);z-index:10;text-align:center}.result-card>svg{width:42px;height:42px;color:#ffd45e}.result-card h1,.pause-card h1{font-size:clamp(24px,4vw,46px);margin:12px 0 5px;text-shadow:4px 4px #4f2840}.result-card p,.pause-card p{color:#c7b8ca;margin:0 0 20px;font-size:14px}.result-card button,.pause-card button{border:3px solid #6f5d43;background:#d49e45;color:#251a18;padding:10px 17px;display:flex;align-items:center;gap:8px;box-shadow:4px 5px #0a080d;cursor:pointer;font-weight:800}.result-card button svg,.pause-card button svg{width:18px}
+.pause-actions{display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap}
+/* 接入怪谈博物馆当最终 boss 战时，结算卡上会出现"返回剧情"（可能和"重新开始"并排）。 */
+.result-card{row-gap:12px}.result-card button{margin:0 6px}
+footer{position:fixed;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:25px;color:#8f8294;font-size:12px}.portrait-note{display:none}
+@media (pointer:coarse){.touch-hint{display:grid}.mode-tools{top:3.5%;bottom:auto;left:42%;transform:translateX(-50%)}.mode kbd{display:none}footer{display:none}.game-page{padding-bottom:14px}.skill-button{right:2.5%;bottom:4%}}
+@media (max-width:760px){.hud-panel{width:112px;padding:3px;border-width:2px}.meter{height:12px}.meter b{font-size:6px}.top-tools{transform:scale(.78);transform-origin:top right}.mode{padding:6px;font-size:10px}.mini-wrap{display:none}.coin{font-size:14px;height:32px}.pixel-button{height:42px;width:42px}.skill-button{width:58px;height:58px}.touch-hint{width:100px;height:100px}.game-shell{width:calc(100vw - 16px)}}
+@media (orientation:portrait) and (pointer:coarse){.portrait-note{display:grid;position:absolute;inset:0;background:#100d18;z-index:30;place-items:center;font-size:20px;color:#f1d68d}.game-shell{aspect-ratio:9/16;height:calc(100dvh - 24px);width:auto}}
+
+/* Crisp 8-bit counters, kept compact so the world remains visible. */
+.meter b{font-family:'Dungeon Pixel',monospace;font-size:9px;font-weight:400;line-height:1;letter-spacing:0;text-shadow:2px 2px #13111a;-webkit-font-smoothing:none}
+.touch-hint{pointer-events:none}
+@media(max-width:760px){.meter{height:15px}.meter b{font-size:7px}.mini-wrap{display:block}.mini-wrap canvas{width:108px;height:69px}.mini-wrap span{font-size:8px}}
+
+:root{--font-geist-mono:"Geist Mono"}
