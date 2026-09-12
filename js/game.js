@@ -11,8 +11,8 @@
   // 衣柜特写是 1.9 MB，而它只在宿舍画衣柜时才用得上。改成一个按需加载的 Image：
   // 走到衣柜旁边才请求，避免开局为主菜单/第一个房间多拉 1.9 MB。
   var wardrobeImage = window.MuseumLazyImage
-    ? window.MuseumLazyImage.create("wardrobe-detail.png", "items", function () { if (window.MuseumGameRedraw) window.MuseumGameRedraw(); })
-    : (function () { var img = new Image(); img.src = "assets/images/items/closeups/wardrobe-detail.png"; return img; }());
+    ? window.MuseumLazyImage.create("wardrobe-detail.webp", "items", function () { if (window.MuseumGameRedraw) window.MuseumGameRedraw(); })
+    : (function () { var img = new Image(); img.src = "assets/images/items/closeups/wardrobe-detail.webp"; return img; }());
   var keys = {};
   var heldTouch = null;
   var camera = { x: 0, y: 0 };

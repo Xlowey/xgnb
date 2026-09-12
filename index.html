@@ -59,6 +59,7 @@
           <button id="save-button" class="button" type="button">保存游戏</button>
           <button id="load-button" class="button" type="button">读取存档</button>
           <button id="log-button" class="button" type="button">回顾文本</button>
+          <button class="button" data-audio-toggle type="button">音乐 · 开</button>
           <details class="pause-help"><summary>操作说明</summary><p>WASD / 方向键移动；靠近物品后按 E 调查；Esc 暂停或继续。</p></details>
           <section class="pause-status" aria-label="当前状态">
             <div class="card-heading"><span>当前状态</span><span class="system-dot" aria-label="系统在线"></span></div>
@@ -81,6 +82,7 @@
 
     <section id="save-panel" class="save-panel" hidden aria-labelledby="save-panel-title"><div class="save-window" role="dialog" aria-modal="true"><header class="save-window-header"><div><p class="eyebrow">当前档案 · <span id="save-user-name">—</span></p><h2 id="save-panel-title">存档管理</h2></div><button id="close-save-panel" class="button button-small" type="button">关闭</button></header><div class="save-mode-tabs" role="tablist" aria-label="保存或读取"><button id="save-mode-button" class="save-mode-button active" type="button" role="tab" aria-selected="true">保存游戏</button><button id="load-mode-button" class="save-mode-button" type="button" role="tab" aria-selected="false">读取存档</button></div><p class="save-help">自动存档会持续更新；下面的 20 个手动存档位不会被自动覆盖。</p><p id="save-panel-message" class="status-message" role="status" aria-live="polite"></p><div id="save-slot-list" class="save-slot-list" aria-label="手动存档位"></div></div></section>
   </main>
+  <script src="js/audio-manager.js?v=3"></script>
   <script src="js/auth.js?v=38"></script>
   <script src="js/state.js?v=56"></script>
   <script src="js/items.js?v=55"></script>

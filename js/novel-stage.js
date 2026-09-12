@@ -16,12 +16,12 @@
   }
   function syncRoomBackdrop(event,hooks) {
     var inDorm=hooks.scene && /员工宿舍/.test(hooks.scene.location || "");
-    var visible=inDorm && !(hooks.scene && hooks.scene.background) && event && (!event.background || event.background === "dorm-map.png") && (["item","document"].includes(event.type) || (["dialogue","television"].includes(event.type) && hooks.state.flags.dormExplorationPosition));
+    var visible=inDorm && !(hooks.scene && hooks.scene.background) && event && (!event.background || event.background === "dorm-map.webp") && (["item","document"].includes(event.type) || (["dialogue","television"].includes(event.type) && hooks.state.flags.dormExplorationPosition));
     document.body.classList.toggle("has-room-backdrop",!!visible);
     if(!visible){if(backdropObserver)backdropObserver.disconnect();if(backdrop)backdrop.remove();backdrop=null;return;}
     if(backdrop)return;
     backdrop=node("div","investigation-backdrop");backdrop.setAttribute("aria-hidden","true");
-    var frame=node("div","investigation-still");frame.appendChild(picture("dorm-map.png","","maps"));
+    var frame=node("div","investigation-still");frame.appendChild(picture("dorm-map.webp","","maps"));
     var canvas=node("canvas","exploration-character");canvas.width=1670;canvas.height=942;
     var source=root.querySelector(".exploration-character");
     if(source)canvas.getContext("2d").drawImage(source,0,0);
@@ -38,7 +38,7 @@
     if (existing) existing.remove();
     var recording = node("div", "recording-overlay"); recording.id = "recording";
     var screen = node("div", "recording-screen");
-    screen.appendChild(picture(opts.image || "rabbits-recording.png", opts.label || "录像"));
+    screen.appendChild(picture(opts.image || "rabbits-recording.webp", opts.label || "录像"));
     screen.appendChild(node("span", "recording-light", "● REC"));
     screen.appendChild(node("span", "recording-caption", opts.caption || "录像正在播放"));
     var close = button("关闭录像", function () { recording.remove(); });
@@ -145,7 +145,7 @@
       disposeExploration=window.MuseumDormExploration.mount(root,hooks,function(o){
         hooks.state.flags["examined-"+o.id]=true;hooks.save();hooks.pause();modal.hidden=false;modal.textContent="";
         var box=node("article","observation-panel");
-        var crop=node("div","observation-closeup"), photo=picture("dorm-map.png",o.name+"特写","maps");
+        var crop=node("div","observation-closeup"), photo=picture("dorm-map.webp",o.name+"特写","maps");
         crop.style.aspectRatio=o.crop[2]+" / "+o.crop[3];
         Object.assign(photo.style,{width:(1670/o.crop[2]*100)+"%",left:(-o.crop[0]/o.crop[2]*100)+"%",top:(-o.crop[1]/o.crop[3]*100)+"%"});crop.appendChild(photo);box.appendChild(crop);
         box.appendChild(node("h2","",o.name));box.appendChild(node("p","",o.text));box.appendChild(button("返回房间",closeModal));modal.appendChild(box);box.querySelector("button").focus();
@@ -154,7 +154,7 @@
     if (event.type === "television") {
       var tv=node("div","television-set"),screen=node("div","television-screen");tv.appendChild(screen);root.appendChild(tv);
       var playing=hooks.state.flags.prologueVideoPlaying;
-      if(playing){screen.classList.add("playing");screen.appendChild(picture("rabbits-recording.png","巨型兔子在城市中横冲直撞，民众四散逃离"));screen.appendChild(node("span","recording-light","● REC"));hooks.setAdvance(true,"关闭电视");}
+      if(playing){screen.classList.add("playing");screen.appendChild(picture("rabbits-recording.webp","巨型兔子在城市中横冲直撞，民众四散逃离"));screen.appendChild(node("span","recording-light","● REC"));hooks.setAdvance(true,"关闭电视");}
       else{screen.classList.add("static");screen.appendChild(button("播放录像",function(){hooks.state.flags.prologueVideoPlaying=true;hooks.save();render(event,hooks);}));hooks.setAdvance(false);}
       return;
     }

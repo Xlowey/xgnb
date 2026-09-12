@@ -7,13 +7,13 @@
 
   // id, 图片, 无障碍名称, 是否作为"在场倾听者"显示（主角始终显示；其他人只在说话或本场有台词时出现）
   var CAST=[
-    ["hero","portraits/hero-portrait.png","主角立绘",false],
-    ["zhaoling","portraits/zhaoling-portrait.png","赵灵立绘",true],
-    ["director","portraits/director-portrait.png","馆长立绘",true],
-    ["paperman","portraits/paper-man-portrait.png","纸人立绘",true],
-    ["girl","portraits/masked-girl-portrait.png","小女孩（面具）立绘",true],
-    ["maskedguard","portraits/masked-guard-portrait.png","保安（面具）立绘",true],
-    ["nightmare","portraits/nightmare-portrait.png","梦魇立绘",true]
+    ["hero","portraits/hero-portrait.webp","主角立绘",false],
+    ["zhaoling","portraits/zhaoling-portrait.webp","赵灵立绘",true],
+    ["director","portraits/director-portrait.webp","馆长立绘",true],
+    ["paperman","portraits/paper-man-portrait.webp","纸人立绘",true],
+    ["girl","portraits/masked-girl-portrait.webp","小女孩（面具）立绘",true],
+    ["maskedguard","portraits/masked-guard-portrait.webp","保安（面具）立绘",true],
+    ["nightmare","portraits/nightmare-portrait.webp","梦魇立绘",true]
   ];
   CAST.forEach(function(entry){
     var img=document.createElement("img");

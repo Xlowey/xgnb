@@ -3,7 +3,7 @@
 body:not([data-event]), body[data-event="dialogue"] { --dialogue-height:220px; --stage-bottom:248px; }
 body:not([data-event]) .novel-dialogue,
 body[data-event="dialogue"] .novel-dialogue {
-  background: url('../assets/images/ui/frames/dialogue-frame.png') center / 100% 100% no-repeat;
+  background: url('../assets/images/ui/frames/dialogue-frame.webp') center / 100% 100% no-repeat;
   border:0; border-radius:0; padding:25px 42px 57px;
   box-shadow:none;
 }
@@ -14,7 +14,7 @@ body[data-event="dialogue"] .novel-tool,
 body[data-event="dialogue"] .novel-next { color:#54351e; }
 body[data-event="dialogue"] .novel-tool:disabled { opacity:.45; }
 .system-message {
-  background:url('../assets/images/ui/frames/system-frame.png') center / 100% 100% no-repeat;
+  background:url('../assets/images/ui/frames/system-frame.webp') center / 100% 100% no-repeat;
   border:0; border-radius:0; box-shadow:none;
   padding:45px 48px; min-height:180px;
 }
@@ -49,12 +49,12 @@ body[data-event="dialogue"] .novel-tool:disabled { opacity:.45; }
 }
 .novel-pause { position:fixed; z-index:20; inset:0; display:grid; place-items:center; padding:20px; background:rgba(10,7,5,.72); backdrop-filter:blur(5px); }
 .novel-pause[hidden] { display:none; }
-.novel-pause-card { width:min(520px,calc(100vw - 32px)); padding:28px 30px 22px; border:15px solid transparent; border-image:url('../assets/images/ui/menus/menu-panel.png') 70 fill / 15px stretch; background:transparent; color:#eee1c7; box-shadow:0 18px 70px #000b; }
+.novel-pause-card { width:min(520px,calc(100vw - 32px)); padding:28px 30px 22px; border:15px solid transparent; border-image:url('../assets/images/ui/menus/menu-panel.webp') 70 fill / 15px stretch; background:transparent; color:#eee1c7; box-shadow:0 18px 70px #000b; }
 .novel-pause-kicker { margin:0 0 6px; color:#d7b675; font-size:13px; letter-spacing:.12em; }
 .novel-pause-card h2 { margin:0 0 20px; color:#f2dfbc; font-family:serif; font-size:clamp(28px,4vw,42px); text-shadow:2px 3px #441a16; }
-.novel-pause-button { display:block; width:100%; margin:9px 0; padding:11px 16px; border:7px solid transparent; border-image:url('../assets/images/ui/buttons/button-dark.png') 22 fill / 7px stretch; background:transparent; color:#f0dfbd; cursor:pointer; text-shadow:0 1px #191613; }
+.novel-pause-button { display:block; width:100%; margin:9px 0; padding:11px 16px; border:7px solid transparent; border-image:url('../assets/images/ui/buttons/button-dark.webp') 22 fill / 7px stretch; background:transparent; color:#f0dfbd; cursor:pointer; text-shadow:0 1px #191613; }
 .novel-pause-button:hover { filter:brightness(1.16); }
-.novel-pause-primary { border-image-source:url('../assets/images/ui/buttons/button-primary.png'); color:#39251b; text-shadow:none; }
+.novel-pause-primary { border-image-source:url('../assets/images/ui/buttons/button-primary.webp'); color:#39251b; text-shadow:none; }
 .novel-pause-quiet { margin-top:18px; }
 .novel-pause-hint { margin:18px 0 0; color:#bca98a; font-size:12px; text-align:center; }
 @media(max-width:600px) { .novel-pause-card { padding:20px 18px 16px; } }

@@ -28,7 +28,7 @@ const KB = n => Math.round(n / 1024);
   const fetched = new Map();
   const track = page => page.on('response', async r => {
     const u = r.url();
-    if (!/\/assets\/images\/.+\.(png|jpe?g)$/i.test(u)) return;
+    // 素材已改 WebP：过滤里必须带上 webp，否则所有请求都被丢掉、数字全是 0。'`n    if (!/\/assets\/images\/.+\.(png|jpe?g|webp)$/i.test(u)) return;
     const rel = u.replace(/^.*\/assets\/images\//, '');
     try { const buf = await r.body(); fetched.set(rel, Math.max(fetched.get(rel) || 0, buf.length)); } catch (e) { /* body unavailable */ }
   });

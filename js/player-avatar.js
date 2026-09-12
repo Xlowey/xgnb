@@ -2,7 +2,7 @@
   "use strict";
   var sheet=new Image();
   var ready=new Promise(function(resolve){sheet.onload=function(){resolve(true);};sheet.onerror=function(){console.error("主角行走素材加载失败");resolve(false);};});
-  sheet.src=window.MuseumAssets ? window.MuseumAssets.url("hero-walk-cycle.png","characters") : new URL("../assets/images/characters/walk/hero-walk-cycle.png",document.currentScript.src).href;
+  sheet.src=window.MuseumAssets ? window.MuseumAssets.url("hero-walk-cycle.webp","characters") : new URL("../assets/images/characters/walk/hero-walk-cycle.webp",document.currentScript.src).href;
   var frames=[{"height": 325, "frames": [[124, 28, 151, 325, 77.0], [470, 26, 145, 324, 73.0], [810, 28, 150, 322, 74.5]]}, {"height": 331, "frames": [[123, 380, 153, 331, 78.5], [470, 380, 145, 326, 73.0], [810, 380, 150, 331, 74.0]]}, {"height": 314, "frames": [[108, 736, 178, 310, 81.0], [464, 735, 134, 314, 67.0], [794, 736, 184, 307, 82.0]]}, {"height": 319, "frames": [[106, 1080, 179, 315, 96.5], [479, 1080, 137, 319, 68.5], [794, 1080, 189, 316, 98.5]]}];
   var directions={down:0,up:1,left:2,right:3};
   // World-space heights match the furniture scale of each room, then scale with its camera.

@@ -24,7 +24,7 @@ const server = http.createServer((req, res) => {
 let fails = 0;
 const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || d === undefined ? '' : '  <- ' + JSON.stringify(d))); if (!ok) fails += 1; };
 const KB = n => Math.round(n / 1024);
-const MAP_MAP = { 'dorm-map.png': 1864, 'hall-map.png': 2156, '食堂地图.png': 1873, 'office-map.png': 2054 };
+const MAP_MAP = { 'dorm-map.webp': 1864, 'hall-map.webp': 2156, '食堂地图.webp': 1873, 'office-map.webp': 2054 };
 
 (async () => {
   await new Promise(r => server.listen(8823, '127.0.0.1', r));
@@ -34,7 +34,7 @@ const MAP_MAP = { 'dorm-map.png': 1864, 'hall-map.png': 2156, '食堂地图.png'
   const fetched = new Map();
   page.on('response', async r => {
     const u = r.url();
-    if (!/\.(png|jpe?g)$/i.test(u)) return;
+    if (!/\.(png|jpe?g|webp)$/i.test(u)) return;   // 素材已改 WebP
     let len = 0; try { len = (await r.body()).length; } catch (e) { /* ignore */ }
     fetched.set(decodeURIComponent(u.replace(/^.*\/assets\/images\//, '')), len);
   });
@@ -44,7 +44,7 @@ const MAP_MAP = { 'dorm-map.png': 1864, 'hall-map.png': 2156, '食堂地图.png'
       window.__wardrobeDraws = 0;
       const orig = CanvasRenderingContext2D.prototype.drawImage;
       CanvasRenderingContext2D.prototype.drawImage = function (img) {
-        try { if (img && (img.lazyName === 'wardrobe-detail.png' || /wardrobe-detail/.test(img.src || ''))) window.__wardrobeDraws += 1; } catch (e) { /* ignore */ }
+        try { if (img && (img.lazyName === 'wardrobe-detail.webp' || /wardrobe-detail/.test(img.src || ''))) window.__wardrobeDraws += 1; } catch (e) { /* ignore */ }
         return orig.apply(this, arguments);
       };
     });

@@ -28,5 +28,5 @@ for(const id of ['wardrobe-repeat','note-repeat','mirror']){
 }
 assert.equal(w.MuseumStory.scenes['wardrobe-repeat'].events[0].item,'rules','re-opening the wardrobe shows the staff rules');
 assert.equal(w.MuseumStory.scenes['note-repeat'].events[0].item,'note','re-reading the note shows the note');
-const uniformEvents=w.MuseumStory.scenes['scene-25'].events;const uniformTrigger=uniformEvents.findIndex(e=>e.type==='dialogue'&&/看纸片上的意思/.test(e.text||''));const uniformItem=uniformEvents.findIndex(e=>e.item==='银色的发卡.png');assert(uniformTrigger>=0&&uniformItem>uniformTrigger,'scene-25 discoveries must follow the line that finds them');
+const uniformEvents=w.MuseumStory.scenes['scene-25'].events;const uniformTrigger=uniformEvents.findIndex(e=>e.type==='dialogue'&&/看纸片上的意思/.test(e.text||''));const uniformItem=uniformEvents.findIndex(e=>e.item==='银色的发卡.webp');assert(uniformTrigger>=0&&uniformItem>uniformTrigger,'scene-25 discoveries must follow the line that finds them');
 console.log('PASS route uniqueness, travel targets, recorded inspections, discovery order');

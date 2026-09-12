@@ -8,7 +8,7 @@
  *   网格    1280/4 = 320，只有 3 列例外（第三列宽 324）
  *   行高    853/3 = 284.33，所以第三行被上移
  *
- * 数据来源：assets/images/characters/walk/zhaoling-walk-cycle.png
+ * 数据来源：assets/images/characters/walk/zhaoling-walk-cycle.webp
  * 帧顺序   [方向][帧]，方向依次为 向下(后) / 向上(前) / 向左 / 向右
  */
 (function () {
@@ -16,7 +16,7 @@
   var NPC_CODE = "zhaoling-npc";
   var sheet = new Image();
   var ready = new Promise(function (resolve) { sheet.onload = function () { resolve(true); }; sheet.onerror = function () { resolve(false); }; });
-  sheet.src = window.MuseumAssets ? window.MuseumAssets.url("zhaoling-walk-cycle.png", "characters") : "assets/images/characters/walk/zhaoling-walk-cycle.png";
+  sheet.src = window.MuseumAssets ? window.MuseumAssets.url("zhaoling-walk-cycle.webp", "characters") : "assets/images/characters/walk/zhaoling-walk-cycle.webp";
 
   // 每一帧：[源 x, 源 y, 宽, 高, 中心线相对 x]
   var FRAMES = {

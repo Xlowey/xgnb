@@ -447,7 +447,7 @@ body[data-theme="nightmare"] .novel-vignette { background: radial-gradient(ellip
 
 body[data-theme="patrol"] { --scene-background: linear-gradient(140deg,#152226,#071013 72%); }
 body[data-theme="office"] { --scene-background: linear-gradient(140deg,#201a18,#0b1013 72%); }
-body[data-theme="canteen"] { --scene-background: url("../assets/images/story-backgrounds/locations/canteen/食堂正常背景.jpeg"); }
+body[data-theme="canteen"] { --scene-background: url("../assets/images/story-backgrounds/locations/canteen/食堂正常背景.webp"); }
 body[data-theme="nightmare"] { --scene-background: linear-gradient(140deg,#251317,#080c10 74%); }
 @media (max-width: 700px) {
   .novel-dialogue { max-height: 280px; padding-bottom: 34px; }

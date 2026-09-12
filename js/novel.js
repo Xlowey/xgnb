@@ -468,7 +468,7 @@
     var inspection = document.getElementById("novel-inspection");
     inspection.hidden = !currentScene.inspection;
     if (currentScene.inspection) {
-      inspection.querySelector("img").src = window.MuseumAssets ? window.MuseumAssets.url("wardrobe-detail.png","items") : "../assets/images/items/closeups/wardrobe-detail.png";
+      inspection.querySelector("img").src = window.MuseumAssets ? window.MuseumAssets.url("wardrobe-detail.webp","items") : "../assets/images/items/closeups/wardrobe-detail.webp";
       inspection.querySelector("img").alt = state.flags.cabinetOpen ? "打开的更衣柜" : "关闭的更衣柜";
       inspection.querySelector("figcaption").textContent = state.flags.hasKey ? "已取得宿舍钥匙" : "更衣柜";
     }

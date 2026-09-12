@@ -1,5 +1,5 @@
 /* Shared skin from the supplied museum UI atlas; layout stays in each module. */
-.map-guide { position:absolute;right:20px;top:18px;width:320px;z-index:4;padding:10px;border:8px solid transparent;border-image:url('../assets/images/ui/menus/menu-panel.png') 70 fill / 8px stretch;color:#e8d4ad;pointer-events:none; }
+.map-guide { position:absolute;right:20px;top:18px;width:320px;z-index:4;padding:10px;border:8px solid transparent;border-image:url('../assets/images/ui/menus/menu-panel.webp') 70 fill / 8px stretch;color:#e8d4ad;pointer-events:none; }
 .map-guide #mini-map { display:block!important;position:static;width:100%;height:auto;max-width:none;margin:6px 0;border:0; }
 /* 馆内总览页收起导览面板：面板内容与该页重复，而且会盖住地图靠右上的房间。
    开关由 game.js 的 renderAll() 按房间设置。 */
@@ -15,7 +15,7 @@ body { scrollbar-color:#a58a60 #241f1a; scrollbar-width:thin; }
 .cover-card,.pause-card,.login-panel,.public-panel,
 .inventory-dialog,.achievements-dialog,.story-save-dialog,.novel-review-card,
 .novel-end-card,.tutorial-cue,.save-window,.log-window,.modal-card {
-  border:15px solid transparent; border-image:url('../assets/images/ui/menus/menu-panel.png') 70 fill / 15px stretch;
+  border:15px solid transparent; border-image:url('../assets/images/ui/menus/menu-panel.webp') 70 fill / 15px stretch;
   background:transparent; border-radius:0; box-shadow:0 16px 55px #0009;
   color:#eee1c7;
 }
@@ -27,13 +27,13 @@ body { scrollbar-color:#a58a60 #241f1a; scrollbar-width:thin; }
 .story-save-dialog button,.tutorial-cue-actions button,
 .map-bag-button,.map-achievements-button,.save-slot button,
 .novel-choice,.novel-end-actions button {
-  border:7px solid transparent; border-image:url('../assets/images/ui/buttons/button-dark.png') 22 fill / 7px stretch;
+  border:7px solid transparent; border-image:url('../assets/images/ui/buttons/button-dark.webp') 22 fill / 7px stretch;
   background:transparent; border-radius:0; color:#f0dfbd;
   padding:9px 18px; text-shadow:0 1px #191613; box-shadow:none;
 }
 .button-primary,.cover-actions .button:first-child,.tutorial-cue-action {
   border:7px solid transparent!important;
-  border-image:url('../assets/images/ui/buttons/button-primary.png') 22 fill / 7px stretch!important;
+  border-image:url('../assets/images/ui/buttons/button-primary.webp') 22 fill / 7px stretch!important;
   background:transparent!important; color:#39251b!important; text-shadow:none;
 }
 .button:hover,.event-button:hover,.inventory-button:hover,.achievement-button:hover,
@@ -60,13 +60,13 @@ button:disabled { filter:grayscale(.65); opacity:.45; }
 .tutorial-cue-kicker,.tutorial-cue-body { color:#ddc9a6; }
 .tutorial-cue-later { color:#dfc9a3!important; background:transparent!important; }
 .interaction-prompt,.game-message,.map-toast,.chapter-objective {
-  border:5px solid transparent; border-image:url('../assets/images/ui/buttons/button-dark.png') 22 fill / 5px stretch;
+  border:5px solid transparent; border-image:url('../assets/images/ui/buttons/button-dark.webp') 22 fill / 5px stretch;
   background:transparent; color:#f2ddb6; border-radius:0;
 }
 .novel-toolbar-actions .novel-tool { background:transparent; border:0; }
 .hotspot-investigation>button {
   border:7px solid transparent;
-  border-image:url('../assets/images/ui/buttons/button-dark.png') 22 fill / 7px stretch;
+  border-image:url('../assets/images/ui/buttons/button-dark.webp') 22 fill / 7px stretch;
   background:transparent;
   border-radius:0;
   color:#f0dfbd;
@@ -74,10 +74,10 @@ button:disabled { filter:grayscale(.65); opacity:.45; }
   box-shadow:none;
 }
 .hotspot-investigation>button:hover { filter:brightness(1.16); }
-.hotspot-investigation>button.examined { border-image-source:url('../assets/images/ui/buttons/button-primary.png'); color:#39251b; text-shadow:none; filter:saturate(.7); }
+.hotspot-investigation>button.examined { border-image-source:url('../assets/images/ui/buttons/button-primary.webp'); color:#39251b; text-shadow:none; filter:saturate(.7); }
 .investigation-feedback {
   border:5px solid transparent;
-  border-image:url('../assets/images/ui/frames/system-frame.png') 34 fill / 5px stretch;
+  border-image:url('../assets/images/ui/frames/system-frame.webp') 34 fill / 5px stretch;
   background:transparent;
   color:#ead7b0;
   min-height:28px;

@@ -20,7 +20,7 @@
     <div class="novel-background" aria-hidden="true"></div>
     <div class="novel-vignette" aria-hidden="true"></div>
     <aside id="novel-briefing" class="novel-briefing" hidden></aside>
-    <figure id="novel-inspection" class="novel-inspection" hidden><img src="../assets/images/items/closeups/wardrobe-detail.png" alt="打开的更衣柜"><figcaption>更衣柜</figcaption></figure>
+    <figure id="novel-inspection" class="novel-inspection" hidden><img src="../assets/images/items/closeups/wardrobe-detail.webp" alt="打开的更衣柜"><figcaption>更衣柜</figcaption></figure>
     <div id="scene-events" class="scene-events" hidden></div>
     <header class="novel-toolbar">
       <div id="novel-location" class="novel-location">交互故事 · 剧情</div>
@@ -44,6 +44,7 @@
         <button class="novel-tool" id="novel-skip-button" type="button">快进已读</button>
         <button class="novel-tool" id="novel-bag-button" data-inventory-open type="button">背包</button>
         <button class="novel-tool" id="novel-achievements-button" data-achievements-open type="button">成就</button>
+        <button class="novel-tool" data-audio-toggle type="button">音乐 · 开</button>
         <button class="novel-tool" id="novel-menu-button" type="button">返回</button>
       </nav>
     </section>
@@ -71,6 +72,7 @@
         <button id="novel-resume-button" class="novel-pause-button novel-pause-primary" type="button">继续剧情</button>
         <button id="novel-pause-save" class="novel-pause-button" type="button">保存游戏</button>
         <button id="novel-pause-load" class="novel-pause-button" type="button">读取存档</button>
+        <button class="novel-pause-button" data-audio-toggle type="button">音乐 · 开</button>
         <button id="novel-pause-menu" class="novel-pause-button novel-pause-quiet" type="button">保存并返回标题</button>
         <p class="novel-pause-hint">Esc 关闭菜单 · 剧情进度会记录到当前档案</p>
       </div>
@@ -78,6 +80,7 @@
     <div id="novel-toast" class="novel-toast" hidden></div>
     <section id="item-modal" class="item-modal" role="dialog" aria-modal="true" aria-label="物品查看" hidden></section>
   </main>
+  <script src="../js/audio-manager.js?v=3"></script>
   <script src="../js/auth.js?v=38"></script>
   <script src="../js/state.js?v=56"></script>
   <script src="../js/items.js?v=55"></script>

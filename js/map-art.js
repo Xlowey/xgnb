@@ -46,7 +46,7 @@
     //           tmp/find-air-walls.cjs（空气墙格数，用来验收）、
     //           tmp/measure-museum-runs.cjs（走廊横竖扫描）。
     // ---------------------------------------------------------------------------
-    overviewRoom("museum","博物馆","museum-overview-map.png",{x:615,y:610},[
+    overviewRoom("museum","博物馆","museum-overview-map.webp",{x:615,y:610},[
       // 八个展厅的内芯（比画面上的房间略小，门前的石地留给玩家）
       {x:200,y:172,w:150,h:76},    // 病房展厅
       {x:476,y:184,w:176,h:66},    // 教室展厅
@@ -99,7 +99,7 @@
       var exit = rooms.wax.objects.find(function (object) { return object.id === "wax-return"; });
       if (exit) { exit.type = "travel"; exit.target = "museum"; exit.label = "返回馆内"; }
     }
-    room("dorm","员工宿舍","dorm-map.png",{x:830,y:750},[
+    room("dorm","员工宿舍","dorm-map.webp",{x:830,y:750},[
       {x:0,y:0,w:1670,h:280},{x:0,y:0,w:40,h:942},{x:1630,y:0,w:40,h:942},{x:0,y:850,w:740,h:92},{x:930,y:850,w:740,h:92},
       {x:45,y:300,w:165,h:550},{x:160,y:270,w:330,h:160},{x:575,y:260,w:220,h:100},{x:1190,y:275,w:280,h:170},{x:1440,y:540,w:200,h:315}
     ],[
@@ -114,7 +114,7 @@
       authored.dorm["dorm-scene-11"], authored.dorm["dorm-scene-12"], authored.dorm["dorm-scene-13"],
       authored.dorm["dorm-scene-14"], authored.dorm["dorm-scene-25"]
     ].filter(Boolean),"序章",1);
-    room("hall","博物馆大厅","hall-map.png",{x:835,y:700},[
+    room("hall","博物馆大厅","hall-map.webp",{x:835,y:700},[
       {x:0,y:0,w:1670,h:525},{x:0,y:0,w:110,h:942},{x:1555,y:0,w:115,h:942},{x:0,y:875,w:735,h:67},{x:945,y:875,w:725,h:67}
     ],[
       gate("hall-corridor","返回馆内总览",835,860,"museum"),
@@ -127,7 +127,7 @@
       Object.assign({}, authored.hall["hall-scene-10"], { id:"hall-scene-10", type:"scene", scene:"scene-10", requiredFlag:"scene09Seen", x:1430, y:740, r:76, label:"阴暗角落" }),
       Object.assign({}, authored.hall["hall-wax-door"], { id:"hall-wax-door", type:"waxDoor", x:1490, y:610, r:95, label:"蜡像馆入口" })
     ].filter(Boolean),"第一幕",1);
-    room("corridor","宿舍外走廊","走廊示意图1.png",{x:1360,y:450},[],[
+    room("corridor","宿舍外走廊","走廊示意图1.webp",{x:1360,y:450},[],[
       gate("corridor-dorm","返回员工宿舍",1000,400,"dorm"),
       gate("corridor-hall","前往馆内总览",1690,420,"museum"),
       // 赵灵在走廊左侧等主角。走廊那段剧情（scene-04 · 午夜巡逻）应当是"和她对话"，
@@ -148,7 +148,7 @@
       {x:950,y:222,w:820,h:388},
       {x:1256,y:560,w:222,h:72}
     ];
-    room("office","馆长办公室","office-map.png",{x:830,y:780},[
+    room("office","馆长办公室","office-map.webp",{x:830,y:780},[
       {x:0,y:0,w:1670,h:315},{x:0,y:0,w:180,h:942},{x:1455,y:0,w:215,h:942},{x:550,y:300,w:520,h:180},{x:440,y:495,w:780,h:125},{x:0,y:885,w:730,h:57},{x:935,y:885,w:735,h:57}
     ],[scene("office-director","馆长",1130,390,"scene-09","scene08Seen"),gate("office-exit","返回馆内总览",835,865,"museum")],"第一幕",1);
     // Keep the chapter events that live in these rooms, while placing them on

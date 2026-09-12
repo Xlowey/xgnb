@@ -5,9 +5,9 @@
   var story = window.MuseumStory, scenes = story.scenes;
   story.items = window.MuseumItems;
   function dialogue(text, visual) { return { type: "dialogue", speaker: "主角（独白）", text: text, visual: visual }; }
-  var roomMap = "dorm-map.png";
+  var roomMap = "dorm-map.webp";
   scenes["scene-01"].events = [
-    { type: "cg", id: "peach-dream", background: "peach-dream.png", effect: "dream", action: "继续" },
+    { type: "cg", id: "peach-dream", background: "peach-dream.webp", effect: "dream", action: "继续" },
     { type: "cg", id: "wake", effect: "wake", action: "睁开眼睛" },
     { type: "system", text: "欢迎来到规则怪谈世界。异变袭击全球，每个国家随机挑选一名天选者进入副本，天选者的存亡与国运直接相关。" },
     dialogue("这是哪儿……我这是穿越到哪本网文小说了？"),
@@ -16,13 +16,13 @@
   ];
   scenes["scene-02"].events = [
     { type: "explore", background: roomMap },
-    { type: "item", image: "wardrobe-detail.png", crop: [423,92,776,735], title: "双开门更衣柜", description: "柜内挂着一套黑色保安制服、一套红色保安制服，以及面具。", action: "查看门板内侧" },
+    { type: "item", image: "wardrobe-detail.webp", crop: [423,92,776,735], title: "双开门更衣柜", description: "柜内挂着一套黑色保安制服、一套红色保安制服，以及面具。", action: "查看门板内侧" },
     { type: "document", item: "rules", side: "front", action: "查看黑色制服口袋" }
   ];
   scenes["scene-03"].events = [
-    { type: "item", collect: "note", image: "note-front.png", crop: [442,85,820,787], title: "黑色制服的口袋", description: "抽出一张揉皱的纸条。纸条上满是干涸的血字，纸背还写着几行小字，末尾几行被血污糊住，看不清。", action: "展开纸条" },
+    { type: "item", collect: "note", image: "note-front.webp", crop: [442,85,820,787], title: "黑色制服的口袋", description: "抽出一张揉皱的纸条。纸条上满是干涸的血字，纸背还写着几行小字，末尾几行被血污糊住，看不清。", action: "展开纸条" },
     { type: "document", item: "note", side: "front", action: "继续" },
-    dialogue("我的前身，到底经历了什么？", "note-front.png"),
+    dialogue("我的前身，到底经历了什么？", "note-front.webp"),
     { type: "document", item: "note", side: "back", action: "收好纸条" },
     dialogue("两张纸条除了不让去蜡像馆这一条，几乎全部矛盾"),
     { type: "television", action: "打开电视" }

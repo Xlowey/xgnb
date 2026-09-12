@@ -84,7 +84,7 @@
       title: "墙上的镜子",
       location: "员工宿舍",
       theme: "dorm",
-      background: "宿舍背景图.png",
+      background: "宿舍背景图.webp",
       lines: [],
       returnToMap: true,
       events: [{ type: "system", text: "镜面上蒙着一层水汽。你抬手擦掉一块，里面的人比你慢了半拍才抬起头。", action: "后退一步" }]
@@ -110,7 +110,7 @@
     title: "梦魇 · 出口之前",
     location: "食堂门前 · 最后一夜",
     theme: "nightmare",
-    background: "食堂门口背景.png",
+    background: "食堂门口背景.webp",
     lines: [
       { speaker: "MOSS（系统 · 画外音）", text: "目标已进入交战范围。这是本副本的最后一个节点。" },
       { speaker: "梦魇", text: "来吧，张天师。让我看看你这一趟，到底学会了什么。" }

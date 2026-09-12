@@ -43,7 +43,7 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     await seed.close();
     const p = await ctx.newPage();
     const reqs = [];
-    p.on('response', r => { const u = r.url(); if (/\.(png|jpe?g)$/i.test(u)) reqs.push(decodeURIComponent(u.replace(/^.*\/assets\/images\//, ''))); });
+    p.on('response', r => { const u = r.url(); if (/\.(png|jpe?g|webp)$/i.test(u)) reqs.push(decodeURIComponent(u.replace(/^.*\/assets\/images\//, ''))); });
     await p.goto('http://127.0.0.1:8825/index.html?fromSave=1');
     await p.waitForTimeout(400);
     if (await p.isVisible('#cover-screen')) await p.click('#continue-button');

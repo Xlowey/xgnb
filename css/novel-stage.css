@@ -28,6 +28,7 @@ body[data-theme="office"] { --scene-background: linear-gradient(140deg,#201a18,#
 .novel-text { max-height:min(7em, calc(100dvh - var(--stage-bottom) - 170px)); min-height:2.7em; overflow-y:auto; font-size:clamp(17px,1.6vw,24px); line-height:1.7; scrollbar-color:#917a55 #182125; }
 .novel-next { right:28px; bottom:53px; font-size:12px; pointer-events:none; }
 .novel-toolbar-actions { position:absolute; bottom:10px; right:20px; gap:4px; max-width:none; }
+.novel-toolbar-actions [data-audio-toggle] { min-width:72px; }
 .novel-tool { border:0; background:transparent; padding:7px 10px; font-size:13px; color:#b3c0c4; border-radius:16px; }
 .novel-tool:hover,.novel-tool[aria-pressed="true"] { background:#47738855; color:#fff; }
 .novel-tool:disabled { opacity:.35; }

@@ -46,7 +46,7 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
 
     // All five new files must load without a 404.
     const loaded = await page.evaluate(async () => {
-      const names = ['paper-man-portrait.png', 'masked-girl-portrait.png', 'masked-guard-portrait.png', 'nightmare-portrait.png', 'zhaoling-walk-cycle.png'];
+      const names = ['paper-man-portrait.webp', 'masked-girl-portrait.webp', 'masked-guard-portrait.webp', 'nightmare-portrait.webp', 'zhaoling-walk-cycle.webp'];
       const out = {};
       for (const n of names) {
         out[n] = await new Promise(res => { const i = new Image(); i.onload = () => res(i.naturalWidth + 'x' + i.naturalHeight); i.onerror = () => res('ERROR'); i.src = MuseumAssets.url(n, 'characters'); });
