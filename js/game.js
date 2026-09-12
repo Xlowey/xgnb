@@ -65,7 +65,7 @@
   function has(list, value) { return list.indexOf(value) !== -1; }
   function markDiscovered(id) { addUnique(state.discovered, id); }
   function addClue(id) { addUnique(state.clues, id); }
-  function addItem(id) { addUnique(state.inventory, id); }
+  // addItem() 已删除：全仓没有调用者，物品发放走 items.js / 剧情事件。
   function showToast(message) { if (!el.toast) return; el.toast.textContent = message; el.toast.classList.add("visible"); window.clearTimeout(showToast.timer); showToast.timer = window.setTimeout(function () { el.toast.classList.remove("visible"); }, 2600); }
   function showMapTutorial() {
     if (!state || !el.game || el.game.hidden || overlaysOpen()) return;
@@ -654,8 +654,18 @@
     if (!save()) { state.mode = "paused"; renderStats(); if (el.gameMessage) el.gameMessage.textContent = "保存失败，仍停留在暂停菜单。"; return; }
     showCover("当前进度已保存。点击“继续游戏”可以从这里继续。");
   });
+  // 退出登录（切换账号）。MuseumAuth.logout() 本来就有，但此前没有任何元素触发它，
+  // 所以玩家换不了账号。这里先存一次进度再登出，然后回到标题页（标题页会显示登录/注册）。
   var logoutButton = document.getElementById("logout-button");
-  if (logoutButton) logoutButton.addEventListener("click", function () { MuseumAuth.logout(); currentUser = null; state = null; showCover(); });
+  if (logoutButton) logoutButton.addEventListener("click", function () {
+    if (state) save();
+    keys = {}; heldTouch = null;
+    MuseumAuth.logout();
+    currentUser = null; state = null;
+    if (el.pause) el.pause.hidden = true;
+    if (el.game) el.game.hidden = true;
+    showCover("已退出登录。可以登录其他账号，或注册新账号。");
+  });
   document.getElementById("rules-close").addEventListener("click", function () { el.rules.hidden = true; if (state) state.mode = "explore"; renderAll(); save(); });
   document.addEventListener("keydown", function (event) {
     var key = event.key.length === 1 ? event.key.toLowerCase() : event.key;

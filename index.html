@@ -67,6 +67,9 @@
             <div class="card-heading pause-section-heading"><span>馆内区域</span></div><div id="room-list" class="room-list"></div>
           </section>
           <button id="back-to-cover-button" class="button button-quiet" type="button">保存并返回标题</button>
+          <!-- 退出登录：MuseumAuth.logout() 一直存在，但此前没有任何元素能触发它，
+               于是玩家永远无法换账号（也回不到注册页）。 -->
+          <button id="logout-button" class="button button-quiet" type="button">退出登录（切换账号）</button>
         </div>
       </section>
 
