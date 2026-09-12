@@ -335,7 +335,10 @@
     else if (object.type === "contract") openContract();
     else if (object.type === "exit") openExit();
   }
-  function goBattle() { if (!currentUser || !state) return; state.returnRoom = state.roomId; state.returnX = state.playerX; state.returnY = state.playerY; save("正在前往交涉现场……"); window.location.href = "demos/battle/index.html?from=game&user=" + encodeURIComponent(currentUser.id); }
+  // 死代码提醒：这里原本有一个 goBattle()，跳到 demos/battle 并依赖 flags.waxDoorUnlocked，
+  // 但**全仓没有任何地方调用它**，那个旗标也**只被写、从没被读过**（grep 0 处读取）。
+  // 战斗演示其实是从剧情进入的：scene-11 的战斗选项在 js/novel.js 里跳转到 demos/battle。
+  // 已删除，避免下一个人以为地图上还有一条战斗入口。
 
   function drawText(text, x, y, size, color, align) { ctx.fillStyle = color; ctx.font = "600 " + size + "px system-ui, sans-serif"; ctx.textAlign = align || "left"; ctx.textBaseline = "middle"; ctx.fillText(text, x, y); }
   function drawFurniture(rect, color, label) { ctx.fillStyle = color; ctx.fillRect(rect.x, rect.y, rect.w, rect.h); ctx.strokeStyle = "rgba(25,39,45,.55)"; ctx.lineWidth = 4; ctx.strokeRect(rect.x, rect.y, rect.w, rect.h); if (label) drawText(label, rect.x + rect.w / 2, rect.y + rect.h / 2, 22, "rgba(245,241,232,.82)", "center"); }
