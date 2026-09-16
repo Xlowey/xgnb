@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="data:,">
   <title>怪谈博物馆</title>
-  <link rel="stylesheet" href="css/style.css?v=39">
+  <link rel="stylesheet" href="css/style.css?v=40">
   <link rel="stylesheet" href="css/inventory.css?v=38">
   <link rel="stylesheet" href="css/achievements.css?v=38">
   <link rel="stylesheet" href="css/tutorial.css?v=38">
@@ -47,7 +47,7 @@
           <p id="chapter-objective" class="chapter-objective" aria-live="polite"></p>
           <div id="map-toast" class="map-toast" role="status" aria-live="polite"></div>
         </div>
-        <div class="map-controls"><span>WASD / 方向键移动</span><span>靠近物品后按 E 调查</span><span>Esc 暂停</span></div>
+        <div class="map-controls"><span>WASD / 方向键移动</span><span>Shift 疾跑（1.5倍速）</span><span>Tab 小地图</span><span>靠近物品后按 E 调查</span><span>Esc 暂停</span></div>
         <div class="touch-controls" aria-label="移动控制"><button data-move="up" type="button" aria-label="向上">▲</button><div><button data-move="left" type="button" aria-label="向左">◀</button><button data-move="down" type="button" aria-label="向下">▼</button><button data-move="right" type="button" aria-label="向右">▶</button></div></div>
       </section>
 
@@ -60,7 +60,7 @@
           <button id="load-button" class="button" type="button">读取存档</button>
           <button id="log-button" class="button" type="button">回顾文本</button>
           <button class="button" data-audio-toggle type="button">音乐 · 开</button>
-          <details class="pause-help"><summary>操作说明</summary><p>WASD / 方向键移动；靠近物品后按 E 调查；Esc 暂停或继续。</p></details>
+          <details class="pause-help"><summary>操作说明</summary><p>WASD / 方向键移动；按住 Shift 以 1.5 倍速疾跑；按 Tab 显示或隐藏小地图；靠近物品后按 E 调查；Esc 暂停或继续。</p></details>
           <section class="pause-status" aria-label="当前状态">
             <div class="card-heading"><span>当前状态</span><span class="system-dot" aria-label="系统在线"></span></div>
             <dl class="stat-list"><div><dt>生存点</dt><dd id="hp-value">25</dd></div><div><dt>系统信任</dt><dd id="trust-value">50</dd></div><div><dt>线索</dt><dd id="clue-value">0</dd></div></dl>
@@ -101,7 +101,7 @@
   <script src="js/player-avatar.js?v=38"></script>
   <script src="js/map-npc.js?v=1"></script>
   <script src="js/map-guide.js?v=56"></script>
-  <script src="js/game.js?v=57"></script>
+  <script src="js/game.js?v=58"></script>
 </body>
 </html>
 

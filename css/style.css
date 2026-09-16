@@ -1657,10 +1657,9 @@ input:focus {
    and covered the room title's second line; the interaction prompt landed on that
    same title; the keyboard hint bar overlapped the D-pad; 背包/成就 sat at the same
    height as the D-pad. On a phone the keyboard hints are false information and the
-   minimap is redundant (the objective is already in #chapter-objective), so both go
-   away and the remaining HUD gets its own band. */
+   minimap is redundant (the objective is already in #chapter-objective), so the
+   default HUD stays compact. The minimap can still be opened on demand with Tab. */
 @media (max-width: 700px) {
-  .map-guide { display: none; }
   .map-controls { display: none; }
   .map-room-label { top: 12px; left: 12px; right: 12px; max-width: none; }
   .map-room-label h1 { font-size: clamp(1.05rem, 5vw, 1.5rem); }

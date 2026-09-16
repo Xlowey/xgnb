@@ -20,7 +20,7 @@
   }
   function mount(root, hooks, inspect) {
     var map=document.createElement("div"); map.className="investigation-map";
-    map.tabIndex=0; map.setAttribute("role","group"); map.setAttribute("aria-label","员工宿舍。方向键或 WASD 移动，走近物品后按 E 调查，也可点击地面移动。");
+    map.tabIndex=0; map.setAttribute("role","group"); map.setAttribute("aria-label","员工宿舍。方向键或 WASD 移动，按住 Shift 可 1.5 倍疾跑，走近物品后按 E 调查，也可点击地面移动。");
     var img=document.createElement("img"); img.src=window.MuseumAssets.url("dorm-map.webp","maps"); img.alt="员工宿舍"; img.draggable=false; map.appendChild(img);
     var canvas=document.createElement("canvas"); canvas.width=W;canvas.height=H;canvas.className="exploration-character";canvas.setAttribute("aria-hidden","true");map.appendChild(canvas);
     var ctx=canvas.getContext("2d"), keys={}, route=[], closest=null, destroyed=false, frame, last=0, moving=false, facing="down", travelled=0;
@@ -91,6 +91,7 @@
       if(suspended() || e.ctrlKey || e.metaKey || e.altKey)return;
       if(e.target.closest("input,textarea,select,[contenteditable=true]"))return;
       var key=e.key.toLowerCase();
+      if(key==="shift"){e.preventDefault();keys.shift=true;return;}
       if(["w","a","s","d","arrowup","arrowleft","arrowdown","arrowright"].includes(key)){e.preventDefault();keys[key]=true;route=[];}
       if(key==="e" && !e.repeat){e.preventDefault();interact();}
     }
@@ -106,7 +107,7 @@
       if(!dx&&!dy&&route.length){var p=route[0],dist=Math.hypot(p.x-player.x,p.y-player.y);if(dist<6)route.shift();else{dx=(p.x-player.x)/dist;dy=(p.y-player.y)/dist;}}
       var len=Math.hypot(dx,dy), wasMoving=moving;moving=false;
       if(len){
-        dx=dx/len*230*dt;dy=dy/len*230*dt;var steps=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dy))/7));
+        var speed=230*(keys.shift?1.5:1); dx=dx/len*speed*dt;dy=dy/len*speed*dt;var steps=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dy))/7));
         for(var i=0;i<steps;i++){if(!blocked(player.x+dx/steps,player.y)){player.x+=dx/steps;moving=true;}if(!blocked(player.x,player.y+dy/steps)){player.y+=dy/steps;moving=true;}}
         facing=Math.abs(dx)>Math.abs(dy)?(dx>0?"right":"left"):(dy>0?"down":"up");travelled+=Math.hypot(dx,dy);remember();
         if(moving && window.MuseumTutorial && !window.MuseumTutorial.isDone("movement")) window.MuseumTutorial.complete("movement");

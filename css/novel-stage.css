@@ -114,7 +114,7 @@ body[data-event="explore"] .novel-background,
 body[data-event="explore"] .novel-vignette { display:none; }
 body[data-event="explore"] .scene-events { inset:58px 24px 70px; padding-bottom:38px; }
 body[data-event="explore"] .novel-dialogue { height:48px; min-height:48px; bottom:10px; width:calc(100% - 48px); max-width:1450px; padding:0; border:0; background:#10191ee8; box-shadow:none; }
-body[data-event="explore"] .novel-dialogue::before { content:"WASD / 方向键移动 · E 调查 · 点击地面也可移动 · Esc 暂停"; position:absolute; left:18px; top:17px; right:auto; bottom:auto; border:0; color:#919c9f; font:12px system-ui,sans-serif; }
+body[data-event="explore"] .novel-dialogue::before { content:"WASD / 方向键移动 · Shift 疾跑 · E 调查 · 点击地面也可移动 · Esc 暂停"; position:absolute; left:18px; top:17px; right:auto; bottom:auto; border:0; color:#919c9f; font:12px system-ui,sans-serif; }
 body[data-event="explore"] .novel-toolbar-actions { right:12px; bottom:7px; }
 body[data-event="explore"] #novel-back-button,
 body[data-event="explore"] #novel-auto-button,
@@ -137,7 +137,7 @@ body[data-event="explore"] #novel-skip-button { display:none; }
 .observation-panel p { margin:0 0 18px; }
 @media(max-width:850px) {
  body[data-event="explore"] .novel-dialogue { height:74px; min-height:74px; width:calc(100% - 24px); }
- body[data-event="explore"] .novel-dialogue::before { content:"方向键 / WASD 移动 · 靠近后调查 · Esc 暂停"; left:0;right:0;top:10px;text-align:center;font-size:11px; }
+ body[data-event="explore"] .novel-dialogue::before { content:"方向键 / WASD 移动 · Shift 疾跑 · 靠近后调查 · Esc 暂停"; left:0;right:0;top:10px;text-align:center;font-size:11px; }
  body[data-event="explore"] .novel-toolbar-actions { left:8px;right:8px;bottom:6px;justify-content:center; }
  body[data-event="explore"] .scene-events { inset:55px 12px 95px; }
  .nearby-investigation { padding:5px 8px;font-size:11px; }

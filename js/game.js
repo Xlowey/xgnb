@@ -21,6 +21,7 @@
   var lastSave = 0;
   var avatarMoving = false, avatarTravelled = 0;
   var savePanelMode = "save";
+  var miniMapVisible = false;
 
   var rooms = window.MuseumMapData.create();
   if (window.MuseumMapArt) window.MuseumMapArt(rooms);
@@ -61,6 +62,16 @@
   }
 
   function currentRoom() { return rooms[state && state.roomId] || rooms.dorm; }
+  function setMiniMapVisible(visible) {
+    miniMapVisible = Boolean(visible);
+    document.body.classList.toggle("hide-map-guide", !miniMapVisible);
+    var guide = document.querySelector(".map-guide");
+    if (guide) guide.setAttribute("aria-hidden", String(!miniMapVisible));
+  }
+  // The guide is an on-demand aid: keep the playfield clear until the player
+  // asks for it with Tab.  It is still rendered off-screen so opening it does
+  // not wait for the overview image to load.
+  setMiniMapVisible(false);
   function addUnique(list, value) { if (list.indexOf(value) === -1) list.push(value); }
   function has(list, value) { return list.indexOf(value) !== -1; }
   function markDiscovered(id) { addUnique(state.discovered, id); }
@@ -174,7 +185,7 @@
   }
   function movePlayer(dx, dy, deltaMs) {
     if (!state || state.mode !== "explore") return;
-    var room = currentRoom(); var speed = room.id === "museum" ? 100 : 235; var len = Math.hypot(dx, dy) || 1; var dt = Math.min(Number(deltaMs) || 16, 50) / 1000; dx = dx / len * speed; dy = dy / len * speed;
+    var room = currentRoom(); var speed = room.id === "museum" ? 100 : 235; if (keys.Shift || keys.shift) speed *= 1.5; var len = Math.hypot(dx, dy) || 1; var dt = Math.min(Number(deltaMs) || 16, 50) / 1000; dx = dx / len * speed; dy = dy / len * speed;
     var previousX = state.playerX, previousY = state.playerY;
     var nextX = state.playerX + dx * dt; var nextY = state.playerY + dy * dt;
     if (!blocked(room, nextX, state.playerY, room.id === "museum" ? 10 : 22)) state.playerX = nextX;
@@ -680,6 +691,13 @@
         if (state) state.mode = "explore";
       } else if (el.pause && !el.pause.hidden) closePauseMenu();
       else if (el.game && !el.game.hidden && state && state.mode === "explore") openPauseMenu();
+      return;
+    }
+    if (key === "Tab") {
+      if (el.game && !el.game.hidden && state && state.mode === "explore" && !overlaysOpen()) {
+        event.preventDefault();
+        setMiniMapVisible(!miniMapVisible);
+      }
       return;
     }
     if (overlaysOpen()) {

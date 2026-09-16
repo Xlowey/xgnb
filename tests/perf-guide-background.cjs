@@ -48,6 +48,8 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     await p.waitForTimeout(400);
     if (await p.isVisible('#cover-screen')) await p.click('#continue-button');
     await p.waitForSelector('#game-screen:not([hidden])', { timeout: 8000 });
+    // The guide is an on-demand overlay; open it before checking its canvas.
+    await p.keyboard.press('Tab');
     await p.waitForTimeout(2200);
     return { page: p, reqs };
   };

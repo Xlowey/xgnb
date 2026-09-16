@@ -1,7 +1,7 @@
 /*
  * Verifies the five reported bugs together:
  *  1. the map canvas fills the viewport (buffer == box) so the map never renders shrunk;
- *  2. the guide/minimap is hidden on the 馆内总览 page and present in other rooms;
+ *  2. the guide/minimap is hidden by default and can be toggled with Tab in every room;
  *  3. the hospital investigation plays its recording when the TV hotspot is clicked;
  *  4. the corridor's reachable feet region matches the painted floor.
  */
@@ -59,9 +59,8 @@ const SHAPES = [[2560, 1380], [1366, 768], [3440, 1440], [1024, 768], [390, 844]
       if (w === 390) await page.screenshot({ path: 'tmp/audit-fix-390x844.png' });
     }
 
-    // 2. The guide panel is shown in EVERY room, the overview included. It was briefly
-    //    hidden there and the player read that as a bug ("why is there no minimap here but
-    //    there is one in the corridor"), so it is shown everywhere again.
+    // 2. The guide panel is an on-demand overlay in every room. It starts hidden
+    //    to keep the playfield clear, then Tab shows it and Tab hides it again.
     await page.setViewportSize({ width: 1366, height: 768 });
     for (const room of ['corridor', 'museum', 'dorm', 'hall']) {
       await page.goto('http://127.0.0.1:8816/index.html?fromSave=1');
@@ -73,8 +72,16 @@ const SHAPES = [[2560, 1380], [1366, 768], [3440, 1440], [1024, 768], [390, 844]
       if (await fresh.isVisible('#cover-screen')) await fresh.click('#continue-button');
       await fresh.waitForSelector('#game-screen:not([hidden])', { timeout: 8000 });
       await fresh.waitForTimeout(700);
+      const initiallyHidden = await fresh.evaluate(() => { const g = document.querySelector('.map-guide'); return !!g && getComputedStyle(g).display === 'none'; });
+      check(`提示面板在 ${room} 房间默认隐藏`, initiallyHidden === true, { room, initiallyHidden });
+      await fresh.keyboard.press('Tab');
+      await fresh.waitForTimeout(120);
       const shown = await fresh.evaluate(() => { const g = document.querySelector('.map-guide'); return !!g && getComputedStyle(g).display !== 'none'; });
-      check(`提示面板在 ${room} 房间显示`, shown === true, { room, shown });
+      check(`Tab 显示 ${room} 房间提示面板`, shown === true, { room, shown });
+      await fresh.keyboard.press('Tab');
+      await fresh.waitForTimeout(120);
+      const hiddenAgain = await fresh.evaluate(() => { const g = document.querySelector('.map-guide'); return !!g && getComputedStyle(g).display === 'none'; });
+      check(`再次按 Tab 隐藏 ${room} 房间提示面板`, hiddenAgain === true, { room, hiddenAgain });
       if (room === 'museum') await fresh.screenshot({ path: 'tmp/audit-fix-museum.png' });
       await fresh.close();
     }
