@@ -189,19 +189,35 @@
     return pages.length ? pages : ["..."];
   }
 
+  // System notices used to be marked only in the handful of scenes that were
+  // converted to `events` by chapter-story.js.  Later scenes still keep their
+  // authored lines array, so the same MOSS/system speaker fell through to the
+  // ordinary bottom dialogue box.  Keep the classification at the page
+  // boundary so every source shape (events or lines) uses the same renderer.
+  function isSystemSpeaker(value) {
+    return /MOSS|系统/.test(String(value || ""));
+  }
+
   function buildPages(scene) {
     var pages = [];
     if (scene.events) {
       scene.events.forEach(function (event, index) {
-        if (event.type === "dialogue") splitNarrativeText(event.text).forEach(function (text) { pages.push(Object.assign({},event,{text:text,sourceIndex:index})); });
-        else pages.push(Object.assign({},event,{sourceIndex:index}));
+        var normalized = Object.assign({}, event, { sourceIndex: index });
+        // A legacy event may still say "dialogue" even though its speaker is
+        // MOSS.  Normalize it before splitting so the stage can render the
+        // blue system panel instead of the bottom dialogue box.
+        if (isSystemSpeaker(normalized.speaker) && (!normalized.type || normalized.type === "dialogue")) normalized.type = "system";
+        if (normalized.type === "dialogue") splitNarrativeText(normalized.text).forEach(function (text) { pages.push(Object.assign({},normalized,{text:text})); });
+        else pages.push(normalized);
       });
       return pages;
     }
     (scene.lines || []).forEach(function (line, sourceIndex) {
       if (/^\s*[△▲▼▽]/.test(line.text)) return;
       splitNarrativeText(line.text).forEach(function (text) {
-        pages.push({ speaker: line.speaker, text: text, sourceIndex: sourceIndex });
+        var page = { speaker: line.speaker, text: text, sourceIndex: sourceIndex };
+        if (isSystemSpeaker(line.speaker)) page.type = "system";
+        pages.push(page);
       });
     });
     return pages;
@@ -478,7 +494,7 @@
     els.title.textContent = currentScene.title;
     els.subtitle.textContent = currentScene.subtitle || "";
     els.speaker.textContent = displaySpeaker(line.speaker);
-    els.dialogue.classList.toggle("is-system", /MOSS|系统/.test(line.speaker));
+    els.dialogue.classList.toggle("is-system", line.type === "system" || isSystemSpeaker(line.speaker));
     startTextReveal(displayText(line.text));
     document.body.dataset.theme = currentScene.theme || "dorm";
     var briefing = document.getElementById("novel-briefing");
@@ -521,7 +537,10 @@
     eventNext.hidden = !isEvent;
     eventNext.disabled = false;eventNext.textContent = line.action || "继续";
     els.speaker.hidden = !!isEvent; els.text.hidden = !!isEvent; els.next.hidden = !!isEvent;
-    stage.render(currentScene.events ? line : null, {
+    // Plain line-based scenes also contain system notices.  Pass those pages
+    // to the stage so they get the same top system-message treatment as event
+    // based scenes; ordinary dialogue still leaves the event layer empty.
+    stage.render((currentScene.events || line.type === "system") ? line : null, {
       scene:currentScene, state:state, save:persist, advance:advance, pause:pausePlayback, resume:function(){els.dialogue.focus();schedulePlayback();},
       canExplore:function(){return els.review.hidden && els.end.hidden && !stage.isOpen() && els.choices.hidden;},
       setAdvance:function(enabled,label){eventAdvance=enabled;eventNext.hidden=!enabled;if(label)eventNext.textContent=label;}
