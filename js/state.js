@@ -19,9 +19,6 @@
     waxDoorUnlocked: false,
     foundContract: false,
     understoodTruth: false,
-    // 新剧本第八场：提交调查记录后永久关闭 C 完美结局（见 novel.js renderChoices）。
-    submitted: false,
-    refusedSubmit: false,
     tutorialChoiceSaved: false
   };
   var DEFAULT_TUTORIAL = {
@@ -67,6 +64,7 @@
     returnX: null,
     returnY: null,
     returnFacing: "down",
+    battleContext: null,
     returnScene: null,
     ending: null,
     endingComplete: false,

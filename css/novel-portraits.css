@@ -7,6 +7,12 @@
    scene whose cast includes 纸人/小女孩/保安/梦魇 never lands on top of the hero; two or
    more listeners also shrink everyone so a face-off still reads. */
 .portrait-zhaoling,.portrait-director,.portrait-paperman,.portrait-girl,.portrait-maskedguard,.portrait-nightmare { right:max(10px,calc(50% - 610px)); }
+.novel-portraits.is-crowd .portrait-zhaoling,
+.novel-portraits.is-crowd .portrait-director,
+.novel-portraits.is-crowd .portrait-paperman,
+.novel-portraits.is-crowd .portrait-girl,
+.novel-portraits.is-crowd .portrait-maskedguard,
+.novel-portraits.is-crowd .portrait-nightmare { right:calc(max(10px,calc(50% - 610px)) + var(--portrait-offset,0px)); }
 .novel-portraits.is-crowd .novel-portrait { width:min(30vw,420px);height:min(56dvh,560px); }
 .novel-portraits.is-crowd .portrait-hero { left:1vw; }
 .novel-portraits.has-prop .novel-portrait { width:min(31vw,440px);height:min(55dvh,530px); }
@@ -27,9 +33,14 @@ body.has-portraits .dialogue-prop img { max-width:100%; }
  .novel-portraits.is-pair .portrait-maskedguard,
  .novel-portraits.is-pair .portrait-nightmare { right:-6vw; }
  .novel-portraits.is-crowd .novel-portrait { width:38vw;height:min(40dvh,340px); }
+ .novel-portraits.is-crowd .portrait-zhaoling,
+ .novel-portraits.is-crowd .portrait-director,
+ .novel-portraits.is-crowd .portrait-paperman,
+ .novel-portraits.is-crowd .portrait-girl,
+ .novel-portraits.is-crowd .portrait-maskedguard,
+ .novel-portraits.is-crowd .portrait-nightmare { right:calc(-6vw + var(--portrait-offset,0px)); }
  .novel-portraits.has-prop .portrait-hero { width:44vw;left:0; }.novel-portraits.has-prop .novel-portrait { height:40dvh; }
  body.has-portraits .dialogue-prop { left:43%;right:3%; }
 }
 @media(max-height:550px) and (min-width:701px) { .novel-portrait { height:calc(100dvh - var(--dialogue-height) - 40px);bottom:calc(var(--dialogue-height) + 8px); }.novel-portraits.has-prop .novel-portrait { height:calc(100dvh - var(--dialogue-height) - 40px); } }
 @media(prefers-reduced-motion:reduce) { .novel-portrait { transition:none; } }
-

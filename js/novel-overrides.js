@@ -59,25 +59,38 @@
     { id: "inspect-wax", label: "继续清点蜡像，调查赵灵的展台", nextScene: "scene-16", effect: "find-contract-clue" }
   ];
 
-  // The office scene is split at the three choices written in the script.
+  // 第九场的四个回答是同一轮的互斥选项。旧实现把 A/B/C 串成了三段，
+  // 还留下一个“提交调查记录”伪选项，导致坦白路线继续播放隐瞒路线的完整坦白。
+  // 以“吃没吃桃子？”为切点，四条路线各自从头播放到自己的收束处。
   var office = scenes["scene-09"];
   var officeAllLines = office.lines.slice();
   var officeChoiceAt = findLineIndex("scene-09", function (line) { return line.text.indexOf("① 什么梦") === 0; });
   var officeAAt = findLineIndex("scene-09", function (line) { return line.text.indexOf("你……吃那些桃子了吗") === 0; });
   var officeBAt = findLineIndex("scene-09", function (line) { return line.text.indexOf("吃了……") === 0; });
   var officeCAt = findLineIndex("scene-09", function (line) { return line.text.indexOf("馆长这么紧张") === 0; });
+  var officeDAt = findLineIndex("scene-09", function (line) { return line.speaker.indexOf("若隐瞒") !== -1; });
   var officeEnd = officeAllLines.length;
   office.lines = officeAllLines.slice(0, officeChoiceAt);
   office.choices = [
-    { id: "office-hide", label: "隐瞒：什么梦？我没做梦啊。", nextScene: "scene-09-a" },
-    { id: "office-tell", label: "坦白桃树的梦", nextScene: "scene-09-b" },
-    { id: "office-ask", label: "反问馆长是否也梦见过桃树", nextScene: "scene-09-c" },
-    // 新剧本第八场：提交后 flag.submitted = true，C 完美结局永久关闭，最终抉择只剩 A / B。
-    { id: "office-submit", label: "提交调查记录（站到系统这边）", effect: "submit-record" }
+    { id: "office-hide", label: "A　没吃，继续隐瞒", nextScene: "scene-09-a" },
+    { id: "office-tell", label: "B　吃了，直接坦白", nextScene: "scene-09-b" },
+    { id: "office-ask", label: "C　反问馆长是否也梦见过桃树", nextScene: "scene-09-c" },
+    { id: "office-secret", label: "D　不回答，保留自己的秘密", nextScene: "scene-09-d" }
   ];
-  scenes["scene-09-a"] = Object.assign({}, office, { id: "scene-09-a", title: "馆长办公室 · 隐瞒", lines: [officeAllLines[officeChoiceAt]].concat(officeAllLines.slice(officeAAt, officeBAt)), choices: null, flag: "officeHideSeen" });
-  scenes["scene-09-b"] = Object.assign({}, office, { id: "scene-09-b", title: "馆长办公室 · 坦白", lines: [officeAllLines[officeChoiceAt + 1]].concat(officeAllLines.slice(officeBAt, officeCAt)), choices: null, flag: "officeTellSeen" });
-  scenes["scene-09-c"] = Object.assign({}, office, { id: "scene-09-c", title: "馆长办公室 · 追问", lines: officeAllLines.slice(officeCAt, officeEnd), choices: null, flag: "officeAskSeen" });
+  var officeBranch = function (id, title, lines, flag) {
+    return Object.assign({}, office, {
+      id: id,
+      title: title,
+      lines: lines,
+      events: null,
+      choices: null,
+      flag: flag
+    });
+  };
+  scenes["scene-09-a"] = officeBranch("scene-09-a", "馆长办公室 · 没吃", officeAllLines.slice(officeAAt, officeBAt), "officeHideSeen");
+  scenes["scene-09-b"] = officeBranch("scene-09-b", "馆长办公室 · 坦白", officeAllLines.slice(officeBAt, officeCAt), "officeTellSeen");
+  scenes["scene-09-c"] = officeBranch("scene-09-c", "馆长办公室 · 追问", officeAllLines.slice(officeCAt, officeDAt), "officeAskSeen");
+  scenes["scene-09-d"] = officeBranch("scene-09-d", "馆长办公室 · 保留秘密", officeAllLines.slice(officeDAt, officeEnd), "officeSecretSeen");
 
   // The first red-uniform confrontation pauses before the two fights.
   var dormIntrusion = scenes["scene-11"];
@@ -137,11 +150,12 @@
   finale.returnToMap = false;
   // 新剧本第三十场：白光在身后明灭，屏上浮出选项；① 进入出口 ② 回头救赵灵 ③ 超时未选择。
   // 超时由 novel.js 的 15 秒计时器结算为 ending-d，所以不再需要一个「等待到超时」按钮。
-  // ending-c（完美结局）只在没有提交调查记录时出现。
+  // 三个最终选项保持并列；A/C 的最终差异由后续 BOSS 阶段系统决定，
+  // 不再读取旧的 submitted 旗标。
   finale.choices = [
     { id: "ending-a", label: "回头救赵灵（拒绝系统建议）", nextScene: "ending-a" },
     { id: "ending-b", label: "进入出口（执行系统建议）", nextScene: "ending-b" },
-    { id: "ending-c", label: "拒绝系统，追问真相", nextScene: "ending-c", availableIf: "notSubmitted" }
+    { id: "ending-c", label: "拒绝系统，追问真相", nextScene: "ending-c" }
   ];
 
   // NOTE: the alias clones and the authored opening pages live in

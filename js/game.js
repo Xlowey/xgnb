@@ -572,10 +572,13 @@
     if (result.status === "win") {
       var remainingHp = Number(result.remainingHp);
       if (Number.isFinite(remainingHp)) state.hp = Math.max(0, remainingHp);
-      state.flags.battleDemoCompleted = true; state.flags.waxDoorUnlocked = true; addClue("faceless-mask"); addUnique(state.unlockedRooms, "wax");
+      var finalBoss = state.battleContext === "final-boss";
+      if (!finalBoss) {
+        state.flags.battleDemoCompleted = true; state.flags.waxDoorUnlocked = true; addClue("faceless-mask"); addUnique(state.unlockedRooms, "wax");
+      }
       var returnRoom = rooms[state.returnRoom] ? state.returnRoom : "hall";
       state.roomId = returnRoom; state.currentNode = returnRoom; state.chapter = rooms[returnRoom].chapter; state.playerX = Number(state.returnX) || rooms[returnRoom].spawn.x; state.playerY = Number(state.returnY) || rooms[returnRoom].spawn.y; state.task = tasks[returnRoom];
-      state.mode = "novel"; state.narrativeNode = state.returnScene || "guard-after-battle"; state.narrativeIndex = 0; state.narrativeChoice = null; var nextScene = state.narrativeNode; state.returnScene = null;
+      state.mode = "novel"; state.narrativeNode = state.returnScene || "guard-after-battle"; state.narrativeIndex = 0; state.narrativeChoice = null; var nextScene = state.narrativeNode; state.returnScene = null; state.battleContext = null;
       if (MuseumState.save(state, currentUser.id)) { window.location.href = "pages/novel.html?scene=" + encodeURIComponent(nextScene); }
       else { state.mode = "explore"; showToast("战斗结果无法写入存档，请检查浏览器存储空间后重试。"); save(); renderAll(); }
       return;

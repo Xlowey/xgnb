@@ -39,7 +39,7 @@
   function complete(state, id) {
     // The parent office scene ends at a question, not at the end of the conversation.
     if (id === "scene-09") return;
-    if (/^scene-09-[abc]$/.test(id)) state.flags.scene09Seen = true;
+    if (/^scene-09-[abcd]$/.test(id)) state.flags.scene09Seen = true;
     state.task = objective(state).text;
   }
   window.MuseumChapterProgress={objective:objective,complete:complete};

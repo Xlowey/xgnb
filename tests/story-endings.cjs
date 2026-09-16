@@ -3,7 +3,7 @@
  *
  * Asserts, in the real story page:
  *  1. the finale is not empty and offers the script's three options;
- *  2. choosing 提交 investigation record removes the perfect ending permanently;
+ *  2. the retired submitted flag does not remove the perfect ending;
  *  3. the other two endings stay reachable either way;
  *  4. the 15 s timeout still resolves to 死亡;
  *  5. the scenes that used to render blank now have content.
@@ -55,13 +55,13 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
       await page.waitForTimeout(350);
     }
     let opts = await choices();
-    check('the finale offers the script\'s three options (submitted=false)', opts.length === 3, opts);
+    check('the finale offers the script\'s three options', opts.length === 3, opts);
     check('the finale offers 回头救赵灵', opts.some(o => o.includes('回头救赵灵')), opts);
     check('the finale offers 进入出口', opts.some(o => o.includes('进入出口')), opts);
     check('the finale offers 追问真相', opts.some(o => o.includes('追问真相')), opts);
     check('the redundant 等待到超时 button is gone (timer covers it)', !opts.some(o => o.includes('等待到超时')), opts);
 
-    // ---- 2. submitting closes the perfect ending permanently --------------
+    // ---- 2. the retired submitted flag is ignored --------------------------
     await seed({ submitted: true });
     await page.goto('http://127.0.0.1:8806/pages/novel.html?scene=ending-choice');
     await page.waitForSelector('#novel-progress', { state: 'attached' });
@@ -73,8 +73,8 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
       await page.waitForTimeout(350);
     }
     opts = await choices();
-    check('after 提交 the perfect ending is GONE', !opts.some(o => o.includes('追问真相')), opts);
-    check('after 提交 exactly two options remain (A / B)', opts.length === 2, opts);
+    check('after a legacy submitted flag the perfect ending remains', opts.some(o => o.includes('追问真相')), opts);
+    check('after a legacy submitted flag all three options remain', opts.length === 3, opts);
 
     // ---- 3. each offered ending actually plays ---------------------------
     for (const [label, expect] of [['回头救赵灵', /ending-a/], ['进入出口', /ending-b/]]) {

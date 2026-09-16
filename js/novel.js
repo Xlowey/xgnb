@@ -30,10 +30,17 @@
     state.mode = "novel";
     state.returnScene = null;
     if (previewBattleResult && previewBattleResult.status === "win") {
-      state.flags.battleDemoCompleted = true;
-      state.flags.waxDoorUnlocked = true;
-      if (state.clues.indexOf("faceless-mask") === -1) state.clues.push("faceless-mask");
-      if (state.unlockedRooms.indexOf("wax") === -1) state.unlockedRooms.push("wax");
+      if (state.battleContext !== "final-boss") {
+        state.flags.battleDemoCompleted = true;
+        state.flags.waxDoorUnlocked = true;
+        if (state.clues.indexOf("faceless-mask") === -1) state.clues.push("faceless-mask");
+        if (state.unlockedRooms.indexOf("wax") === -1) state.unlockedRooms.push("wax");
+      } else {
+        state.roomId = "museum";
+        state.currentNode = "museum";
+        state.playerX = 610;
+        state.playerY = 620;
+      }
     }
     if (previewBattleResult && Number.isFinite(Number(previewBattleResult.remainingHp))) state.hp = Math.max(0, Number(previewBattleResult.remainingHp));
     persist();
@@ -134,7 +141,23 @@
   }
 
   function getScene(sceneId) {
-    return story.scenes[sceneId] || story.scenes[story.fallback];
+    var scene = story.scenes[sceneId] || story.scenes[story.fallback];
+    // 不摘面具路线不会获得“渣男”记忆。场景 25 是地图重新进入的独立
+    // 场次，不能只修 scene-18-no-mask，否则玩家后面仍会从纸片独白里
+    // 重新看到同一段回忆。
+    if (sceneId === "scene-25" && state.flags.remainedMasked && !state.flags.removedMask) {
+      var variant = Object.assign({}, scene);
+      variant.lines = (scene.lines || []).filter(function (line) {
+        return !/渣男|以前是不是见过|看到你的样子之后/.test(String(line.text || ""));
+      });
+      if (scene.events) {
+        variant.events = scene.events.filter(function (event) {
+          return !/渣男|以前是不是见过|看到你的样子之后/.test(String(event.text || ""));
+        });
+      }
+      return variant;
+    }
+    return scene;
   }
 
   function cleanNarrativeText(value) {
@@ -415,14 +438,10 @@
     }
     if (!Array.isArray(currentScene.choices) || !currentScene.choices.length) return;
 
-    // A choice can be gated on progress. `availableIf: "notSubmitted"` is the script's
-    // rule that submitting the investigation record closes the perfect ending for the
-    // rest of the run, so the option must not merely be disabled - it must be gone.
-    // An unrecognised value is logged rather than silently ignored: a typo here would
-    // quietly hand the player a choice the story means to lock.
+    // A choice can be gated on progress. Unknown gates are logged rather than silently
+    // ignored, so a typo cannot quietly change a route.
     var offered = currentScene.choices.filter(function (choice) {
       if (!choice.availableIf) return true;
-      if (choice.availableIf === "notSubmitted") return !state.flags.submitted;
       console.warn("未知的 availableIf 取值，已按可用处理：" + choice.availableIf + "（选项 " + choice.id + "）");
       return true;
     });
@@ -537,15 +556,6 @@
       state.flags.foundContract = true;
       if (state.clues.indexOf("contract") === -1) state.clues.push("contract");
     }
-    // 新剧本第八场：提交调查记录。此后 C 完美结局永久关闭，最终抉择只剩 A / B。
-    // 判定只看 state.flags.submitted（选项用 availableIf:"notSubmitted" 问它）。
-    // 这里曾经还写一个 refusedSubmit，但全仓没有任何地方读它，属于只写不读的死旗标，已去掉。
-    if (choice.effect === "submit-record") {
-      state.flags.submitted = true;
-      if (state.clues.indexOf("submitted-record") === -1) state.clues.push("submitted-record");
-      state.systemTrust += 6;
-      state.task = "按系统的安排继续行动。";
-    }
     if (choice.id === "remove-mask" || choice.id === "reveal-name") state.flags.removedMask = true;
     if (choice.id === "keep-mask" || choice.id === "keep-name-secret") state.flags.remainedMasked = true;
     if (["ending-a", "ending-b", "ending-c", "ending-d"].indexOf(choice.id) !== -1) state.ending = choice.id;
@@ -565,9 +575,19 @@
 
   function startBattle(choice) {
     var beforeBattle=JSON.parse(JSON.stringify(state));
-    state.returnRoom = state.returnRoom || state.roomId;
-    state.returnX = state.returnX == null ? state.playerX : state.returnX;
-    state.returnY = state.returnY == null ? state.playerY : state.returnY;
+    if (choice.battleContext === "final-boss") {
+      // 最终战发生在食堂内部，胜利后必须从博物馆大门继续，而不是回到
+      // 进入剧情前的食堂出生点。
+      state.returnRoom = "museum";
+      state.returnX = 610;
+      state.returnY = 620;
+      state.battleContext = "final-boss";
+    } else {
+      state.returnRoom = state.returnRoom || state.roomId;
+      state.returnX = state.returnX == null ? state.playerX : state.returnX;
+      state.returnY = state.returnY == null ? state.playerY : state.returnY;
+      state.battleContext = null;
+    }
     state.returnScene = choice.afterBattle || "guard-after-battle";
     state.mode = "battle";
     state.narrativeNode = state.returnScene;

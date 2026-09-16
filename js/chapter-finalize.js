@@ -75,6 +75,180 @@
   ensureOpeningPage("scene-31", "白光在身后明灭。屏上浮出三个选项，静静等待。");
   ensureOpeningPage("ending-choice", "白光在身后明灭。屏上浮出三个选项，静静等待。");
 
+  // ---------------------------------------------------------------------------
+  // 2a. 将最新剧本里的互斥支线落成真正的场景节点。
+  // ---------------------------------------------------------------------------
+  function visibleLines(lines) {
+    return (lines || []).filter(function (line) {
+      var text = String(line && line.text || "");
+      // △ 是给制作组看的舞台说明；它们不进入对白播放器。
+      if (/^\s*△/.test(text)) return false;
+      // 这些是剧本里的分支标记，选择按钮已经承担了它们的作用。
+      if (/^\s*(?:A|B|C|D)[．.]/.test(text)) return false;
+      if (/玩家可选支线|玩家可以选择|分支选择/.test(text)) return false;
+      return text.trim().length > 0;
+    });
+  }
+
+  function lineEvents(lines, background) {
+    return visibleLines(lines).map(function (line) {
+      return { type: "dialogue", speaker: line.speaker, text: line.text, background: background };
+    });
+  }
+
+  // 第十六场：A/B/C 三选一。C 是“系统回顾”路线，直接进入 B 结局；
+  // A/B 才会进入第十七场，并且两条支线都从馆长办公室门口开始。
+  var scene16 = scenes["scene-16"];
+  if (scene16) {
+    var scene16All = scene16.lines.slice();
+    var scene16ChoiceAt = scene16All.findIndex(function (line) { return /我现在应该/.test(line.text); });
+    if (scene16ChoiceAt < 0) scene16ChoiceAt = scene16All.length;
+    var scene16Intro = scene16All.slice(0, scene16ChoiceAt);
+    scene16.lines = visibleLines(scene16Intro);
+    scene16.events = [
+      { type: "cg", background: "赵灵展厅.webp", action: "继续" },
+      { type: "cg", background: "赵灵展厅（含人物）.webp", action: "继续" }
+    ].concat(lineEvents(scene16Intro, scene16.background));
+    scene16.choices = [
+      { id: "scene16-office", label: "A　进入馆长办公室，确认员工人数", nextScene: "scene-17" },
+      { id: "scene16-diary", label: "B　调查馆长日记，了解馆长为何放弃过去", nextScene: "scene-17-diary" },
+      { id: "scene16-system", label: "C　使用系统帮助，回顾之前的会议人数", nextScene: "ending-b", effect: "scene16-system" }
+    ];
+  }
+
+  // 第十七场原稿把 A、B、C 三段连续写在同一个 lines 数组里。拆开后，
+  // 每次只播玩家选中的一条路线，所有入口的第一句都是“办公室门口”。
+  var scene17 = scenes["scene-17"];
+  if (scene17) {
+    var scene17All = scene17.lines.slice();
+    var scene17BAt = scene17All.findIndex(function (line) { return /^\s*△?\s*B[（(．.]/.test(line.text); });
+    var scene17CAt = scene17All.findIndex(function (line) { return /^\s*△?\s*C[（(．.]/.test(line.text); });
+    // novel-presentation 已经移除了 △ 标记，故用正文首句作稳定回退。
+    if (scene17BAt < 0) scene17BAt = scene17All.findIndex(function (line) { return line.text === "馆长的日记本"; });
+    if (scene17CAt < 0) scene17CAt = scene17All.findIndex(function (line) { return /^经多次确认，蜡像馆展台数/.test(line.text); });
+    if (scene17BAt < 0) scene17BAt = scene17All.length;
+    if (scene17CAt < 0) scene17CAt = scene17All.length;
+    var officeDoor = [{ speaker: "旁白", text: "你来到馆长办公室门口。" }];
+    var aLines = officeDoor.concat(visibleLines(scene17All.slice(0, scene17BAt)));
+    var bLines = officeDoor.concat(visibleLines(scene17All.slice(scene17BAt + 1, scene17CAt)));
+    var branchScene = function (id, title, lines) {
+      return Object.assign({}, scene17, {
+        id: id,
+        title: title,
+        location: "馆长办公室门口 · 夜",
+        background: "馆长办公室背景.webp",
+        lines: lines,
+        events: null,
+        choices: null,
+        returnToMap: true,
+        flag: "scene17Seen"
+      });
+    };
+    scenes["scene-17"] = branchScene("scene-17", "第十七场　馆长办公室门口", aLines);
+    scenes["scene-17-diary"] = branchScene("scene-17-diary", "第十七场　馆长办公室 · 日记", bLines);
+  }
+
+  // 面具分支的后续对白必须真正分开。不摘面具时，删除“以前见过 / 渣男”回忆，
+  // 同时让第二十四场的办公室事件使用同一条规则。
+  if (scenes["scene-18-no-mask"]) {
+    scenes["scene-18-no-mask"].lines = scenes["scene-18-no-mask"].lines.filter(function (line) {
+      return !/渣男|以前是不是见过|看到你的样子之后/.test(String(line.text || ""));
+    });
+    scenes["scene-18-no-mask"].events = null;
+    scenes["scene-18-no-mask"].background = "银色的恋人展厅.webp";
+  }
+  if (scenes["scene-09-d"]) scenes["scene-09-d"].background = "馆长办公室背景.webp";
+
+  // 文字修订：统一最新场次名称、时间、身份表述和重复问句。
+  function rewriteSceneText(scene, rewrite) {
+    if (!scene) return;
+    (scene.lines || []).forEach(function (line) { line.text = rewrite(String(line.text || ""), line); });
+    (scene.events || []).forEach(function (event) {
+      if (typeof event.text === "string") event.text = rewrite(event.text, event);
+    });
+  }
+  Object.keys(scenes).forEach(function (id) {
+    var scene = scenes[id];
+    rewriteSceneText(scene, function (text) {
+      return text.replace(/去图书馆/g, "去蜡像馆");
+    });
+  });
+  ["scene-25"].forEach(function (id) {
+    if (scenes[id]) {
+      scenes[id].title = scenes[id].title.replace(/　夜$/, "　下午");
+      scenes[id].location = scenes[id].location.replace(/　夜$/, "　下午");
+    }
+  });
+  if (scenes["scene-26"]) {
+    var duplicateSeen = false;
+    scenes["scene-26"].lines = scenes["scene-26"].lines.filter(function (line) {
+      if (line.text === "对了，这个是你的吧？") {
+        if (duplicateSeen) return true;
+        duplicateSeen = true;
+        return false;
+      }
+      return true;
+    });
+    scenes["scene-26"].events = null;
+  }
+  Object.keys(scenes).forEach(function (id) {
+    rewriteSceneText(scenes[id], function (text) {
+      return text
+        .replace(/^胜利后[：:]\s*/, "")
+        .replace(/我已经死了/g, "张明诚已经死了");
+    });
+    if (scenes[id].lines) {
+      scenes[id].lines = scenes[id].lines.filter(function (line) {
+        return !/^胜利后[：:]?\s*$/.test(String(line.text || ""));
+      });
+    }
+  });
+
+  // 第二十四场沿用面具分支状态；不摘面具路线不应在办公室再次提起“渣男”。
+  if (scenes["scene-24"]) {
+    scenes["scene-24"].events = (scenes["scene-24"].events || []).filter(function (event) {
+      return !/渣男|以前是不是见过|看到你的样子之后/.test(String(event.text || ""));
+    });
+  }
+
+  // 最新剧本将“未了解信息直接去 B”的限制放到第十六场 C；最终选择不再读取旧 submitted 旗标。
+  if (scenes["scene-31"] && scenes["scene-31"].choices) {
+    ["scene-31", "ending-choice"].forEach(function (id) {
+      if (!scenes[id] || !scenes[id].choices) return;
+      scenes[id].choices = scenes[id].choices.map(function (choice) {
+        var copy = Object.assign({}, choice);
+        delete copy.availableIf;
+        return copy;
+      });
+    });
+  }
+  if (scenes["scene-30"]) {
+    scenes["scene-30"].lines = scenes["scene-30"].lines.filter(function (line) {
+      return !/如果之前没有从馆长了解信息/.test(String(line.text || ""));
+    });
+    scenes["scene-30"].events = null;
+  }
+
+  // C 结局的新对白：回到原世界，契约揭示不再重复解释梦魇为何阻止出口。
+  if (scenes["ending-c"]) {
+    rewriteSceneText(scenes["ending-c"], function (text) {
+      return text
+        .replace("你打开病房的门，就可以进入下一个试炼了。", "你打开病房的门，就可以回到原来的世界。")
+        .replace("你想知道为什么我笃定那个出口是错的吗？", "还有一件事，你应该知道。")
+        .replace("梦魇不希望我进入到那个所谓的出口，原因就是因为这个！这个不是你的，是张明诚的。他也和梦魇签订了一份契约，梦魇之所以不想让我进入那里，应该就是不想让我见到这个东西。”", "这不是你的，是张明诚的——他也和梦魇签了一份契约。")
+        .replace("为什么？", "什么事？");
+    });
+  }
+
+  // △ 说明永远不进入对白页，避免“地图/演出说明”再次混到播放器里。
+  Object.keys(scenes).forEach(function (id) {
+    var scene = scenes[id];
+    if (!scene || !scene.events) return;
+    scene.events = scene.events.filter(function (event) {
+      return !(typeof event.text === "string" && /^\s*△/.test(event.text));
+    });
+  });
+
   // The mirror hotspot must not open the blood note. novel-prologue.js aliases
   // `mirror` to `note-inspect`, which made 墙上的镜子 show 血字纸条 - a real
   // "wrong scene" bug. It gets its own small recorded frame instead.
@@ -108,16 +282,16 @@
   scenes["scene-29-boss"] = {
     id: "scene-29-boss",
     title: "梦魇 · 出口之前",
-    location: "食堂门前 · 最后一夜",
+    location: "食堂内部 · 最后一夜",
     theme: "nightmare",
-    background: "食堂门口背景.webp",
+    background: "食堂背景（含彩带版）.webp",
     lines: [
       { speaker: "MOSS（系统 · 画外音）", text: "目标已进入交战范围。这是本副本的最后一个节点。" },
       { speaker: "梦魇", text: "来吧，张天师。让我看看你这一趟，到底学会了什么。" }
     ],
     returnToMap: false,
     choices: [
-      { id: "boss-fight", label: "迎战梦魇", action: "battle", demo: "pixel-dungeon", afterBattle: "scene-30" }
+      { id: "boss-fight", label: "迎战梦魇", action: "battle", demo: "pixel-dungeon", battleContext: "final-boss", afterBattle: "scene-30" }
     ]
   };
   if (scenes["scene-29"]) scenes["scene-29"].nextScene = "scene-29-boss";
