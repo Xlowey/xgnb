@@ -146,6 +146,15 @@
     };
     scenes["scene-17"] = branchScene("scene-17", "第十七场　馆长办公室门口", aLines);
     scenes["scene-17-diary"] = branchScene("scene-17-diary", "第十七场　馆长办公室 · 日记", bLines);
+    // 日记路线使用实际的文档素材。正文仍保留在剧情文本中，翻开后可在背包里重看。
+    var diaryScene = scenes["scene-17-diary"];
+    diaryScene.events = [];
+    diaryScene.lines.forEach(function (line) {
+      diaryScene.events.push({ type: "dialogue", speaker: line.speaker, text: line.text, background: diaryScene.background });
+      if (String(line.text || "") === "馆长的日记本") {
+        diaryScene.events.push({ type: "document", item: "director-diary", side: "front", action: "翻看日记" });
+      }
+    });
   }
 
   // 面具分支的后续对白必须真正分开。不摘面具时，删除“以前见过 / 渣男”回忆，

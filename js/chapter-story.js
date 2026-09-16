@@ -6,7 +6,7 @@
   scenes["scene-05"].events=[{type:"investigate",background:"病房场景黑夜版（电视机关闭）.webp",title:"调查病房展厅",key:"hospital",intro:"病房里只有一张床和一台老电视。点击画面中的标记调查。",hotspots:[
     {id:"bed",label:"调查病床",afterLabel:"病床已调查",x:26,y:70,text:"床单下空无一物。床架内侧有几道很深的抓痕，像是有人被按在这里挣扎过。"},
     {id:"tv",label:"打开电视",afterLabel:"查看录像",x:86,y:71,text:"电视自己亮了。屏幕上是一段夜间监控录像。",background:hospital,video:"rabbits-recording.webp",videoLabel:"病房电视录像",videoCaption:"录像 · 巨型兔子在城市中横冲直撞"}
-  ],action:"继续剧情"}].concat(scenes["scene-05"].lines.map(function(l){return dialogue(l,/（录像）/.test(l.speaker)?"病房电视机.webp":hospital);}));
+  ],action:"继续剧情"},{type:"cg",background:"hospital-resuscitation.webp",action:"继续",label:"录像画面 · 病房急救"}].concat(scenes["scene-05"].lines.map(function(l){return dialogue(l,/（录像）/.test(l.speaker)?"病房电视机.webp":hospital);}));
   // 剧情播放器只引用剧情背景；地图由探索页和地图数据单独加载。
   var backgrounds={"scene-04":null,"scene-06":null,"scene-07":null,"scene-08":"食堂走廊背景.webp","scene-09":null,"scene-09-a":null,"scene-09-b":null,"scene-09-c":null};
   Object.keys(backgrounds).forEach(function(id){
@@ -44,7 +44,8 @@
     "scene-01":"宿舍背景图.webp","scene-02":"宿舍背景图.webp","scene-03":"宿舍背景图.webp",
     "scene-04":"普通走廊.webp","scene-07":"大厅背景.webp",
     "scene-09":"馆长办公室背景.webp","scene-09-a":"馆长办公室背景.webp","scene-09-b":"馆长办公室背景.webp","scene-09-c":"馆长办公室背景.webp",
-    "scene-10":"阴暗的角落.webp","scene-11":"宿舍背景图.webp","scene-11-after":"宿舍背景图.webp","scene-12":"宿舍背景图.webp",
+    // 新到的静态 CG 与第十场的“阴暗角落”正文对应；旧的同名地图图不再拿来当剧情背景。
+    "scene-10":"dark-corner.webp","scene-11":"宿舍背景图.webp","scene-11-after":"宿舍背景图.webp","scene-12":"宿舍背景图.webp",
     "scene-17":"馆长办公室背景.webp","scene-19":"普通走廊.webp","scene-24":"馆长办公室背景.webp","scene-25":"宿舍背景图.webp",
     "scene-26":"普通走廊.webp","scene-26-reveal":"普通走廊.webp","scene-26-hide":"普通走廊.webp",
     "scene-27":"宿舍门带血迹.webp","scene-28":"走廊带血版.webp","scene-30":"出口图片.webp","scene-31":"出口图片.webp",
@@ -54,6 +55,20 @@
   Object.keys(supplementBackgrounds).forEach(function(id){if(scenes[id])scenes[id].background=supplementBackgrounds[id];});
   function itemEvent(image){return {type:"document",item:image,side:"front",action:"继续"};}
   function prepend(id,events){var s=scenes[id];s.events=events.concat(s.events || s.lines.map(function(l){return dialogue(l);}));}
+  function prependVideos(id, entries){
+    var s=scenes[id];
+    if(!s)return;
+    var existing=s.events || s.lines.map(function(l){return dialogue(l,s.background);});
+    s.events=entries.map(function(entry){return {type:"video",video:entry.video,label:entry.label,action:"继续"};}).concat(existing);
+  }
+  // 本轮新到的 CG 按场次接入。视频只是开场演出，正文仍由原对白数据推进。
+  prependVideos("scene-01", [{video:"CG1：桃树梦中惊醒.mp4",label:"CG · 桃树梦中惊醒"}]);
+  prependVideos("scene-09", [{video:"CG9.1.mp4",label:"CG · 馆长办公室"}]);
+  prependVideos("scene-10", [{video:"CG10.1.mp4",label:"CG · 阴暗角落"}]);
+  prependVideos("scene-11-after", [
+    {video:"CG11.mp4",label:"CG · 禁忌失控"},
+    {video:"CG11.2.mp4",label:"CG · 蜡像馆异象"}
+  ]);
   prepend("scene-15",[{type:"cg",background:"床头柜.webp",action:"查看展台"},{type:"cg",background:"张明诚展台.webp",action:"继续"}]);
   prepend("scene-16",[{type:"cg",background:"赵灵展厅.webp",action:"继续"},{type:"cg",background:"赵灵展厅（含人物）.webp",action:"继续"}]);
   prepend("scene-24",[itemEvent("入职申请表.webp")]);

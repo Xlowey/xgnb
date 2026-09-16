@@ -2,6 +2,7 @@
   "use strict";
   // 运行素材按用途归档；文件名到相对路径集中维护，避免业务代码各写一套路径。
   var root = new URL("../assets/images/", document.currentScript.src).href;
+  var videoRoot = new URL("../assets/video/", document.currentScript.src).href;
   var dirs = { maps: "maps/", storyBackgrounds: "story-backgrounds/", cg: "cg/", items: "items/", ui: "ui/", characters: "characters/" };
   var maps = {
     "museum-overview-map.webp": true, "dorm-map.webp": true, "hall-map.webp": true,
@@ -54,7 +55,17 @@
   "赵灵红色制服里的纸片.webp": "items/documents/赵灵红色制服里的纸片.webp",
   "赵灵红色制服里的纸片2.webp": "items/documents/赵灵红色制服里的纸片2.webp",
   "病房电视机.webp": "cg/病房电视机.webp",
-  "病房场景含人物.webp": "cg/病房场景含人物.webp"
+  "病房场景含人物.webp": "cg/病房场景含人物.webp",
+  "hospital-resuscitation.webp": "cg/hospital-resuscitation.webp",
+  "dark-corner.webp": "cg/dark-corner.webp",
+  "doctor-portrait.webp": "characters/portraits/doctor-portrait.webp",
+  "old-man-portrait.webp": "characters/portraits/old-man-portrait.webp",
+  "son-portrait.webp": "characters/portraits/son-portrait.webp",
+  "director-walk-cycle.webp": "characters/walk/director-walk-cycle.webp",
+  "nightmare-cycle.webp": "characters/battle/nightmare-cycle.webp",
+  "director-diary-cover.webp": "items/documents/director-diary-cover.webp",
+  "director-diary-pages.webp": "items/documents/director-diary-pages.webp",
+  "director-diary-turn.webp": "items/documents/director-diary-turn.webp"
 });
   maps["食堂地图.webp"]=true;
   storyBackgrounds["宿舍背景图.webp"]=true;
@@ -68,6 +79,16 @@
   storyBackgrounds["病房场景黑夜版.webp"]=true;
   storyBackgrounds["病房场景黑夜版（电视机关闭）.webp"]=true;
   storyBackgrounds["出口图片.webp"]=true;
+  var videoPaths = {
+    "CG1：桃树梦中惊醒.mp4": "cg/CG1：桃树梦中惊醒.mp4",
+    "CG9.1.mp4": "cg/CG9.1.mp4",
+    "CG10.1.mp4": "cg/CG10.1.mp4",
+    "CG11.mp4": "cg/CG11.mp4",
+    "CG11.2.mp4": "cg/CG11.2.mp4"
+  };
+  function video(name) {
+    return new URL(videoPaths[name] || ("cg/" + name), videoRoot).href;
+  }
   function url(name, category) {
     var path = paths[name];
     if (!path) {
@@ -76,5 +97,5 @@
     }
     return new URL(path, root).href;
   }
-  window.MuseumAssets = { root: root, dirs: dirs, maps: maps, storyBackgrounds: storyBackgrounds, paths: paths, categoryFor: categoryFor, url: url };
+  window.MuseumAssets = { root: root, videoRoot: videoRoot, dirs: dirs, maps: maps, storyBackgrounds: storyBackgrounds, paths: paths, videoPaths: videoPaths, categoryFor: categoryFor, url: url, video: video };
 }());

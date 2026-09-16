@@ -37,7 +37,7 @@ const missingMedia = [];
 const collect = (id, obj) => {
   for (const key of ['background', 'video', 'cg', 'portrait', 'image']) {
     const v = obj && obj[key];
-    if (typeof v === 'string' && v && /\.(png|jpe?g|gif|webp|svg)$/i.test(v) && !have.has(v)) {
+    if (typeof v === 'string' && v && /\.(png|jpe?g|gif|webp|svg|mp4)$/i.test(v) && !have.has(v)) {
       missingMedia.push({ id, key, file: v });
     }
   }

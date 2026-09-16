@@ -56,6 +56,47 @@
     return recording;
   }
 
+  // 独立 CG 视频：与录像浮层分开，避免把剧情动画误当作调查录像。
+  // 视频默认静音以绕过浏览器自动播放限制，玩家可用原生控件打开声音。
+  function playCutscene(options, hooks) {
+    var opts = options || {};
+    document.body.classList.remove("video-ready");
+    var videoEvent = node("section", "video-cg");
+    var title = node("small", "video-cg-title", opts.label || "剧情动画");
+    var player = document.createElement("video");
+    player.className = "video-cg-player";
+    player.src = window.MuseumAssets.video(opts.video);
+    player.autoplay = true; player.muted = true; player.controls = true; player.playsInline = true;
+    player.setAttribute("aria-label", opts.label || "剧情动画");
+    var footer = node("div", "video-cg-footer");
+    var hint = node("span", "video-cg-hint", "动画播放中 · 可用控件打开声音");
+    var skip = button("跳过动画", finish, "video-cg-skip");
+    footer.appendChild(hint); footer.appendChild(skip);
+    videoEvent.appendChild(title); videoEvent.appendChild(player); videoEvent.appendChild(footer);
+    root.appendChild(videoEvent);
+    hooks.setAdvance(false);
+    var finished = false;
+    function finish() {
+      if (finished) return;
+      finished = true;
+      player.pause();
+      videoEvent.classList.add("is-finished");
+      hint.textContent = "动画已结束";
+      document.body.classList.add("video-ready");
+      hooks.setAdvance(true, opts.action || "继续");
+      skip.textContent = "继续";
+    }
+    player.addEventListener("ended", finish);
+    player.addEventListener("error", function () {
+      hint.textContent = "动画素材暂时无法播放，可直接继续";
+      finish();
+    });
+    player.play().catch(function () {
+      hint.textContent = "点击播放动画；也可以直接跳过";
+    });
+    skip.focus();
+  }
+
   function paragraphText(value) { return String(value || "").replace(/([一二三四五六七八九十]+)，/g, "\n$1，").replace(/」「/g, "」\n「").trim(); }
   function closeModal() { modal.hidden = true; modal.textContent = ""; if (currentHooks) currentHooks.resume(); }
   function showDocument(item, side, inModal) {
@@ -76,6 +117,7 @@
     transcript.addEventListener("click", function (event) { event.stopPropagation(); });
     detail.appendChild(transcript);
     if (inModal && item.reverseImage) detail.appendChild(button(side === "back" ? "翻到正面" : "翻到背面", function () { openItem(item, side === "back" ? "front" : "back"); }));
+    if (inModal && item.turnImage) detail.appendChild(button("查看翻页过程", function () { showZoom(item.turnImage, item.name + " · 翻页过程"); }));
     card.appendChild(detail); return card;
   }
   function showZoom(name, title, crop) {
@@ -124,6 +166,7 @@
       if(event.visual){var visual=node("figure","dialogue-prop");visual.appendChild(picture(event.visual,"血字纸条"));root.appendChild(visual);}return;
     }
     if (event.type === "system") {var system=node("section","system-message");system.setAttribute("role","status");system.appendChild(node("small","","系统"));system.appendChild(node("p","",event.text));root.appendChild(system);return;}
+    if (event.type === "video") {root.className="scene-events video-event";playCutscene(event,hooks);return;}
     if (event.type === "cg") {root.className="scene-events "+(event.effect || "");return;}
     root.className="scene-events";
     if (event.type === "document") {

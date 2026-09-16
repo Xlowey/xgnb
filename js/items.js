@@ -43,6 +43,16 @@ window.MuseumItems = {
     "赵灵红色制服里的纸片2.webp":["赵灵留下的纸片","我是赵灵。这是我进入这里的第一天。在我还记得你之前，我要把自己能记得的事情记录下来。这是一个梦境的世界，进入这里的代价就是失去记忆。但我是个例外。那个自称神明的人告诉我，它会和我制定一个赌约。如果我赢了，我们就都可以离开这里。我相信你，明诚。我们一定都会活着离开这里的！"],
     "赵灵红色制服里的纸片.webp":["纸片上的逃离路线","赵灵找到的逃离路线。"],
     "张明诚契约.webp":["张明诚的契约","我与神明画押。我愿永堕那片梦境，今生不悔。作为交换，我死，她活。张明诚。"]
+    ,"director-diary-cover.webp":["馆长日记","一本封面写着“日记”的红色旧册。馆长把它藏在办公室里，扉页和正文都留下了异常的记录。"]
   };
   Object.keys(documents).forEach(function(id){window.MuseumItems[id]={name:documents[id][0],image:id,text:documents[id][1],kind:"线索物品"};});
+  window.MuseumItems["director-diary"]={
+    name:"馆长日记",
+    image:"director-diary-cover.webp",
+    reverseImage:"director-diary-pages.webp",
+    text:"馆长日记的封面。翻到背面查看日记正文。",
+    reverseText:"日记内容：馆长日记·第一天。这里没人能拥有入馆之前的记忆，包括我在内。忘了吧，那些记忆能带来什么呢？",
+    kind:"剧情文档",
+    turnImage:"director-diary-turn.webp"
+  };
 }());

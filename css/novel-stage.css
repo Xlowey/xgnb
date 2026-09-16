@@ -83,6 +83,20 @@ body:has(.wake) .novel-background { animation:wake .8s ease-out both; }
 .recording-screen img { width:100%; height:100%; object-fit:contain; animation:recording 9s ease-in-out infinite alternate; }
 .recording-screen::after { content:""; position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(0deg,#0003 0 1px,transparent 1px 4px); }
 .recording-caption { position:absolute; left:0; right:0; bottom:10px; text-align:center; font-size:13px; color:#cdd8dc; }
+.video-cg { position:relative; width:min(1180px,94vw); height:min(68dvh,680px); margin:auto; display:grid; grid-template-rows:auto 1fr auto; gap:10px; padding:14px; border:2px solid #8b6b3f; background:#100d0d; box-shadow:0 22px 80px #000b; }
+.video-cg-title { color:#e7c98e; letter-spacing:.12em; text-align:left; }
+.video-cg-player { width:100%; height:100%; min-height:0; object-fit:contain; background:#050607; }
+.video-cg-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; color:#aeb9bb; font-size:13px; }
+.video-cg-skip { min-width:112px; }
+.video-cg.is-finished .video-cg-skip { color:#d7c18c; }
+/* Video pages own the stage while the clip is playing. The regular dialogue
+   layer remains mounted by the story renderer, but must not sit above the
+   player and intercept the skip/continue controls. */
+body[data-event="video"] .novel-dialogue { pointer-events:none; visibility:hidden; height:54px; min-height:54px; padding:0; bottom:10px; width:calc(100% - 48px); max-width:1450px; border:0; box-shadow:none; background:#10191ee8; }
+body[data-event="video"].video-ready .novel-dialogue { visibility:visible; }
+body[data-event="video"].video-ready #event-next { pointer-events:auto; }
+body[data-event="video"] .scene-events { z-index:6; pointer-events:auto; }
+body[data-event="video"] { --stage-bottom:82px; }
 /* 调查反馈与进度分成两行，描述不再被进度文字覆盖。 */
 .investigation-bar { display:flex; flex-direction:column; align-items:center; gap:6px; margin-top:8px; flex-shrink:0; }
 .investigation-progress { margin:0; color:#cdd8dc; font-size:13px; text-align:center; }
