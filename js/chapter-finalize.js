@@ -7,14 +7,14 @@
  * 这个文件存在的两个理由，都是"前面的文件互相覆盖"造成的真实 bug：
  *
  * 1. 别名副本。novel-overrides.js 原先在 chapter-story.js 之前做 cloneScene，
- *    所以玩家真正点击的地图入口（guard-intro / contract / ending-choice …）拿不到
+ *    所以玩家真正点击的地图入口（contract / ending-choice …）拿不到
  *    chapter-story.js 后来挂到正式场次上的 events 与 background。实测：纸人那一幕
  *    从不播放、张明诚展台的两张 CG 从不播放、出口背景图从不显示。放在最后克隆，
  *    副本才等于正式场次。
  *
  * 2. 空白页。novel-presentation.js 会删掉所有以 △ 开头的舞台说明。如果某场戏被
  *    novel-overrides.js 切分后只剩 △ 行，它就变成 0 页——玩家看到的是几个选项按钮
- *    悬在空屏上（scene-11 / scene-31 / ending-choice 都曾如此，而 ending-choice 是
+ *    悬在空屏上（scene-11 / scene-29 / ending-choice 都曾如此，而 ending-choice 是
  *    最终抉择的唯一入口）。在最后补齐开场页，前面的删除就不会再影响它。
  */
 (function () {
@@ -53,14 +53,12 @@
   cloneScene("wardrobe-clue", "scene-02", { id: "wardrobe-clue" });
   cloneScene("wardrobe-repeat", "scene-02", { id: "wardrobe-repeat", title: "员工宿舍 · 已查衣柜", choices: null });
   cloneScene("terminal", "scene-03-tv", { id: "terminal" });
-  cloneScene("guard-intro", "scene-07", { id: "guard-intro" });
-  cloneScene("guard-repeat", "scene-07", { id: "guard-repeat", title: "中央大厅 · 已读记录", choices: null });
   cloneScene("guard-after-battle", "scene-11-after", { id: "guard-after-battle" });
-  cloneScene("contract", "scene-15", { id: "contract" });
-  cloneScene("contract-repeat", "scene-15", { id: "contract-repeat", title: "蜡像馆 · 已读展台", choices: null });
+  cloneScene("contract", "scene-13", { id: "contract" });
+  cloneScene("contract-repeat", "scene-13", { id: "contract-repeat", title: "蜡像馆 · 已读展台", choices: null });
   // ending-choice 是最终抉择的唯一入口（博物馆出口那个物件就打开它）。必须在
-  // ensureOpeningPage 之前克隆，才能带上 scene-31 的三选一与开场页。
-  cloneScene("ending-choice", "scene-31", { id: "ending-choice" });
+  // ensureOpeningPage 之前克隆，才能带上 scene-29 的三选一与开场页。
+  cloneScene("ending-choice", "scene-29", { id: "ending-choice" });
   // 曾经还有 ending-escape / ending-turn-back / ending-understand 三个副本，分别是
   // ending-a/b/c 的克隆，但**没有任何代码会打开它们**（全仓 grep 0 处引用）。它们是
   // 永远播不到的死内容，还让"一共有几个结局"数不清。已删除。
@@ -72,7 +70,7 @@
   // 这两个 id 是同一场戏的两条入口，都要补。scene-11 不需要补页：它的 choices 在第 0 页
   // 就能点，补一句"玩家可选择"反而把剧本的写作标记念给玩家听。
   // ---------------------------------------------------------------------------
-  ensureOpeningPage("scene-31", "白光在身后明灭。屏上浮出三个选项，静静等待。");
+  ensureOpeningPage("scene-29", "白光在身后明灭。屏上浮出三个选项，静静等待。");
   ensureOpeningPage("ending-choice", "白光在身后明灭。屏上浮出三个选项，静静等待。");
 
   // ---------------------------------------------------------------------------
@@ -98,39 +96,39 @@
 
   // 第十六场：A/B/C 三选一。C 是“系统回顾”路线，直接进入 B 结局；
   // A/B 才会进入第十七场，并且两条支线都从馆长办公室门口开始。
-  var scene16 = scenes["scene-16"];
+  var scene16 = scenes["scene-14"];
   if (scene16) {
-    var scene16All = scene16.lines.slice();
-    var scene16ChoiceAt = scene16All.findIndex(function (line) { return /我现在应该/.test(line.text); });
-    if (scene16ChoiceAt < 0) scene16ChoiceAt = scene16All.length;
-    var scene16Intro = scene16All.slice(0, scene16ChoiceAt);
-    scene16.lines = visibleLines(scene16Intro);
+    var scene14All = scene16.lines.slice();
+    var scene14ChoiceAt = scene14All.findIndex(function (line) { return /我现在应该/.test(line.text); });
+    if (scene14ChoiceAt < 0) scene14ChoiceAt = scene14All.length;
+    var scene14Intro = scene14All.slice(0, scene14ChoiceAt);
+    scene16.lines = visibleLines(scene14Intro);
     scene16.events = [
       { type: "cg", background: "赵灵展厅.webp", action: "继续" },
       { type: "cg", background: "赵灵展厅（含人物）.webp", action: "继续" }
-    ].concat(lineEvents(scene16Intro, scene16.background));
+    ].concat(lineEvents(scene14Intro, scene16.background));
     scene16.choices = [
-      { id: "scene16-office", label: "A　进入馆长办公室，确认员工人数", nextScene: "scene-17" },
-      { id: "scene16-diary", label: "B　调查馆长日记，了解馆长为何放弃过去", nextScene: "scene-17-diary" },
+      { id: "scene16-office", label: "A　进入馆长办公室，确认员工人数", nextScene: "scene-15" },
+      { id: "scene16-diary", label: "B　调查馆长日记，了解馆长为何放弃过去", nextScene: "scene-15-diary" },
       { id: "scene16-system", label: "C　使用系统帮助，回顾之前的会议人数", nextScene: "ending-b", effect: "scene16-system" }
     ];
   }
 
   // 第十七场原稿把 A、B、C 三段连续写在同一个 lines 数组里。拆开后，
   // 每次只播玩家选中的一条路线，所有入口的第一句都是“办公室门口”。
-  var scene17 = scenes["scene-17"];
+  var scene17 = scenes["scene-15"];
   if (scene17) {
-    var scene17All = scene17.lines.slice();
-    var scene17BAt = scene17All.findIndex(function (line) { return /^\s*△?\s*B[（(．.]/.test(line.text); });
-    var scene17CAt = scene17All.findIndex(function (line) { return /^\s*△?\s*C[（(．.]/.test(line.text); });
+    var scene15All = scene17.lines.slice();
+    var scene15BAt = scene15All.findIndex(function (line) { return /^\s*△?\s*B[（(．.]/.test(line.text); });
+    var scene15CAt = scene15All.findIndex(function (line) { return /^\s*△?\s*C[（(．.]/.test(line.text); });
     // novel-presentation 已经移除了 △ 标记，故用正文首句作稳定回退。
-    if (scene17BAt < 0) scene17BAt = scene17All.findIndex(function (line) { return line.text === "馆长的日记本"; });
-    if (scene17CAt < 0) scene17CAt = scene17All.findIndex(function (line) { return /^经多次确认，蜡像馆展台数/.test(line.text); });
-    if (scene17BAt < 0) scene17BAt = scene17All.length;
-    if (scene17CAt < 0) scene17CAt = scene17All.length;
+    if (scene15BAt < 0) scene15BAt = scene15All.findIndex(function (line) { return line.text === "馆长的日记本"; });
+    if (scene15CAt < 0) scene15CAt = scene15All.findIndex(function (line) { return /^经多次确认，蜡像馆展台数/.test(line.text); });
+    if (scene15BAt < 0) scene15BAt = scene15All.length;
+    if (scene15CAt < 0) scene15CAt = scene15All.length;
     var officeDoor = [{ speaker: "旁白", text: "你来到馆长办公室门口。" }];
-    var aLines = officeDoor.concat(visibleLines(scene17All.slice(0, scene17BAt)));
-    var bLines = officeDoor.concat(visibleLines(scene17All.slice(scene17BAt + 1, scene17CAt)));
+    var aLines = officeDoor.concat(visibleLines(scene15All.slice(0, scene15BAt)));
+    var bLines = officeDoor.concat(visibleLines(scene15All.slice(scene15BAt + 1, scene15CAt)));
     var branchScene = function (id, title, lines) {
       return Object.assign({}, scene17, {
         id: id,
@@ -141,13 +139,13 @@
         events: null,
         choices: null,
         returnToMap: true,
-        flag: "scene17Seen"
+        flag: "scene15Seen"
       });
     };
-    scenes["scene-17"] = branchScene("scene-17", "第十七场　馆长办公室门口", aLines);
-    scenes["scene-17-diary"] = branchScene("scene-17-diary", "第十七场　馆长办公室 · 日记", bLines);
+    scenes["scene-15"] = branchScene("scene-15", "第十七场　馆长办公室门口", aLines);
+    scenes["scene-15-diary"] = branchScene("scene-15-diary", "第十七场　馆长办公室 · 日记", bLines);
     // 日记路线使用实际的文档素材。正文仍保留在剧情文本中，翻开后可在背包里重看。
-    var diaryScene = scenes["scene-17-diary"];
+    var diaryScene = scenes["scene-15-diary"];
     diaryScene.events = [];
     diaryScene.lines.forEach(function (line) {
       diaryScene.events.push({ type: "dialogue", speaker: line.speaker, text: line.text, background: diaryScene.background });
@@ -159,14 +157,14 @@
 
   // 面具分支的后续对白必须真正分开。不摘面具时，删除“以前见过 / 渣男”回忆，
   // 同时让第二十四场的办公室事件使用同一条规则。
-  if (scenes["scene-18-no-mask"]) {
-    scenes["scene-18-no-mask"].lines = scenes["scene-18-no-mask"].lines.filter(function (line) {
+  if (scenes["scene-16-no-mask"]) {
+    scenes["scene-16-no-mask"].lines = scenes["scene-16-no-mask"].lines.filter(function (line) {
       return !/渣男|以前是不是见过|看到你的样子之后/.test(String(line.text || ""));
     });
-    scenes["scene-18-no-mask"].events = null;
-    scenes["scene-18-no-mask"].background = "银色的恋人展厅.webp";
+    scenes["scene-16-no-mask"].events = null;
+    scenes["scene-16-no-mask"].background = "银色的恋人展厅.webp";
   }
-  if (scenes["scene-09-d"]) scenes["scene-09-d"].background = "馆长办公室背景.webp";
+  if (scenes["scene-08-d"]) scenes["scene-08-d"].background = "馆长办公室背景.webp";
 
   // 文字修订：统一最新场次名称、时间、身份表述和重复问句。
   function rewriteSceneText(scene, rewrite) {
@@ -182,15 +180,15 @@
       return text.replace(/去图书馆/g, "去蜡像馆");
     });
   });
-  ["scene-25"].forEach(function (id) {
+  ["scene-23"].forEach(function (id) {
     if (scenes[id]) {
       scenes[id].title = scenes[id].title.replace(/　夜$/, "　下午");
       scenes[id].location = scenes[id].location.replace(/　夜$/, "　下午");
     }
   });
-  if (scenes["scene-26"]) {
+  if (scenes["scene-24"]) {
     var duplicateSeen = false;
-    scenes["scene-26"].lines = scenes["scene-26"].lines.filter(function (line) {
+    scenes["scene-24"].lines = scenes["scene-24"].lines.filter(function (line) {
       if (line.text === "对了，这个是你的吧？") {
         if (duplicateSeen) return true;
         duplicateSeen = true;
@@ -198,7 +196,7 @@
       }
       return true;
     });
-    scenes["scene-26"].events = null;
+    scenes["scene-24"].events = null;
   }
   Object.keys(scenes).forEach(function (id) {
     rewriteSceneText(scenes[id], function (text) {
@@ -214,15 +212,15 @@
   });
 
   // 第二十四场沿用面具分支状态；不摘面具路线不应在办公室再次提起“渣男”。
-  if (scenes["scene-24"]) {
-    scenes["scene-24"].events = (scenes["scene-24"].events || []).filter(function (event) {
+  if (scenes["scene-22"]) {
+    scenes["scene-22"].events = (scenes["scene-22"].events || []).filter(function (event) {
       return !/渣男|以前是不是见过|看到你的样子之后/.test(String(event.text || ""));
     });
   }
 
   // 最新剧本将“未了解信息直接去 B”的限制放到第十六场 C；最终选择不再读取旧 submitted 旗标。
-  if (scenes["scene-31"] && scenes["scene-31"].choices) {
-    ["scene-31", "ending-choice"].forEach(function (id) {
+  if (scenes["scene-29"] && scenes["scene-29"].choices) {
+    ["scene-29", "ending-choice"].forEach(function (id) {
       if (!scenes[id] || !scenes[id].choices) return;
       scenes[id].choices = scenes[id].choices.map(function (choice) {
         var copy = Object.assign({}, choice);
@@ -231,11 +229,11 @@
       });
     });
   }
-  if (scenes["scene-30"]) {
-    scenes["scene-30"].lines = scenes["scene-30"].lines.filter(function (line) {
+  if (scenes["scene-28"]) {
+    scenes["scene-28"].lines = scenes["scene-28"].lines.filter(function (line) {
       return !/如果之前没有从馆长了解信息/.test(String(line.text || ""));
     });
-    scenes["scene-30"].events = null;
+    scenes["scene-28"].events = null;
   }
 
   // C 结局的新对白：回到原世界，契约揭示不再重复解释梦魇为何阻止出口。
@@ -283,13 +281,13 @@
   //    出口关闭之前打败我了！"
   // 但原文只有台词、没有战斗入口，玩家读完就直接进第三十场——这场戏等于被跳过了。
   // 这里补上真正的战斗，接像素地牢（demos/pixel-dungeon-html）：
-  //   打赢 -> scene-30（正在消失的出口）-> 最终抉择
+  //   打赢 -> scene-28（正在消失的出口）-> 最终抉择
   //   打输 -> game.js 走 ending-d（死亡）
   // 放在 chapter-finalize 里是因为它必须在所有故事文件之后生效，而且要让
   // tests/story-reachability.cjs 能从选项图里走到它。
   // ---------------------------------------------------------------------------
-  scenes["scene-29-boss"] = {
-    id: "scene-29-boss",
+  scenes["scene-27-boss"] = {
+    id: "scene-27-boss",
     title: "梦魇 · 出口之前",
     location: "食堂内部 · 最后一夜",
     theme: "nightmare",
@@ -300,10 +298,10 @@
     ],
     returnToMap: false,
     choices: [
-      { id: "boss-fight", label: "迎战梦魇", action: "battle", demo: "pixel-dungeon", battleContext: "final-boss", afterBattle: "scene-30" }
+      { id: "boss-fight", label: "迎战梦魇", action: "battle", demo: "pixel-dungeon", battleContext: "final-boss", afterBattle: "scene-28" }
     ]
   };
-  if (scenes["scene-29"]) scenes["scene-29"].nextScene = "scene-29-boss";
+  if (scenes["scene-27"]) scenes["scene-27"].nextScene = "scene-27-boss";
 
   // ---------------------------------------------------------------------------
   // 3. 重看入口（最后一步，必须盖过上面的别名克隆）

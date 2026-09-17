@@ -55,7 +55,7 @@ async function walkTo(page, tx, ty, budgetMs) {
     const u = MuseumAuth.register('走位', 'x').user;
     const s = MuseumState.create(u);
     s.mode = 'explore'; s.roomId = 'museum'; s.playerX = 615; s.playerY = 610;
-    s.flags = Object.assign({}, s.flags, { scene03Seen: true, scene04Seen: true, scene05Seen: true, scene06Seen: true, scene07Seen: true, scene08Seen: true, scene09Seen: true, scene10Seen: true, scene11Seen: true, scene12Seen: true, scene13Seen: true, scene14Seen: true, scene15Seen: true, scene16Seen: true, scene20Seen: true, scene21Seen: true, scene22Seen: true, scene23Seen: true, scene24Seen: true, scene25Seen: true, scene26Seen: true, scene27Seen: true, scene28Seen: true, scene29Seen: true, scene30Seen: true, hasKey: true });
+    s.flags = Object.assign({}, s.flags, { scene03Seen: true, scene04Seen: true, scene05Seen: true, scene06Seen: true, scene06Seen: true, scene07Seen: true, scene08Seen: true, scene09Seen: true, scene11Seen: true, scene10Seen: true, scene11Seen: true, scene12Seen: true, scene13Seen: true, scene14Seen: true, scene18Seen: true, scene19Seen: true, scene20Seen: true, scene21Seen: true, scene22Seen: true, scene23Seen: true, scene24Seen: true, scene25Seen: true, scene26Seen: true, scene27Seen: true, scene28Seen: true, hasKey: true });
     Object.keys(s.tutorial).forEach(k => s.tutorial[k] = true);
     MuseumState.save(s, u.id);
   });

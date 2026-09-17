@@ -34,7 +34,6 @@ for (const room of Object.values(rooms)) {
     if (o.type === 'terminal') { add('terminal', 'map:' + room.id + '.terminal'); add('tv-inspect', 'map:' + room.id + '.terminal(inspect)'); }
     if (o.type === 'mirror') add('mirror', 'map:' + room.id + '.mirror');
     if (o.type === 'rules') add('rules-inspect', 'map:' + room.id + '.rules(inspect)');
-    if (o.type === 'guard') { add('guard-intro', 'map:' + room.id + '.guard'); add('guard-repeat', 'map:' + room.id + '.guard(repeat)'); }
     if (o.type === 'contract') { add('contract', 'map:' + room.id + '.contract'); add('contract-repeat', 'map:' + room.id + '.contract(repeat)'); }
     if (o.type === 'exit' || o.id === 'overview-exit') add('ending-choice', 'map:' + room.id + '.exit');
   }
@@ -43,7 +42,7 @@ for (const room of Object.values(rooms)) {
 add('scene-01', 'game.js new game');
 add('scene-04', 'corridor NPC Zhaoling');
 add('guard-after-battle', 'battle result');
-add('scene-31', 'alias of ending-choice');
+add('scene-29', 'alias of ending-choice');
 add('ending-choice', 'map exit');
 // Aliases: the map/engine opens these ids, and state.js maps them to canonical scenes.
 // Without this the canonical ids look orphaned even though their content plays.
@@ -56,12 +55,12 @@ add('ending-d', 'timeout of the final choice (novel.js)');
 add('ending-d', 'battle loss with hp 0 (game.js)');
 //   ending-e  <- loading the "选择前检查点" from the save panel (game.js loadSelected)
 add('ending-e', 'load the pre-choice checkpoint (game.js)');
-// scene-19/scene-20 are inlined into the scene-18 branches rather than opened by id.
-add('scene-19', 'lines inlined into scene-18-mask/no-mask');
-add('scene-20', 'lines inlined into scene-18-mask/no-mask');
-// scene-07 / scene-15 / scene-03-tv are opened through their alias ids (guard-intro, contract, terminal).
-add('scene-07', 'alias:guard-intro');
-add('scene-15', 'alias:contract');
+// scene-17/scene-18 are inlined into the scene-16 branches rather than opened by id.
+add('scene-17', 'lines inlined into scene-16-mask/no-mask');
+add('scene-18', 'lines inlined into scene-16-mask/no-mask');
+// scene-06 现在由地图节点 hall-speech 直接进入（无脸保安已删）；scene-13 / scene-03-tv 仍走别名。
+add('scene-06', 'map:hall.hall-speech');
+add('scene-13', 'alias:contract');
 add('scene-03-tv', 'alias:terminal');
 add('note-inspect', 'alias:note-repeat/mirror');
 // `opening` is an alias of scene-01: new game starts scene-01 directly, and `opening` exists
@@ -137,7 +136,7 @@ console.log('\n=== chapter-progress 路线表是否真能走通 ===');
     flags[row.flag] = true;
     steps += 1;
   }
-  if (!flags.scene30Seen) { console.log('  注意：模拟结束时 scene30Seen 仍未置位（还有 ' + (table.length - steps) + ' 步没走）'); }
+  if (!flags.scene28Seen) { console.log('  注意：模拟结束时 scene28Seen 仍未置位（还有 ' + (table.length - steps) + ' 步没走）'); }
   console.log(broken ? '  路线表有 ' + broken + ' 处问题' : '  路线表 ' + table.length + ' 步全部指向真实存在、可触发的入口');
 }
 

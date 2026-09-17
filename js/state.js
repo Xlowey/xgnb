@@ -266,8 +266,8 @@
   var sceneAliases = {
     opening: "scene-01", "note-intro": "scene-03", "note-repeat": "scene-03",
     "wardrobe-clue": "scene-02", "wardrobe-repeat": "scene-02", mirror: "mirror-inspect",
-    terminal: "scene-03-tv", "guard-intro": "scene-07", "guard-repeat": "scene-07",
-    contract: "scene-15", "contract-repeat": "scene-15", "ending-choice": "scene-31"
+    terminal: "scene-03-tv",
+    contract: "scene-13", "contract-repeat": "scene-13", "ending-choice": "scene-29"
   };
   function canonicalScene(id) { return sceneAliases[id] || id; }
   function sceneCompleted(state, id) {

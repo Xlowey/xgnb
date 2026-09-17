@@ -34,7 +34,7 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     });
 
     // The speaker->portrait mapping must cover the new cast.
-    await page.goto('http://127.0.0.1:8809/pages/novel.html?scene=scene-07');
+    await page.goto('http://127.0.0.1:8809/pages/novel.html?scene=scene-06');
     await page.waitForSelector('#novel-progress', { state: 'attached' });
     await page.waitForTimeout(400);
     const map = await page.evaluate(() => {
@@ -57,7 +57,7 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     check('all five new assets load from the runtime path', Object.values(loaded).every(v => v !== 'ERROR'), loaded);
 
     // Drive a scene that actually has the new speakers and confirm the layer shows them.
-    for (const [scene, expectId] of [['scene-22', 'nightmare'], ['scene-10', 'girl'], ['scene-07', 'paperman']]) {
+    for (const [scene, expectId] of [['scene-20', 'nightmare'], ['scene-09', 'girl'], ['scene-06', 'paperman']]) {
       await page.goto('http://127.0.0.1:8809/pages/novel.html?scene=' + scene);
       await page.waitForSelector('#novel-progress', { state: 'attached' });
       await page.waitForTimeout(300);
@@ -79,7 +79,7 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
 
     // No portrait may overlap the hero on a narrow screen.
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('http://127.0.0.1:8809/pages/novel.html?scene=scene-22');
+    await page.goto('http://127.0.0.1:8809/pages/novel.html?scene=scene-20');
     await page.waitForSelector('#novel-progress', { state: 'attached' });
     for (let i = 0; i < 24; i += 1) {
       const s = await page.evaluate(() => { const n = document.querySelector('.portrait-nightmare'); return n && !n.hidden ? 1 : 0; });

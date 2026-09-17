@@ -47,7 +47,7 @@ const expect = (label, ok, detail) => { check(label, ok, detail); if (!ok) failu
     expect('event-based system line uses the top panel', first.event === 'system' && first.panel && first.label === '系统', first);
     expect('event-based system line clears the bottom dialogue text', first.bottomText === '', first);
 
-    await open('scene-22');
+    await open('scene-20');
     const later = await advanceUntilSystem(100);
     expect('line-based system line reaches the top panel', later.event === 'system' && later.panel, later);
     const lower = await page.evaluate(() => ({ speakerHidden: !!document.getElementById('novel-speaker').hidden, panelLabel: document.querySelector('.system-message small') && document.querySelector('.system-message small').textContent.trim() }));

@@ -8,29 +8,29 @@
     ["scene03Seen", "调查宿舍里的纸条，确认下一步该怎么走。", "dorm", "dorm-note"],
     ["scene04Seen", "从宿舍门进入走廊，开始午夜巡逻。", "dorm", "dorm-door"],
     ["scene05Seen", "前往病房展厅，调查病床和电视。", "museum", "overview-hospital"],
-    ["scene06Seen", "前往教室展厅，查看录像。", "classroom", "classroom-recording"],
-    ["scene07Seen", "对讲机通知集合：返回大厅，观察无脸保安。", "hall", "hall-guard"],
-    ["scene08Seen", "与赵灵前往食堂门前。", "canteenPassage", "canteen-door-story"],
-    ["scene09Seen", "前往馆长办公室谈话。", "office", "office-director"],
-    ["scene10Seen", "回大厅调查阴暗角落。", "hall", "hall-scene-10"],
-    ["scene11Seen", "经走廊回宿舍，查看门口的客人。", "dorm", "dorm-scene-11"],
-    ["scene12Seen", "调查宿舍门边散落的彩带。", "dorm", "dorm-scene-12"],
-    ["scene13Seen", "查看宿舍桌边的来信。", "dorm", "dorm-scene-13"],
-    ["scene14Seen", "经食堂走廊进入食堂。", "canteen", "canteen-meal"],
-    ["scene15Seen", "前往蜡像馆调查张明诚展台。", "wax", "wax-contract"],
-    ["scene16Seen", "继续调查蜡像馆展台。", "wax", "wax-scene-16"],
-    ["scene17Seen", "前往馆长办公室。", "office", "wax-scene-17"],
-    ["scene20Seen", "前往银色恋人展厅，完成调查。", "museum", "overview-silver"],
-    ["scene21Seen", "进入食堂，调查彩带。", "canteen", "canteen-ribbons"],
-    ["scene22Seen", "调查食堂彩带深处。", "canteen", "wax-scene-22"],
-    ["scene23Seen", "继续调查食堂中的回声。", "canteen", "wax-scene-23"],
-    ["scene24Seen", "回馆长办公室调查。", "office", "wax-scene-24"],
-    ["scene25Seen", "回宿舍翻找红色制服。", "dorm", "dorm-scene-25"],
-    ["scene26Seen", "回到宿舍外走廊巡逻。", "corridor", "wax-scene-26"],
-    ["scene27Seen", "回到宿舍门边。", "dorm", "wax-scene-27"],
-    ["scene28Seen", "前往食堂走廊，调查逃离路线。", "canteenPassage", "wax-scene-28"],
-    ["scene29Seen", "调查食堂门前的变化。", "canteenPassage", "wax-scene-29"],
-    ["scene30Seen", "前往博物馆出口。", "museum", "wax-scene-30"]
+    ["scene06Seen", "回大厅集合，听馆长宣读客人规则。", "hall", "hall-speech"],
+    ["scene07Seen", "与赵灵前往食堂门前。", "canteenPassage", "canteen-door-story"],
+    ["scene08Seen", "前往馆长办公室谈话。", "office", "office-director"],
+    ["scene09Seen", "在馆内总览找到「阴暗角落」，看看赵灵。", "museum", "overview-corner"],
+    // 旧 scene-11（王钢蛋宿舍）已删，dorm-scene-11 改指 009 第十场（客人）。
+    // 原表里 scene11Seen 出现两次且与 scene10Seen 倒序，这里按节点实际产出的 flag 理顺。
+    ["scene10Seen", "经走廊回宿舍，查看门口的客人。", "dorm", "dorm-scene-11"],
+    ["scene11Seen", "追上逃跑的馆长，逼问出真相。", "dorm", "dorm-scene-13"],
+    ["scene12Seen", "回宿舍外走廊，找赵灵说说话。", "corridor", "corridor-zhaoling-12"],
+    ["scene13Seen", "前往蜡像馆调查张明诚展台。", "wax", "wax-contract"],
+    ["scene14Seen", "继续调查蜡像馆展台。", "wax", "wax-scene-16"],
+    ["scene15Seen", "前往馆长办公室。", "office", "wax-scene-17"],
+    ["scene18Seen", "前往银色恋人展厅，完成调查。", "museum", "overview-silver"],
+    ["scene19Seen", "进入食堂，调查彩带。", "canteen", "canteen-ribbons"],
+    ["scene20Seen", "调查食堂彩带深处。", "canteen", "wax-scene-22"],
+    ["scene21Seen", "继续调查食堂中的回声。", "canteen", "wax-scene-23"],
+    ["scene22Seen", "回馆长办公室调查。", "office", "wax-scene-24"],
+    ["scene23Seen", "回宿舍翻找红色制服。", "dorm", "dorm-scene-25"],
+    ["scene24Seen", "回到宿舍外走廊巡逻。", "corridor", "wax-scene-26"],
+    ["scene25Seen", "回到宿舍门边。", "dorm", "wax-scene-27"],
+    ["scene26Seen", "前往食堂走廊，调查逃离路线。", "canteenPassage", "wax-scene-28"],
+    ["scene27Seen", "调查食堂门前的变化。", "canteenPassage", "wax-scene-29"],
+    ["scene28Seen", "前往博物馆出口。", "museum", "wax-scene-30"]
   ];
   function objective(state) {
     var row = route.find(function (r) { return !state.flags[r[0]]; });
@@ -38,8 +38,8 @@
   }
   function complete(state, id) {
     // The parent office scene ends at a question, not at the end of the conversation.
-    if (id === "scene-09") return;
-    if (/^scene-09-[abcd]$/.test(id)) state.flags.scene09Seen = true;
+    if (id === "scene-08") return;
+    if (/^scene-08-[abcd]$/.test(id)) state.flags.scene08Seen = true;
     state.task = objective(state).text;
   }
   window.MuseumChapterProgress={objective:objective,complete:complete};
