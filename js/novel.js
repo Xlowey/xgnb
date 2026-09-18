@@ -18,6 +18,15 @@
     } catch (error) { return null; }
   }
   var state = preview ? (readPreviewState() || MuseumState.create(user)) : (MuseumState.load(user.id) || MuseumState.create(user));
+  function unlockAchievement(id, persistNow) {
+    if (!state || !window.MuseumAchievements) return false;
+    return window.MuseumAchievements.unlock(state, id, { save: persistNow ? persist : function () {} });
+  }
+  function syncAchievementProgress() {
+    if (!state || !window.MuseumAchievements) return;
+    window.MuseumAchievements.setProgress(state, "clue-collector", state.clues.length, { save: function () {} });
+    window.MuseumAchievements.setProgress(state, "area-explorer", state.unlockedRooms.length, { save: function () {} });
+  }
   if (previewResume) {
     // The preview battle does not pass through game.js, so finish the small
     // amount of result handling here before showing the continuation scene.
@@ -35,6 +44,7 @@
         state.flags.waxDoorUnlocked = true;
         if (state.clues.indexOf("faceless-mask") === -1) state.clues.push("faceless-mask");
         if (state.unlockedRooms.indexOf("wax") === -1) state.unlockedRooms.push("wax");
+        unlockAchievement("first-battle", false);
       } else {
         state.roomId = "museum";
         state.currentNode = "museum";
@@ -47,6 +57,7 @@
   }
   function persist() {
     try {
+      syncAchievementProgress();
       if (preview) { sessionStorage.setItem("museum_class_preview", JSON.stringify(state)); return true; }
       return MuseumState.save(state, user.id) !== false;
     } catch (error) {
@@ -312,7 +323,12 @@
       state.flags.readNote = true;
       state.task = window.MuseumChapterProgress.objective(state).text;
       state.returnRoom = state.returnRoom || "dorm";
+      unlockAchievement("blood-note", false);
     }
+    if (currentSceneId === "scene-04") unlockAchievement("corridor-meeting", false);
+    if (/^scene-09-[a-d]$/.test(currentSceneId)) unlockAchievement("director-talk", false);
+    if (currentSceneId === "scene-17") unlockAchievement("diary-reader", false);
+    syncAchievementProgress();
   }
 
   function saveEnding() {
@@ -323,6 +339,10 @@
     state.narrativeChoice = endingChoice;
     state.ending = currentScene.endingId || endingChoice || state.ending;
     state.endingComplete = true;
+    var endingId = state.ending;
+    if (endingId && state.endingHistory.indexOf(endingId) === -1) state.endingHistory.push(endingId);
+    unlockAchievement("first-ending", false);
+    window.MuseumAchievements.setProgress(state, "ending-collector", state.endingHistory.length, { save: function () {} });
     return persist();
   }
 

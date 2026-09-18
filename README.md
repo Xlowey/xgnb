@@ -67,9 +67,9 @@ xgnb/
 
 背包在地图右上角、对白框右下角均有入口，也可按 B 打开或收起，Esc 收起。阅读员工守则时收录规则记录，从黑色制服口袋取出血字纸条时获得物品；重复查看不会重复获得。背包可选物品、查看清晰原文、翻面和放大，关闭后继续原位置与剧情。物品随当前账号的自动档和手动档保存，旧档中已获得的纸条与守则会自动恢复；课堂预览仍使用独立的临时状态。`js/items.js` 是剧情与背包共用的物品定义，`js/inventory.js` 管理收录与界面；新物品通过定义和 `MuseumInventory.acquire(state, id, {save: persist})` 接入。
 
-成就入口在地图右上角和对白框右下角，也可按 J 打开或关闭，Esc 关闭。正式列表在 `js/achievements-data.js`，目前为空；旧测试成就的展示与触发已移除，旧档记录保留但不计入当前列表。面板支持全部、已解锁、未解锁筛选，打开时暂停移动和自动播放。成就随本账号当前存档保存，读取较早存档会恢复当时的成就进度；课堂预览与正式账号分开。
+成就入口在地图右上角和对白框右下角，也可按 J 打开或关闭，Esc 关闭。正式列表在 `js/achievements-data.js`，当前已接入移动、调查、区域探索、线索收集、守则判断、血字纸条、馆长谈话、战斗、馆长日记和结局收集等项目。面板支持全部、已解锁、未解锁筛选，打开时暂停移动和自动播放。成就随本账号当前存档保存，读取较早存档会恢复当时的成就进度；课堂预览与正式账号分开。
 
-后续在配置中添加 `{id, name, description, target: 1, hidden: false}`。一次性成就调用 `MuseumAchievements.unlock(state, id, {save: persist})`；累计成就调用 `increment(state, id, 1, {save: persist})` 或 `setProgress(state, id, progress, {save: persist})`。未知 ID 不会解锁，重复解锁不再提示；解锁时间和进度保存在 `achievements` 与 `achievementRecords`。隐藏成就解锁前不显示名称、条件或进度。框架校验可运行 `node docs/tests/achievements.test.cjs`，测试定义仅在测试进程中注册。
+一次性成就调用 `MuseumAchievements.unlock(state, id, {save: persist})`；累计成就调用 `increment(state, id, 1, {save: persist})` 或 `setProgress(state, id, progress, {save: persist})`。未知 ID 不会解锁，重复解锁不再提示；解锁时间和进度保存在 `achievements` 与 `achievementRecords`。隐藏成就解锁前不显示名称、条件或进度。框架校验可运行 `node docs/tests/achievements.test.cjs`，实际接入回归可运行 `node tests/achievements.cjs`。
 
 ## 测试
 

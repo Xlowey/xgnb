@@ -74,8 +74,17 @@
   setMiniMapVisible(false);
   function addUnique(list, value) { if (list.indexOf(value) === -1) list.push(value); }
   function has(list, value) { return list.indexOf(value) !== -1; }
-  function markDiscovered(id) { addUnique(state.discovered, id); }
-  function addClue(id) { addUnique(state.clues, id); }
+  function unlockAchievement(id, persistNow) {
+    if (!state || !window.MuseumAchievements) return false;
+    return window.MuseumAchievements.unlock(state, id, { save: persistNow ? save : function () {} });
+  }
+  function syncAchievementProgress() {
+    if (!state || !window.MuseumAchievements) return;
+    window.MuseumAchievements.setProgress(state, "clue-collector", state.clues.length, { save: function () {} });
+    window.MuseumAchievements.setProgress(state, "area-explorer", state.unlockedRooms.length, { save: function () {} });
+  }
+  function markDiscovered(id) { addUnique(state.discovered, id); unlockAchievement("first-investigation", true); }
+  function addClue(id) { addUnique(state.clues, id); syncAchievementProgress(); }
   // addItem() 已删除：全仓没有调用者，物品发放走 items.js / 剧情事件。
   function showToast(message) { if (!el.toast) return; el.toast.textContent = message; el.toast.classList.add("visible"); window.clearTimeout(showToast.timer); showToast.timer = window.setTimeout(function () { el.toast.classList.remove("visible"); }, 2600); }
   function showMapTutorial() {
@@ -192,7 +201,10 @@
     if (!blocked(room, state.playerX, nextY, room.id === "museum" ? 10 : 22)) state.playerY = nextY;
     var distance = Math.hypot(state.playerX - previousX, state.playerY - previousY);
     avatarMoving = distance > 0; avatarTravelled += distance;
-    if (distance > 0 && !window.MuseumTutorial.isDone("movement")) window.MuseumTutorial.complete("movement");
+    if (distance > 0) {
+      unlockAchievement("first-step", true);
+      if (!window.MuseumTutorial.isDone("movement")) window.MuseumTutorial.complete("movement");
+    }
     if (Math.abs(dx) > Math.abs(dy)) state.facing = dx > 0 ? "right" : "left"; else state.facing = dy > 0 ? "down" : "up";
   }
   function playerDirection() {
@@ -230,7 +242,9 @@
   function switchRoom(id, x, y) {
     if (!rooms[id]) return;
     state.roomId = id; state.currentNode = id; state.chapter = rooms[id].chapter; state.playerX = x === undefined ? rooms[id].spawn.x : x; state.playerY = y === undefined ? rooms[id].spawn.y : y; state.mode = "explore"; if (el.pause) el.pause.hidden = true; state.task = window.MuseumChapterProgress.objective(state).text;
-    addUnique(state.unlockedRooms, id); renderAll(); save("已进入" + rooms[id].title + "。");
+    addUnique(state.unlockedRooms, id); syncAchievementProgress();
+    if (id === "corridor") unlockAchievement("dorm-escape", true);
+    renderAll(); save("已进入" + rooms[id].title + "。");
   }
 
   function switchRoomAt(id, entry) {
@@ -284,9 +298,10 @@
     startNovel("guard-intro");
   }
   function openRules() {
+    markDiscovered("hall-rules");
     if (state.flags.rulesGameCompleted) { showToast("告示上的规则你已经记住了。"); return; }
     state.mode = "mini"; el.rules.hidden = false; el.rulesFeedback.textContent = ""; el.rulesOptions.textContent = "";
-    [{ id: "red", text: "远离红色制服的工作人员" }, { id: "smile", text: "面对游客时保持微笑" }, { id: "exit", text: "直接询问工作人员出口" }].forEach(function (option) { var button = document.createElement("button"); button.type = "button"; button.className = "modal-option"; button.textContent = option.text; button.addEventListener("click", function () { if (state.flags.rulesGameCompleted) return; if (option.id === "red") { state.flags.rulesGameCompleted = true; addClue("rule-red"); state.systemTrust += 4; el.rulesFeedback.textContent = "判断正确。红制服员工的规则暂时可信，去观察他吧。"; state.task = "观察大厅里的红制服员工。"; save(); } else { state.hp = Math.max(0, state.hp - 3); el.rulesFeedback.textContent = "这条信息无法解释纸条中的矛盾。生存点 -3。"; save(); } }); el.rulesOptions.appendChild(button); });
+    [{ id: "red", text: "远离红色制服的工作人员" }, { id: "smile", text: "面对游客时保持微笑" }, { id: "exit", text: "直接询问工作人员出口" }].forEach(function (option) { var button = document.createElement("button"); button.type = "button"; button.className = "modal-option"; button.textContent = option.text; button.addEventListener("click", function () { if (state.flags.rulesGameCompleted) return; if (option.id === "red") { state.flags.rulesGameCompleted = true; addClue("rule-red"); unlockAchievement("rules-reader", true); state.systemTrust += 4; el.rulesFeedback.textContent = "判断正确。红制服员工的规则暂时可信，去观察他吧。"; state.task = "观察大厅里的红制服员工。"; save(); } else { state.hp = Math.max(0, state.hp - 3); el.rulesFeedback.textContent = "这条信息无法解释纸条中的矛盾。生存点 -3。"; save(); } }); el.rulesOptions.appendChild(button); });
   }
   function openContract() {
     markDiscovered("wax-contract");
@@ -337,7 +352,7 @@
     else if (object.type === "terminal") openTerminal();
     else if (object.type === "mirror") openMirror();
     else if (object.type === "scene") startNovel(object.scene);
-    else if (object.type === "door") { if (!state.flags.hasKey) showToast("门锁着。衣柜里也许有能用的东西。"); else { state.flags.openedDormDoor = true; addUnique(state.unlockedRooms, "corridor"); switchRoomAt(object.target || "corridor", object.entry || {x:1040,y:400}); if (!state.flags.scene04Seen) startNovel("scene-04"); } }
+    else if (object.type === "door") { if (!state.flags.hasKey) showToast("门锁着。衣柜里也许有能用的东西。"); else { state.flags.openedDormDoor = true; addUnique(state.unlockedRooms, "corridor"); unlockAchievement("dorm-escape", true); switchRoomAt(object.target || "corridor", object.entry || {x:1040,y:400}); if (!state.flags.scene04Seen) startNovel("scene-04"); } }
     else if (object.type === "returnDorm") switchRoom("dorm", 1330, 460);
     else if (object.type === "guard") openGuard();
     else if (object.type === "rules") openRules();
@@ -524,7 +539,7 @@
   }
 
   function renderRooms() { el.rooms.textContent = ""; Object.keys(rooms).forEach(function (id) { if (!rooms[id]) return; var button = document.createElement("button"); button.type = "button"; var unlocked = has(state.unlockedRooms, id); button.className = "room-button" + (state.roomId === id ? " current" : ""); button.disabled = true; button.innerHTML = "<strong>" + roomName(id) + "</strong><small>" + (unlocked ? (state.roomId === id ? "当前位置" : "已探索") : "尚未开放") + "</small>";  el.rooms.appendChild(button); }); }
-  function renderStats() { var objective=window.MuseumChapterProgress.objective(state); state.task=objective.text; var hint=document.getElementById("chapter-objective"); if(hint)hint.textContent=objective.text;  el.hp.textContent = String(state.hp); el.trust.textContent = String(state.systemTrust); el.clues.textContent = String(state.clues.length); el.task.textContent = objective.text || tasks[state.roomId] || "继续探索。"; window.MuseumAchievements.refresh(); }
+  function renderStats() { var objective=window.MuseumChapterProgress.objective(state); state.task=objective.text; var hint=document.getElementById("chapter-objective"); if(hint)hint.textContent=objective.text; syncAchievementProgress(); el.hp.textContent = String(state.hp); el.trust.textContent = String(state.systemTrust); el.clues.textContent = String(state.clues.length); el.task.textContent = objective.text || tasks[state.roomId] || "继续探索。"; window.MuseumAchievements.refresh(); }
   function renderAll() {
     if (!state) return; var room = currentRoom();
     if (!Number.isFinite(state.playerX) || !Number.isFinite(state.playerY) || blocked(room,state.playerX,state.playerY,room.id === "museum" ? 10 : 22)) {
@@ -585,7 +600,7 @@
       if (Number.isFinite(remainingHp)) state.hp = Math.max(0, remainingHp);
       var finalBoss = state.battleContext === "final-boss";
       if (!finalBoss) {
-        state.flags.battleDemoCompleted = true; state.flags.waxDoorUnlocked = true; addClue("faceless-mask"); addUnique(state.unlockedRooms, "wax");
+        state.flags.battleDemoCompleted = true; state.flags.waxDoorUnlocked = true; addClue("faceless-mask"); addUnique(state.unlockedRooms, "wax"); syncAchievementProgress(); unlockAchievement("first-battle", false);
       }
       var returnRoom = rooms[state.returnRoom] ? state.returnRoom : "hall";
       state.roomId = returnRoom; state.currentNode = returnRoom; state.chapter = rooms[returnRoom].chapter; state.playerX = Number(state.returnX) || rooms[returnRoom].spawn.x; state.playerY = Number(state.returnY) || rooms[returnRoom].spawn.y; state.task = tasks[returnRoom];

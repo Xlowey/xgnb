@@ -68,6 +68,7 @@
     returnScene: null,
     ending: null,
     endingComplete: false,
+    endingHistory: [],
     tutorial: DEFAULT_TUTORIAL,
     tutorialDismissed: {},
     savedAt: null,
@@ -96,6 +97,7 @@
     if(window.MuseumInventory)window.MuseumInventory.normalize(state);
     state.discovered = Array.isArray(state.discovered) ? state.discovered : [];
     state.unlockedRooms = Array.isArray(state.unlockedRooms) ? state.unlockedRooms : ["dorm"];
+    state.endingHistory = Array.from(new Set(Array.isArray(state.endingHistory) ? state.endingHistory.filter(function (id) { return typeof id === "string" && id.length > 0; }) : []));
     // Version 6 introduced the walkable museum overview. Existing records
     // that have already completed the prologue can enter it immediately;
     // new records unlock it when scene-03 is completed.
