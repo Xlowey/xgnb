@@ -574,6 +574,14 @@
 
   function applyChoice(choice) {
     endingChoice = choice.id;
+    if (choice.effect === "skip-nightmare") {
+      state.flags.nightmareMinigameChoice = "skip";
+      state.returnRoom = "museum";
+      state.returnX = 610;
+      state.returnY = 620;
+      state.battleContext = null;
+      state.returnScene = null;
+    }
     if (choice.effect === "read-note") {
       state.flags.readNote = true;
       state.systemTrust += 3;
@@ -615,6 +623,7 @@
   function startBattle(choice) {
     var beforeBattle=JSON.parse(JSON.stringify(state));
     if (choice.battleContext === "final-boss") {
+      state.flags.nightmareMinigameChoice = "enter";
       // 最终战发生在食堂内部，胜利后必须从博物馆大门继续，而不是回到
       // 进入剧情前的食堂出生点。
       state.returnRoom = "museum";
@@ -641,6 +650,11 @@
   }
 
   function choose(choice) {
+    if (choice.endingFromNightmareChoice) {
+      // 老存档没有主动选择记录时走 A，不推断玩家打过哪些 Boss 阶段。
+      var destination = state.flags.nightmareMinigameChoice === "enter" ? "ending-c" : "ending-a";
+      choice = Object.assign({}, choice, { id: destination, nextScene: destination });
+    }
     if (!window.MuseumTutorial.isDone("branch")) window.MuseumTutorial.complete("branch");
     // A battle choice must NOT complete the scene yet: doing so awarded scene11Seen and
     // completed:scene-11 the moment 战斗 was clicked, so losing the fight still unlocked
@@ -683,7 +697,7 @@
   }
 
   function completeEnding() {
-    saveEnding();
+    if (!saveEnding()) { showToast("结局保存失败，请重试。"); return; }
     showEndingScreen();
   }
 

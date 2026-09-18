@@ -94,6 +94,34 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
       check(`「${label}」 ending has text`, body.length > 0 || (await page.evaluate(() => !document.getElementById('novel-end').hidden)), body.slice(0, 60));
     }
 
+    // A/C follows the saved minigame decision, regardless of the finale wording.
+    for (const decision of ['skip', 'enter']) {
+      for (const label of ['回头救赵灵', '追问真相']) {
+        await seed({ nightmareMinigameChoice: decision });
+        await page.goto('http://127.0.0.1:8806/pages/novel.html?scene=ending-choice');
+        for (let i = 0; i < 8 && !(await choices()).length; i++) {
+          await page.keyboard.press('e');
+          await page.waitForTimeout(150);
+        }
+        await page.getByRole('button', { name: new RegExp(label) }).click();
+        check(`${decision}: ${label} follows minigame decision`, page.url().includes(decision === 'enter' ? 'ending-c' : 'ending-a'), page.url());
+      }
+    }
+    for (const enter of [false, true]) {
+      await seed({});
+      await page.goto('http://127.0.0.1:8806/pages/novel.html?scene=scene-27-boss');
+      for (let i = 0; i < 20 && !(await choices()).length; i++) {
+        await page.keyboard.press('e');
+        await page.waitForTimeout(150);
+      }
+      await page.getByRole('button', { name: enter ? '迎战梦魇（进入小游戏）' : '不进入小游戏，前往出口', exact: true }).click();
+      await page.waitForTimeout(500);
+      check('nightmare choice opens correct destination', page.url().includes(enter ? 'pixel-dungeon-html' : 'scene-28'), page.url());
+      await page.goto('http://127.0.0.1:8806/index.html');
+      const saved = await page.evaluate(() => MuseumState.load(MuseumAuth.getCurrentUser().id));
+      check('nightmare decision survives page navigation', saved.flags.nightmareMinigameChoice === (enter ? 'enter' : 'skip'), saved.flags.nightmareMinigameChoice);
+    }
+
     // ---- 4. the timeout still resolves to 死亡 ---------------------------
     await seed({});
     await page.goto('http://127.0.0.1:8806/pages/novel.html?scene=ending-choice');
