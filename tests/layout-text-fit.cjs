@@ -55,8 +55,8 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
 
     for (const [w, h] of [[1366, 768], [844, 390], [390, 844]]) {
       await page.setViewportSize({ width: w, height: h });
-      // scene-08 page 4 is a real 64-char dialogue page.
-      await page.goto('http://127.0.0.1:8805/pages/novel.html?scene=scene-08');
+      // scene-07 page 4 is a real 64-char dialogue page.
+      await page.goto('http://127.0.0.1:8805/pages/novel.html?scene=scene-07');
       await page.waitForSelector('#novel-progress', { state: 'attached' });
       await page.waitForTimeout(400);
       // Advance to the first plain dialogue page so #novel-text is actually shown.

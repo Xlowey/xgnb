@@ -67,14 +67,14 @@
       gate("overview-dorm","员工宿舍",345,330,"dorm"),
       gate("overview-corridor","宿舍外走廊",465,570,"corridor"),
       scene("overview-hospital","病房展厅",345,300,"scene-05"),
-      scene("overview-class","教室展厅",650,298,"scene-06","scene05Seen"),
-      gate("overview-wax","蜡像馆",799,300,"wax","scene07Seen"),
+      gate("overview-wax","蜡像馆",799,300,"wax","scene06Seen"),
       gate("overview-hall","大厅",615,465,"hall"),
-      scene("overview-canteen","食堂展厅",769,430,"scene-08","scene07Seen"),
+      scene("overview-canteen","食堂展厅",769,430,"scene-07","scene06Seen"),
       gate("overview-office","馆长办公室",345,480,"office"),
-      scene("overview-wang-dorm","王钢蛋宿舍",345,440,"scene-11","scene10Seen"),
-      scene("overview-silver","银色恋人展厅",700,625,"scene-18","scene17Seen"),
-      scene("overview-exit","离开博物馆",610,642,"ending-choice","scene30Seen")
+      scene("overview-corner","阴暗角落",345,570,"scene-09","scene08Seen"),
+      scene("overview-wang-dorm","宿舍门口的客人",345,440,"scene-10","scene09Seen"),
+      scene("overview-silver","银色恋人展厅",700,625,"scene-16","scene15Seen"),
+      scene("overview-exit","离开博物馆",610,642,"ending-choice","scene28Seen")
     ]);
     // 可走区域 = 画面上的石地走廊，按实测范围铺满，并且相邻两条**重叠 20px 以上**。
     // 上一版每条带子只有 60-100px 宽、彼此只是首尾相接，于是带子之外的地板全是空气墙
@@ -111,20 +111,15 @@
       // a real room and the player must walk through it before reaching the
       // museum overview; this prevents the old dorm -> hall teleport.
       Object.assign({}, authored.dorm["dorm-door"], { id:"dorm-door", type:"travel", target:"corridor", requiredFlag:"scene03Seen", x:835, y:860, r:82, label:"宿舍门 · 前往走廊", entry:{x:1040,y:400} }),
-      authored.dorm["dorm-scene-11"], authored.dorm["dorm-scene-12"], authored.dorm["dorm-scene-13"],
-      authored.dorm["dorm-scene-14"], authored.dorm["dorm-scene-25"]
+      authored.dorm["dorm-scene-11"], authored.dorm["dorm-scene-13"], authored.dorm["dorm-scene-25"]
     ].filter(Boolean),"序章",1);
     room("hall","博物馆大厅","hall-map.webp",{x:835,y:700},[
       {x:0,y:0,w:1670,h:525},{x:0,y:0,w:110,h:942},{x:1555,y:0,w:115,h:942},{x:0,y:875,w:735,h:67},{x:945,y:875,w:725,h:67}
     ],[
       gate("hall-corridor","返回馆内总览",835,860,"museum"),
-      Object.assign({}, authored.hall["hall-guard"], { id:"hall-guard", type:"guard", requiredFlag:"scene06Seen", x:835, y:610, r:100, label:"无脸保安" }),
+      Object.assign({}, authored.hall["hall-speech"], { id:"hall-speech", type:"scene", scene:"scene-06", requiredFlag:"scene05Seen", x:835, y:610, r:90, label:"大厅集合 · 馆长训话" }),
       Object.assign({}, authored.hall["hall-rules"], { id:"hall-rules", type:"rules", x:1240, y:610, r:88, label:"值班告示" }),
       Object.assign({}, authored.hall["hall-scene-05"], { id:"hall-scene-05", type:"scene", scene:"scene-05", requiredFlag:"scene04Seen", x:310, y:620, r:76, label:"病房展厅" }),
-      Object.assign({}, authored.hall["hall-scene-06"], { id:"hall-scene-06", type:"scene", scene:"scene-06", requiredFlag:"scene05Seen", x:1370, y:620, r:76, label:"教室展厅" }),
-      Object.assign({}, authored.hall["hall-scene-08"], { id:"hall-scene-08", type:"scene", scene:"scene-08", requiredFlag:"scene07Seen", x:620, y:740, r:76, label:"食堂门前" }),
-      Object.assign({}, authored.hall["hall-scene-09"], { id:"hall-scene-09", type:"scene", scene:"scene-09", requiredFlag:"scene08Seen", x:1080, y:740, r:76, label:"馆长办公室" }),
-      Object.assign({}, authored.hall["hall-scene-10"], { id:"hall-scene-10", type:"scene", scene:"scene-10", requiredFlag:"scene09Seen", x:1430, y:740, r:76, label:"阴暗角落" }),
       Object.assign({}, authored.hall["hall-wax-door"], { id:"hall-wax-door", type:"waxDoor", x:1490, y:610, r:95, label:"蜡像馆入口" })
     ].filter(Boolean),"第一幕",1);
     room("corridor","宿舍外走廊","走廊示意图1.webp",{x:1360,y:450},[],[
@@ -133,7 +128,9 @@
       // 赵灵在走廊左侧等主角。走廊那段剧情（scene-04 · 午夜巡逻）应当是"和她对话"，
       // 而不是走出宿舍门就自动播放——剧本里那段正是她自我介绍（"赵灵。""师……师父……"）。
       // 出现条件与 js/map-npc.js 的 sequenceFor() 一致：还没谈过才显示。
-      {id:"corridor-zhaoling",type:"npc",x:1060,y:445,r:95,label:"赵灵",scene:"scene-04",npc:"zhaoling"}
+      {id:"corridor-zhaoling",type:"npc",x:1060,y:445,r:95,label:"赵灵",scene:"scene-04",npc:"zhaoling"},
+      // 逼问馆长之后她再等主角一次（第十二场）。出现条件见 js/map-npc.js 的 SEQUENCES。
+      {id:"corridor-zhaoling-12",type:"npc",x:1560,y:445,r:95,label:"赵灵",scene:"scene-12",npc:"zhaoling"}
     ],"第一幕",1);
     // New artwork has a horizontal corridor; the dorm facade has no doorway.
     // Do not retain old vertical-map door locations or allow walking through it.
@@ -150,12 +147,12 @@
     ];
     room("office","馆长办公室","office-map.webp",{x:830,y:780},[
       {x:0,y:0,w:1670,h:315},{x:0,y:0,w:180,h:942},{x:1455,y:0,w:215,h:942},{x:550,y:300,w:520,h:180},{x:440,y:495,w:780,h:125},{x:0,y:885,w:730,h:57},{x:935,y:885,w:735,h:57}
-    ],[scene("office-director","馆长",1130,390,"scene-09","scene08Seen"),gate("office-exit","返回馆内总览",835,865,"museum")],"第一幕",1);
+    ],[scene("office-director","馆长",1130,390,"scene-08","scene07Seen"),scene("office-corner","办公室门口",540,830,"scene-09","scene08Seen"),gate("office-exit","返回馆内总览",835,865,"museum")],"第一幕",1);
     // Keep the chapter events that live in these rooms, while placing them on
     // the open floor of the replacement artwork.
     ["dorm", "hall"].forEach(function (id) {
       (rooms[id].objects || []).forEach(function (object) {
-        if (object.scene === "scene-10") { object.x = 1320; object.y = 780; }
+        if (object.scene === "scene-09") { object.x = 1320; object.y = 780; }
       });
     });
   };

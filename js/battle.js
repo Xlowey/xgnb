@@ -23,9 +23,9 @@
     elements.enemyHpBar.style.width=Math.max(0,state.enemyHp/MAX_ENEMY_HP*100)+"%"; elements.playerHpBar.style.width=Math.max(0,state.playerHp/MAX_PLAYER_HP*100)+"%";
     var nextAction = enemyPatterns[state.turn % enemyPatterns.length];
     elements.enemyIntent.textContent=state.observed ? "已观察：下一次行动是“"+(enemyActionLabels[nextAction] || "未知行动")+"”。" : "正在观察你的表情。";
-    elements.ruleText.textContent=state.ruleSolved ? "规则已破解：保持微笑可以令无脸保安停止行动。" : "面对游客需面带微笑。先观察，才能发现它的弱点。";
+    elements.ruleText.textContent=state.ruleSolved ? "规则已破解：你已看穿馆长的虚实，他本回合停止行动。" : "馆长深不可测。先观察，才能发现他的弱点。";
   }
-  function makeResult(status) { return { status:status, remainingHp:state.playerHp, rewards:status === "win" ? ["faceless_mask"] : [], flags:status === "win" ? ["guard_defeated"] : ["battle_failed"] }; }
+  function makeResult(status) { return { status:status, remainingHp:state.playerHp, rewards:status === "win" ? ["director_account"] : [], flags:status === "win" ? ["director_defeated"] : ["battle_failed"] }; }
   function finish(status,message) {
     state.finished=true;
     setButtonsDisabled(true);
@@ -43,11 +43,11 @@
     if (window.parent !== window) window.parent.postMessage({ type:"battle-result", result:window.lastBattleResult }, "*");
   }
   function enemyTurn() {
-    if (state.ruleSolved) { addLog("无脸保安无法理解你的微笑，本回合停止行动。"); return; }
+    if (state.ruleSolved) { addLog("馆长一时语塞，本回合停止行动。"); return; }
     var action=enemyPatterns[state.turn % enemyPatterns.length]; var damage=action === "heavyAttack" ? 9 : 4;
-    if (action === "observe") { addLog("无脸保安靠近了一步，没有造成伤害。"); return; }
+    if (action === "observe") { addLog("馆长靠近了一步，没有造成伤害。"); return; }
     if (state.defending) damage=Math.ceil(damage/2); state.playerHp=Math.max(0,state.playerHp-damage);
-    addLog("无脸保安发动"+(action === "heavyAttack" ? "重击" : "攻击")+"，你受到 "+damage+" 点伤害。");
+    addLog("馆长发动"+(action === "heavyAttack" ? "重击" : "攻击")+"，你受到 "+damage+" 点伤害。");
   }
   function takeAction(action) {
     if (state.finished) return; state.defending=false;
@@ -56,12 +56,12 @@
     else if (action === "observe") { state.observed=true; elements.playerStatus.textContent="你看见了它的行动规律。"; addLog("观察结果：它每四回合会发动一次重击。"); }
     else if (action === "smile") {
       if (!state.observed) { addLog("你还没有找到正确时机。先使用“观察”。"); updateView(); return; }
-      state.ruleSolved=true; addLog("你保持微笑。无脸保安停下了，它无法执行这条规则。");
+      state.ruleSolved=true; addLog("你步步紧逼。馆长停下了，他无法自圆其说。");
       updateView();
-      finish("win","你保持微笑。无脸保安停下了，交涉成功。");
+      finish("win","馆长不再辩解，交涉成功。");
       return;
     }
-    if (state.enemyHp <= 0) { updateView(); finish("win","无脸保安倒下了，你获得线索：无脸面具。"); return; }
+    if (state.enemyHp <= 0) { updateView(); finish("win","馆长被打服了，你获得线索：馆长的口供。"); return; }
     setButtonsDisabled(true);
     window.setTimeout(function () { enemyTurn(); state.turn+=1; updateView(); setButtonsDisabled(state.finished); if (state.playerHp <= 0) finish("lose","你的生存点归零，战斗结束。"); },260);
     updateView();

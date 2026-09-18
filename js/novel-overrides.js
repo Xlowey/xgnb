@@ -51,31 +51,32 @@
     { id: "leave-wardrobe", label: "暂时不动，继续调查宿舍", nextScene: null }
   ];
 
-  scenes["scene-07"].choices = [
-    { id: "follow-zhaoling", label: "跟赵灵去食堂门前", nextScene: "scene-08" }
+  scenes["scene-06"].choices = [
+    { id: "follow-zhaoling", label: "跟赵灵去食堂门前", nextScene: "scene-07" }
   ];
 
-  scenes["scene-15"].choices = [
-    { id: "inspect-wax", label: "继续清点蜡像，调查赵灵的展台", nextScene: "scene-16", effect: "find-contract-clue" }
+  scenes["scene-13"].choices = [
+    { id: "inspect-wax", label: "继续清点蜡像，调查赵灵的展台", nextScene: "scene-14", effect: "find-contract-clue" }
   ];
 
   // 第九场的四个回答是同一轮的互斥选项。旧实现把 A/B/C 串成了三段，
   // 还留下一个“提交调查记录”伪选项，导致坦白路线继续播放隐瞒路线的完整坦白。
   // 以“吃没吃桃子？”为切点，四条路线各自从头播放到自己的收束处。
-  var office = scenes["scene-09"];
+  var office = scenes["scene-08"];
   var officeAllLines = office.lines.slice();
-  var officeChoiceAt = findLineIndex("scene-09", function (line) { return line.text.indexOf("① 什么梦") === 0; });
-  var officeAAt = findLineIndex("scene-09", function (line) { return line.text.indexOf("你……吃那些桃子了吗") === 0; });
-  var officeBAt = findLineIndex("scene-09", function (line) { return line.text.indexOf("吃了……") === 0; });
-  var officeCAt = findLineIndex("scene-09", function (line) { return line.text.indexOf("馆长这么紧张") === 0; });
-  var officeDAt = findLineIndex("scene-09", function (line) { return line.speaker.indexOf("若隐瞒") !== -1; });
+  var officeChoiceAt = findLineIndex("scene-08", function (line) { return line.text.indexOf("① 什么梦") === 0; });
+  var officeAAt = findLineIndex("scene-08", function (line) { return line.text.indexOf("你……吃那些桃子了吗") === 0; });
+  var officeBAt = findLineIndex("scene-08", function (line) { return line.text.indexOf("吃了……") === 0; });
+  var officeCAt = findLineIndex("scene-08", function (line) { return line.text.indexOf("馆长这么紧张") === 0; });
+  // 「主角（若隐瞒）」的括号已按 009 口径剔除，改用 D 分支首句定位（选项行前面带 ①，不会误命中）
+  var officeDAt = findLineIndex("scene-08", function (line) { return line.text.indexOf("什么梦？") === 0; });
   var officeEnd = officeAllLines.length;
   office.lines = officeAllLines.slice(0, officeChoiceAt);
   office.choices = [
-    { id: "office-hide", label: "A　没吃，继续隐瞒", nextScene: "scene-09-a" },
-    { id: "office-tell", label: "B　吃了，直接坦白", nextScene: "scene-09-b" },
-    { id: "office-ask", label: "C　反问馆长是否也梦见过桃树", nextScene: "scene-09-c" },
-    { id: "office-secret", label: "D　不回答，保留自己的秘密", nextScene: "scene-09-d" }
+    { id: "office-hide", label: "A　没吃，继续隐瞒", nextScene: "scene-08-a" },
+    { id: "office-tell", label: "B　吃了，直接坦白", nextScene: "scene-08-b" },
+    { id: "office-ask", label: "C　反问馆长是否也梦见过桃树", nextScene: "scene-08-c" },
+    { id: "office-secret", label: "D　不回答，保留自己的秘密", nextScene: "scene-08-d" }
   ];
   var officeBranch = function (id, title, lines, flag) {
     return Object.assign({}, office, {
@@ -87,25 +88,26 @@
       flag: flag
     });
   };
-  scenes["scene-09-a"] = officeBranch("scene-09-a", "馆长办公室 · 没吃", officeAllLines.slice(officeAAt, officeBAt), "officeHideSeen");
-  scenes["scene-09-b"] = officeBranch("scene-09-b", "馆长办公室 · 坦白", officeAllLines.slice(officeBAt, officeCAt), "officeTellSeen");
-  scenes["scene-09-c"] = officeBranch("scene-09-c", "馆长办公室 · 追问", officeAllLines.slice(officeCAt, officeDAt), "officeAskSeen");
-  scenes["scene-09-d"] = officeBranch("scene-09-d", "馆长办公室 · 保留秘密", officeAllLines.slice(officeDAt, officeEnd), "officeSecretSeen");
+  scenes["scene-08-a"] = officeBranch("scene-08-a", "馆长办公室 · 没吃", officeAllLines.slice(officeAAt, officeBAt), "officeHideSeen");
+  scenes["scene-08-b"] = officeBranch("scene-08-b", "馆长办公室 · 坦白", officeAllLines.slice(officeBAt, officeCAt), "officeTellSeen");
+  scenes["scene-08-c"] = officeBranch("scene-08-c", "馆长办公室 · 追问", officeAllLines.slice(officeCAt, officeDAt), "officeAskSeen");
+  scenes["scene-08-d"] = officeBranch("scene-08-d", "馆长办公室 · 保留秘密", officeAllLines.slice(officeDAt, officeEnd), "officeSecretSeen");
 
-  // The first red-uniform confrontation pauses before the two fights.
+  // 009 删掉了王钢蛋的宿舍卡牌战，战斗挪到第十一场：馆长被擒、客人走后主角动手。
+  // 以「进入战斗（可选择使用系统提供的帮助）」为切点，战斗结算后回到 scene-11-after。
   var dormIntrusion = scenes["scene-11"];
   var dormAllLines = dormIntrusion.lines.slice();
-  var fightHintAt = findLineIndex("scene-11", function (line) { return line.text.indexOf("玩家可选择") !== -1; });
+  var fightHintAt = findLineIndex("scene-11", function (line) { return line.text.indexOf("进入战斗") !== -1; });
   dormIntrusion.lines = dormAllLines.slice(0, fightHintAt);
   dormIntrusion.choices = [
-    { id: "dorm-yield", label: "妥协，先观察他们的行动", nextScene: "scene-11-after" },
-    { id: "dorm-fight", label: "战斗，夺回进入宿舍的权利", action: "battle", afterBattle: "scene-11-after" }
+    { id: "dorm-fight", label: "战斗，逼馆长说出通关的方法", action: "battle", afterBattle: "scene-11-after" }
   ];
   cloneScene("scene-11-after", "scene-11", {
     title: "员工宿舍 · 交涉之后",
-    subtitle: "第三幕 · 禁忌与梦境",
     location: "员工宿舍",
-    lines: dormAllLines.slice(fightHintAt),
+    lines: dormAllLines.slice(fightHintAt + 1),
+    // 必须仍是 scene11Seen：战斗选项不会完成 scene-11（见 novel.js choose()），
+    // 真正记录「逼问完成」的是这个战后场。改名会让进度链永远卡在「追上逃跑的馆长」。
     flag: "scene11Seen",
     choices: null
   });
@@ -113,39 +115,39 @@
   // The mask decision in the Silver Lovers scene is represented as a real choice.
   // The two lines that only labelled the branches in the script ("A摘下" / "B没摘…") are
   // authoring notes, not dialogue, so they are replaced with the action each branch is.
-  var silver = scenes["scene-18"];
-  var maskChoiceAt = findLineIndex("scene-18", function (line) { return line.text.indexOf("分支选择") !== -1; });
+  var silver = scenes["scene-16"];
+  var maskChoiceAt = findLineIndex("scene-16", function (line) { return line.text.indexOf("分支选择") !== -1; });
   var maskBranchLines = silver.lines.slice(maskChoiceAt + 1, maskChoiceAt + 4).map(function (line) {
     var text = String(line.text || "");
-    if (text.indexOf("A摘下") === 0) return Object.assign({}, line, { speaker: "旁白", text: "你伸手摘下了面具。" });
-    if (text.indexOf("B没摘") === 0) return Object.assign({}, line, { speaker: "旁白", text: "你没有动，继续戴着面具观察。" });
+    if (/^【A】\s*摘下/.test(text) || text.indexOf("A摘下") === 0) return Object.assign({}, line, { speaker: "旁白", text: "你伸手摘下了面具。" });
+    if (/^【B】\s*没摘/.test(text) || text.indexOf("B没摘") === 0) return Object.assign({}, line, { speaker: "旁白", text: "你没有动，继续戴着面具观察。" });
     return line;
   });
   var silverA = maskBranchLines.slice(0, 2).concat(silver.lines.slice(maskChoiceAt + 4));
   var silverB = maskBranchLines.slice(2, 3).concat(silver.lines.slice(maskChoiceAt + 4));
   silver.lines = silver.lines.slice(0, maskChoiceAt);
   silver.choices = [
-    { id: "remove-mask", label: "摘下自己的面具", nextScene: "scene-18-mask" },
-    { id: "keep-mask", label: "不摘面具，继续观察", nextScene: "scene-18-no-mask" }
+    { id: "remove-mask", label: "摘下自己的面具", nextScene: "scene-16-mask" },
+    { id: "keep-mask", label: "不摘面具，继续观察", nextScene: "scene-16-no-mask" }
   ];
-  cloneScene("scene-18-mask", "scene-18", { title: "银色的恋人 · 面具之后", lines: silverA.concat(scenes["scene-19"].lines, scenes["scene-20"].lines), flag: "scene20Seen", choices: null });
-  cloneScene("scene-18-no-mask", "scene-18", { title: "银色的恋人 · 面具之后", lines: silverB.concat(scenes["scene-19"].lines, scenes["scene-20"].lines), flag: "scene20Seen", choices: null });
+  cloneScene("scene-16-mask", "scene-16", { title: "银色的恋人 · 面具之后", lines: silverA.concat(scenes["scene-17"].lines, scenes["scene-18"].lines), flag: "scene18Seen", choices: null });
+  cloneScene("scene-16-no-mask", "scene-16", { title: "银色的恋人 · 面具之后", lines: silverB.concat(scenes["scene-17"].lines, scenes["scene-18"].lines), flag: "scene18Seen", choices: null });
 
   // Scene 26 keeps both written variants available, while the engine records the choice.
-  var patrol = scenes["scene-26"];
-  var revealAt = findLineIndex("scene-26", function (line) { return line.text.indexOf("主角缓缓摘下面具") !== -1; });
+  var patrol = scenes["scene-24"];
+  var revealAt = findLineIndex("scene-24", function (line) { return line.text.indexOf("主角缓缓摘下面具") !== -1; });
   patrol.choices = [
-    { id: "reveal-name", label: "摘下面具，告诉赵灵自己的名字", nextScene: "scene-26-reveal" },
-    { id: "keep-name-secret", label: "不摘面具，继续观察", nextScene: "scene-26-hide" }
+    { id: "reveal-name", label: "摘下面具，告诉赵灵自己的名字", nextScene: "scene-24-reveal" },
+    { id: "keep-name-secret", label: "不摘面具，继续观察", nextScene: "scene-24-hide" }
   ];
   // Keep the direct script text after the decision in both routes; the difference is stored as a flag.
-  cloneScene("scene-26-reveal", "scene-26", { title: "巡逻路线 · 真名", lines: patrol.lines.slice(0, revealAt + 3), flag: "scene26Seen", choices: null });
-  cloneScene("scene-26-hide", "scene-26", { title: "巡逻路线 · 面具", lines: patrol.lines.slice(0, revealAt), flag: "scene26Seen", choices: null });
+  cloneScene("scene-24-reveal", "scene-24", { title: "巡逻路线 · 真名", lines: patrol.lines.slice(0, revealAt + 3), flag: "scene24Seen", choices: null });
+  cloneScene("scene-24-hide", "scene-24", { title: "巡逻路线 · 面具", lines: patrol.lines.slice(0, revealAt), flag: "scene24Seen", choices: null });
   patrol.lines = patrol.lines.slice(0, revealAt);
 
   // Scene 31 must stop before the ending text and expose the final choice.
-  var finale = scenes["scene-31"];
-  var endingTextAt = findLineIndex("scene-31", function (line) { return line.text.indexOf("结局 A") === 0; });
+  var finale = scenes["scene-29"];
+  var endingTextAt = findLineIndex("scene-29", function (line) { return line.text.indexOf("结局 A") === 0; });
   finale.lines = finale.lines.slice(0, endingTextAt);
   finale.returnToMap = false;
   // 新剧本第三十场：白光在身后明灭，屏上浮出选项；① 进入出口 ② 回头救赵灵 ③ 超时未选择。

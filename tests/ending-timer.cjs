@@ -35,7 +35,7 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
       const u = MuseumAuth.register('终局', 'x').user;
       const s = MuseumState.create(u);
       s.mode = 'novel'; s.narrativeNode = 'ending-choice';
-      s.flags = Object.assign({}, s.flags, { scene30Seen: true, scene01Seen: true, hasKey: true });
+      s.flags = Object.assign({}, s.flags, { scene28Seen: true, scene01Seen: true, hasKey: true });
       Object.keys(s.tutorial).forEach(k => s.tutorial[k] = true);
       MuseumState.save(s, u.id);
     });

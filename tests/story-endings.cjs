@@ -33,7 +33,7 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
       localStorage.clear();
       const u = MuseumAuth.register('结局', 'x').user;
       const s = MuseumState.create(u);
-      s.flags = Object.assign({}, s.flags, { scene30Seen: true, scene08Seen: true }, flags);
+      s.flags = Object.assign({}, s.flags, { scene28Seen: true, scene07Seen: true }, flags);
       Object.keys(s.tutorial).forEach(k => s.tutorial[k] = true);
       MuseumState.save(s, u.id);
     }, flags);
@@ -110,7 +110,7 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     check('letting the timer run out resolves to 死亡 (ending-d)', /ending-d/.test(page.url()), page.url());
 
     // ---- 5. previously-blank scenes now have content ---------------------
-    for (const scene of ['scene-11', 'ending-choice', 'scene-31', 'guard-intro', 'contract']) {
+    for (const scene of ['scene-11', 'ending-choice', 'scene-29', 'scene-06', 'contract']) {
       await page.goto('http://127.0.0.1:8806/pages/novel.html?scene=' + scene);
       await page.waitForSelector('#novel-progress', { state: 'attached' });
       await page.waitForTimeout(300);

@@ -152,10 +152,10 @@ function listen(port) {
     check('a future plot marker cannot start a scene', (await state()).roomId === 'dorm');
 
     // 5. An active scene must beat the repeat inspection at the same spot.
-    await seed('dorm', 1370, 475, { scene24Seen: true, hasKey: true });
+    await seed('dorm', 1370, 475, { scene22Seen: true, hasKey: true });
     await enterGame();
     await press('e');
-    check('the uniform story wins over the repeat wardrobe', /scene=scene-25/.test(page.url()), page.url());
+    check('the uniform story wins over the repeat wardrobe', /scene=scene-23/.test(page.url()), page.url());
 
     // 6. Recorded inspections must not replay the prologue.
     await seed('dorm', 285, 805, { scene03Seen: true, hasKey: true, readNote: true });

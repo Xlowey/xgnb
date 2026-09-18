@@ -106,7 +106,8 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
   check('每一行都有说话人', emptySpeaker === 0, { emptySpeaker });
 
   // Spot check the scenes that were fixed.
-  for (const [id, want] of [['scene-27', '赵灵（急促拍门）'], ['ending-c', '赵灵（轻声）'], ['scene-07', '馆长（扫视全场）']]) {
+  // 2026-09-17 起说话人标签里的括号一律剔除（只留 自言自语 / 独白），断言随之更新。
+  for (const [id, want] of [['scene-25', '赵灵'], ['ending-c', '赵灵'], ['scene-06', '馆长']]) {
     const lines = inPage[id] ? inPage[id].lines : [];
     const hit = lines.find(l => l.speaker === want);
     check(id + ' 的说话人是 ' + want, Boolean(hit), { speakers: [...new Set(lines.map(l => l.speaker))].slice(0, 8) });

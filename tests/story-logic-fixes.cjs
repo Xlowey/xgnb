@@ -50,7 +50,7 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     check('the mirror does not open the blood-note document', mirror.docs === 0, mirror);
 
     // ---- 2. battle must not pre-complete the scene ----------------------
-    await seed({ roomId: 'dorm', playerX: 835, playerY: 795, mode: 'explore', flags: { scene03Seen: true, scene10Seen: true, scene11Seen: false } });
+    await seed({ roomId: 'dorm', playerX: 835, playerY: 795, mode: 'explore', flags: { scene03Seen: true, scene09Seen: true, scene11Seen: false } });
     await page.goto('http://127.0.0.1:8808/pages/novel.html?scene=scene-11');
     await page.waitForSelector('#novel-progress', { state: 'attached' });
     await page.waitForTimeout(400);

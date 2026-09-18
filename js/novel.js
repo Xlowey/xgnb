@@ -42,7 +42,7 @@
       if (state.battleContext !== "final-boss") {
         state.flags.battleDemoCompleted = true;
         state.flags.waxDoorUnlocked = true;
-        if (state.clues.indexOf("faceless-mask") === -1) state.clues.push("faceless-mask");
+        if (state.clues.indexOf("director-account") === -1) state.clues.push("director-account");
         if (state.unlockedRooms.indexOf("wax") === -1) state.unlockedRooms.push("wax");
         unlockAchievement("first-battle", false);
       } else {
@@ -154,9 +154,9 @@
   function getScene(sceneId) {
     var scene = story.scenes[sceneId] || story.scenes[story.fallback];
     // 不摘面具路线不会获得“渣男”记忆。场景 25 是地图重新进入的独立
-    // 场次，不能只修 scene-18-no-mask，否则玩家后面仍会从纸片独白里
+    // 场次，不能只修 scene-16-no-mask，否则玩家后面仍会从纸片独白里
     // 重新看到同一段回忆。
-    if (sceneId === "scene-25" && state.flags.remainedMasked && !state.flags.removedMask) {
+    if (sceneId === "scene-23" && state.flags.remainedMasked && !state.flags.removedMask) {
       var variant = Object.assign({}, scene);
       variant.lines = (scene.lines || []).filter(function (line) {
         return !/渣男|以前是不是见过|看到你的样子之后/.test(String(line.text || ""));
@@ -289,10 +289,10 @@
   // Replayable entries (repeat/inspect aliases, the mirror) show recorded text
   // again.  They must not write a "scene seen" flag, otherwise re-reading a
   // note or re-opening the wardrobe would be recorded as progress through the
-  // main script.  scene-09 is excluded for the same reason it always was: its
+  // main script.  scene-08 is excluded for the same reason it always was: its
   // completion is decided by the branch scene, not by the parent dialogue.
   function isReplayScene(id) {
-    return id === "scene-09" || /(?:-repeat|-inspect)$/.test(id) || id === "mirror";
+    return id === "scene-08" || /(?:-repeat|-inspect)$/.test(id) || id === "mirror";
   }
 
   function completeCurrentScene() {
@@ -404,7 +404,7 @@
   function startFinalChoiceTimer() {
     // The map enters the final decision through the stable alias `ending-choice`.
     // Keep the source id supported for direct testing and old saves as well.
-    if ((currentSceneId !== "scene-31" && currentSceneId !== "ending-choice") || finalChoiceTimer || els.choices.hidden) return;
+    if ((currentSceneId !== "scene-29" && currentSceneId !== "ending-choice") || finalChoiceTimer || els.choices.hidden) return;
     if (finalChoiceRemaining === null) finalChoiceRemaining = finalChoiceSeconds;
     els.next.textContent = "请选择行动 · " + finalChoiceRemaining + " 秒";
     finalChoiceTimer = window.setInterval(function () {
@@ -417,7 +417,7 @@
         // back to it by id, so the timeout still resolves if that option is not offered.
         var offered = currentScene.choices || [];
         var timeoutChoice = offered.filter(function (choice) { return choice.id === "ending-d"; })[0]
-          || (currentSceneId === "scene-31" || currentSceneId === "ending-choice" ? { id: "ending-d", nextScene: "ending-d" } : null);
+          || (currentSceneId === "scene-29" || currentSceneId === "ending-choice" ? { id: "ending-d", nextScene: "ending-d" } : null);
         if (timeoutChoice) choose(timeoutChoice);
       }
     }, 1000);
@@ -644,7 +644,7 @@
     if (!window.MuseumTutorial.isDone("branch")) window.MuseumTutorial.complete("branch");
     // A battle choice must NOT complete the scene yet: doing so awarded scene11Seen and
     // completed:scene-11 the moment 战斗 was clicked, so losing the fight still unlocked
-    // scene-12. The outcome is decided by the battle itself, and the after-battle scene
+    // scene-10. The outcome is decided by the battle itself, and the after-battle scene
     // (scene-11-after / guard-after-battle) is what records the completion.
     if (choice.action !== "battle") completeCurrentScene();
     applyChoice(choice);

@@ -36,7 +36,7 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
       const u = MuseumAuth.register('小游戏', 'x').user;
       const s = MuseumState.create(u);
       s.mode = 'explore'; s.roomId = room; s.playerX = x; s.playerY = y;
-      s.flags = Object.assign({}, s.flags, { scene01Seen: true, scene03Seen: true, scene04Seen: true, scene05Seen: true, scene06Seen: true, scene07Seen: true, hasKey: true }, flags || {});
+      s.flags = Object.assign({}, s.flags, { scene01Seen: true, scene03Seen: true, scene04Seen: true, scene05Seen: true, scene06Seen: true, scene06Seen: true, hasKey: true }, flags || {});
       Object.keys(s.tutorial).forEach(k => s.tutorial[k] = true);
       MuseumState.save(s, u.id);
     }, { room, x, y, flags });
@@ -131,7 +131,7 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
       const u = MuseumAuth.register('战斗', 'x').user;
       const s = MuseumState.create(u);
       s.mode = 'novel'; s.narrativeNode = 'scene-11';
-      s.flags = Object.assign({}, s.flags, { scene01Seen: true, scene03Seen: true, scene04Seen: true, scene05Seen: true, scene06Seen: true, scene07Seen: true, scene08Seen: true, scene09Seen: true, scene10Seen: true, hasKey: true });
+      s.flags = Object.assign({}, s.flags, { scene01Seen: true, scene03Seen: true, scene04Seen: true, scene05Seen: true, scene06Seen: true, scene06Seen: true, scene07Seen: true, scene08Seen: true, scene09Seen: true, hasKey: true });
       Object.keys(s.tutorial).forEach(k => s.tutorial[k] = true);
       MuseumState.save(s, u.id);
     });
@@ -139,7 +139,15 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     p = await ctx.newPage();
     p.on('pageerror', e => console.log('        [pageerror]', e.message));
     await p.goto('http://127.0.0.1:8843/pages/novel.html?scene=scene-11');
-    await p.waitForTimeout(1500);
+    await p.waitForTimeout(1200);
+    // 009 把战斗选项放在第十一场 5 行剧情之后（旧稿它在第 0 页），先推进到选项出现。
+    for (let i = 0; i < 12; i += 1) {
+      const n = await p.evaluate(() => document.querySelectorAll('.novel-choice').length);
+      if (n) break;
+      const ev = await p.evaluate(() => { const e = document.getElementById('event-next'); return !!e && !e.hidden; });
+      if (ev) await p.click('#event-next'); else await p.keyboard.press('e');
+      await p.waitForTimeout(300);
+    }
     const battleChoice = await p.evaluate(() => {
       const buttons = [...document.querySelectorAll('button')].map(b => b.textContent.trim());
       const target = [...document.querySelectorAll('button')].find(b => /战斗|交涉|动手/.test(b.textContent));
@@ -156,7 +164,7 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     await p.close();
 
     // Simulate a WIN by writing the pending result the demo would leave behind, then loading the map.
-    p = await seed('hall', 1490, 700, { scene07Seen: true, battleDemoCompleted: false, waxDoorUnlocked: true });
+    p = await seed('hall', 1490, 700, { scene06Seen: true, battleDemoCompleted: false, waxDoorUnlocked: true });
     await p.evaluate(() => {
       localStorage.setItem('museum_pending_battle_v1', JSON.stringify({ status: 'win', remainingHp: 7 }));
     });
@@ -169,7 +177,7 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     await p.close();
 
     // Simulate a LOSS -> ending-d.
-    p = await seed('hall', 1490, 700, { scene07Seen: true, battleDemoCompleted: false, waxDoorUnlocked: true });
+    p = await seed('hall', 1490, 700, { scene06Seen: true, battleDemoCompleted: false, waxDoorUnlocked: true });
     await p.evaluate(() => {
       localStorage.setItem('museum_pending_battle_v1', JSON.stringify({ status: 'lose', remainingHp: 0 }));
     });

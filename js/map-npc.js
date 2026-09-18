@@ -35,31 +35,50 @@
   // 走廊那段剧情（scene-04 · 午夜巡逻）本来在走出宿舍门时自动播放；现在改成走到赵灵
   // 身边按 E 才触发——剧本里那段就是她自我介绍（"赵灵。""师……师父……"），所以应当是
   // 一次对话。map-art.js 里的 npc 交互对象用的是同一份条件，两边不会走偏。
-  function sequenceFor(roomId) {
-    if (roomId !== "corridor") return null;
-    return {
-      room: "corridor",
-      // 站位要落在玩家真正能站的地方（walkable x 950..1770, y 222..610）。原来放 x=1085
+  // 赵灵在地图上的出场表。每条各自带「必须已设」的 requires 与「必须未设」的 flag——
+  // 走廊里她会出场两次：一次是第四场（午夜巡逻的自我介绍），一次是逼问馆长之后（第十二场）。
+  // 只写 flag 的话，第二段会在第一段结束后立刻冒出来，把 corridor-npc 那条断言打破。
+  var SEQUENCES = [
+    {
+      id: "corridor-zhaoling", room: "corridor",
+      // 站位要落在玩家真正能站的地方（walkable x 960..1774, y 337..565）。原来放 x=1085
       // 时她的可交互半径越过了可行走区左边界，玩家站在旁边的宿舍门边时提示会被门抢走。
-      x: 1060,
-      y: 445,
-      height: 145,
-      facing: "front",
-      scene: "scene-04",
-      flag: "scene04Seen",
-      label: "赵灵"
-    };
+      x: 1060, y: 445, height: 145, facing: "front",
+      scene: "scene-04", flag: "scene04Seen", label: "赵灵"
+    },
+    {
+      // 逼问馆长之后，她换到走廊右侧再等主角一次（第十二场：师父你没事吧）。
+      id: "corridor-zhaoling-12", room: "corridor",
+      x: 1560, y: 445, height: 145, facing: "front",
+      scene: "scene-12", flag: "scene12Seen", requires: "scene11Seen", label: "赵灵"
+    }
+  ];
+  function sequencesFor(roomId, objectId) {
+    return SEQUENCES.filter(function (s) {
+      return s.room === roomId && (!objectId || s.id === objectId);
+    });
   }
-  function placeFor(roomId, state) {
+  function isPlaced(s, state) {
+    return (!s.requires || !!state.flags[s.requires]) && !state.flags[s.flag];
+  }
+  function placeFor(roomId, state, objectId) {
     if (!state) return null;
-    var sequence = sequenceFor(roomId);
-    if (!sequence) return null;
-    // 谈过话她就先走了；第五场之前她都还在走廊上等主角。
-    if (state.flags[sequence.flag]) return null;
-    return { x: sequence.x, y: sequence.y, facing: sequence.facing, height: sequence.height };
+    var list = sequencesFor(roomId, objectId);
+    for (var i = 0; i < list.length; i += 1) {
+      if (isPlaced(list[i], state)) {
+        var s = list[i];
+        return { x: s.x, y: s.y, facing: s.facing, height: s.height };
+      }
+    }
+    return null;
   }
-  function visibleFor(roomId, state) {
-    return !!placeFor(roomId, state);
+  function placesFor(roomId, state) {
+    if (!state) return [];
+    return sequencesFor(roomId).filter(function (s) { return isPlaced(s, state); })
+      .map(function (s) { return { x: s.x, y: s.y, facing: s.facing, height: s.height }; });
+  }
+  function visibleFor(roomId, state, objectId) {
+    return !!placeFor(roomId, state, objectId);
   }
 
   // 地图 NPC 的显示高度（世界像素）。主角在宿舍按 210 校准，走廊地板更窄，NPC 略小一点
@@ -70,8 +89,13 @@
   // this works in WORLD pixels exactly like window.MuseumPlayerAvatar.draw does.
   function draw(ctx, roomId, state) {
     if (!readyResolved) return false;
-    var place = placeFor(roomId, state);
-    if (!place) return false;
+    var places = placesFor(roomId, state);
+    if (!places.length) return false;
+    places.forEach(function (place) { drawOne(ctx, place); });
+    return true;
+  }
+
+  function drawOne(ctx, place) {
     var frame = FRAMES[place.facing] && FRAMES[place.facing][1];
     if (!frame) return false;
     // 按目标高度等比缩放，而不是直接用素材原始像素（原始帧高达 284px，在走廊里过大）。
@@ -86,11 +110,10 @@
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(sheet, frame[0], frame[1], frame[2], frame[3], left, top, drawW, drawH);
     ctx.restore();
-    return true;
   }
 
   var readyResolved = false;
   ready.then(function (ok) { readyResolved = ok; if (!ok) console.warn("赵灵行走素材加载失败，地图上不显示该 NPC。"); });
 
-  window.MuseumNpc = { code: NPC_CODE, draw: draw, placeFor: placeFor, visibleFor: visibleFor, sequenceFor: sequenceFor, ready: ready, frames: FRAMES };
+  window.MuseumNpc = { code: NPC_CODE, draw: draw, placeFor: placeFor, placesFor: placesFor, visibleFor: visibleFor, sequencesFor: sequencesFor, ready: ready, frames: FRAMES };
 }());

@@ -292,11 +292,6 @@
     if (!MuseumState.sceneCompleted(state, "terminal")) state.systemTrust += 2; startNovel("terminal");
   }
   function openMirror() { markDiscovered("dorm-mirror"); startNovel("mirror"); }
-  function openGuard() {
-    markDiscovered("hall-guard");
-    if (state.flags.battleDemoCompleted) { startNovel("guard-repeat"); return; }
-    startNovel("guard-intro");
-  }
   function openRules() {
     markDiscovered("hall-rules");
     if (state.flags.rulesGameCompleted) { showToast("告示上的规则你已经记住了。"); return; }
@@ -309,7 +304,7 @@
     startNovel("contract");
   }
   function openExit() {
-    if (!state.flags.scene30Seen) { showToast("出口前的雾还没有散去。先沿着线索走到最后一幕。"); return; }
+    if (!state.flags.scene28Seen) { showToast("出口前的雾还没有散去。先沿着线索走到最后一幕。"); return; }
     startNovel("ending-choice");
   }
   function interact(object) {
@@ -354,9 +349,8 @@
     else if (object.type === "scene") startNovel(object.scene);
     else if (object.type === "door") { if (!state.flags.hasKey) showToast("门锁着。衣柜里也许有能用的东西。"); else { state.flags.openedDormDoor = true; addUnique(state.unlockedRooms, "corridor"); unlockAchievement("dorm-escape", true); switchRoomAt(object.target || "corridor", object.entry || {x:1040,y:400}); if (!state.flags.scene04Seen) startNovel("scene-04"); } }
     else if (object.type === "returnDorm") switchRoom("dorm", 1330, 460);
-    else if (object.type === "guard") openGuard();
     else if (object.type === "rules") openRules();
-    else if (object.type === "waxDoor") { if (!state.flags.scene07Seen && !state.flags.battleDemoCompleted) showToast("东侧入口被无形的锁封住了。先完成保安的交涉。"); else { state.flags.waxDoorUnlocked = true; switchRoom("wax"); } }
+    else if (object.type === "waxDoor") { if (!state.flags.scene06Seen) showToast("东侧入口被无形的锁封住了。先去大厅听馆长的训话。"); else { state.flags.waxDoorUnlocked = true; switchRoom("wax"); } }
     else if (object.type === "returnHall") switchRoom("hall", 835, 700);
     else if (object.type === "contract") openContract();
     else if (object.type === "exit") openExit();
@@ -492,7 +486,7 @@
     if (room.id === "dorm") { drawFurniture({ x: 130, y: 125, w: 360, h: 180 }, "#51656a", "铁床"); drawFurniture({ x: 620, y: 104, w: 260, h: 100 }, "#44565a", "书桌"); drawFurniture({ x: 170, y: 610, w: 310, h: 130 }, "#667477", "地毯"); drawFurniture({ x: 760, y: 610, w: 330, h: 110 }, "#46565c", "旧沙发"); }
     if (room.id === "hall") { drawFurniture({ x: 170, y: 110, w: 260, h: 170 }, "#465962", "接待台"); drawFurniture({ x: 570, y: 120, w: 280, h: 130 }, "#56656a", "展柜"); drawFurniture({ x: 1080, y: 110, w: 320, h: 170 }, "#4c5a60", "值班台"); drawFurniture({ x: 180, y: 640, w: 360, h: 80 }, "#647073", "长椅"); drawFurniture({ x: 1040, y: 630, w: 410, h: 90 }, "#59676b", "封锁门"); }
     if (room.id === "wax") { drawFurniture({ x: 170, y: 110, w: 260, h: 160 }, "#77736e", "空展台"); drawFurniture({ x: 560, y: 105, w: 300, h: 170 }, "#716d68", "蜡像展台"); drawFurniture({ x: 1020, y: 110, w: 310, h: 170 }, "#77736e", "旧展柜"); }
-    room.objects.forEach(function (object) { var nearest = nearestObject(); var nearby = nearest && nearest.id === object.id; ctx.save(); ctx.globalAlpha = nearby ? 1 : .9; if (object.type === "note") { ctx.fillStyle = "#f1e7cd"; ctx.fillRect(object.x - 20, object.y - 15, 40, 30); ctx.strokeStyle = "#765e4c"; ctx.strokeRect(object.x - 20, object.y - 15, 40, 30); } else if (object.type === "wardrobe") { drawWardrobe(object); } else if (object.type === "terminal") { drawFurniture({ x: object.x - 48, y: object.y - 40, w: 96, h: 70 }, "#2b4650", ""); ctx.fillStyle = "#5ba2b8"; ctx.fillRect(object.x - 34, object.y - 28, 68, 40); } else if (object.type === "mirror") { ctx.fillStyle = "#293f48"; ctx.fillRect(object.x - 28, object.y - 55, 56, 110); ctx.strokeStyle = "#d6d2c3"; ctx.lineWidth = 5; ctx.strokeRect(object.x - 28, object.y - 55, 56, 110); } else if (object.type === "door" || object.type === "waxDoor" || object.type === "exit") { var isOpen = object.type === "door" ? state.flags.hasKey : object.type === "waxDoor" ? (state.flags.scene07Seen || state.flags.battleDemoCompleted) : state.flags.scene30Seen; ctx.fillStyle = isOpen ? "#3d6670" : "#5a3f41"; ctx.fillRect(object.x - 32, object.y - 72, 64, 144); ctx.strokeStyle = "#d9c9a9"; ctx.lineWidth = 4; ctx.strokeRect(object.x - 32, object.y - 72, 64, 144); } else if (object.type === "guard") { ctx.fillStyle = "#732f37"; ctx.fillRect(object.x - 25, object.y - 60, 50, 120); ctx.fillStyle = "#e3ded1"; ctx.beginPath(); ctx.arc(object.x, object.y - 82, 28, 0, Math.PI * 2); ctx.fill(); } else if (object.type === "rules") { ctx.fillStyle = "#d7cfbc"; ctx.fillRect(object.x - 50, object.y - 45, 100, 90); ctx.strokeStyle = "#4d5960"; ctx.strokeRect(object.x - 50, object.y - 45, 100, 90); } else if (object.type === "contract") { ctx.fillStyle = "#d8c9aa"; ctx.fillRect(object.x - 40, object.y - 25, 80, 50); ctx.strokeStyle = "#6c4e45"; ctx.strokeRect(object.x - 40, object.y - 25, 80, 50); } else { ctx.fillStyle = object.type === "scene" ? "#9a6c50" : "#405057"; ctx.beginPath(); ctx.arc(object.x, object.y, 24, 0, Math.PI * 2); ctx.fill(); } if (nearby) { ctx.strokeStyle = "#b9e4e0"; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.beginPath(); ctx.arc(object.x, object.y, 52, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); } drawText(object.label, object.x, object.y + object.r * .62, 18, nearby ? "#19363e" : "rgba(34,47,50,.84)", "center"); ctx.restore(); });
+    room.objects.forEach(function (object) { var nearest = nearestObject(); var nearby = nearest && nearest.id === object.id; ctx.save(); ctx.globalAlpha = nearby ? 1 : .9; if (object.type === "note") { ctx.fillStyle = "#f1e7cd"; ctx.fillRect(object.x - 20, object.y - 15, 40, 30); ctx.strokeStyle = "#765e4c"; ctx.strokeRect(object.x - 20, object.y - 15, 40, 30); } else if (object.type === "wardrobe") { drawWardrobe(object); } else if (object.type === "terminal") { drawFurniture({ x: object.x - 48, y: object.y - 40, w: 96, h: 70 }, "#2b4650", ""); ctx.fillStyle = "#5ba2b8"; ctx.fillRect(object.x - 34, object.y - 28, 68, 40); } else if (object.type === "mirror") { ctx.fillStyle = "#293f48"; ctx.fillRect(object.x - 28, object.y - 55, 56, 110); ctx.strokeStyle = "#d6d2c3"; ctx.lineWidth = 5; ctx.strokeRect(object.x - 28, object.y - 55, 56, 110); } else if (object.type === "door" || object.type === "waxDoor" || object.type === "exit") { var isOpen = object.type === "door" ? state.flags.hasKey : object.type === "waxDoor" ? (state.flags.scene06Seen) : state.flags.scene28Seen; ctx.fillStyle = isOpen ? "#3d6670" : "#5a3f41"; ctx.fillRect(object.x - 32, object.y - 72, 64, 144); ctx.strokeStyle = "#d9c9a9"; ctx.lineWidth = 4; ctx.strokeRect(object.x - 32, object.y - 72, 64, 144); } else if (object.type === "rules") { ctx.fillStyle = "#d7cfbc"; ctx.fillRect(object.x - 50, object.y - 45, 100, 90); ctx.strokeStyle = "#4d5960"; ctx.strokeRect(object.x - 50, object.y - 45, 100, 90); } else if (object.type === "contract") { ctx.fillStyle = "#d8c9aa"; ctx.fillRect(object.x - 40, object.y - 25, 80, 50); ctx.strokeStyle = "#6c4e45"; ctx.strokeRect(object.x - 40, object.y - 25, 80, 50); } else { ctx.fillStyle = object.type === "scene" ? "#9a6c50" : "#405057"; ctx.beginPath(); ctx.arc(object.x, object.y, 24, 0, Math.PI * 2); ctx.fill(); } if (nearby) { ctx.strokeStyle = "#b9e4e0"; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.beginPath(); ctx.arc(object.x, object.y, 52, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); } drawText(object.label, object.x, object.y + object.r * .62, 18, nearby ? "#19363e" : "rgba(34,47,50,.84)", "center"); ctx.restore(); });
     drawPlayer(); ctx.restore(); drawMiniMap(room);
   }
   function drawPlayer() {
@@ -600,7 +594,7 @@
       if (Number.isFinite(remainingHp)) state.hp = Math.max(0, remainingHp);
       var finalBoss = state.battleContext === "final-boss";
       if (!finalBoss) {
-        state.flags.battleDemoCompleted = true; state.flags.waxDoorUnlocked = true; addClue("faceless-mask"); addUnique(state.unlockedRooms, "wax"); syncAchievementProgress(); unlockAchievement("first-battle", false);
+        state.flags.battleDemoCompleted = true; state.flags.waxDoorUnlocked = true; addClue("director-account"); addUnique(state.unlockedRooms, "wax"); syncAchievementProgress(); unlockAchievement("first-battle", false);
       }
       var returnRoom = rooms[state.returnRoom] ? state.returnRoom : "hall";
       state.roomId = returnRoom; state.currentNode = returnRoom; state.chapter = rooms[returnRoom].chapter; state.playerX = Number(state.returnX) || rooms[returnRoom].spawn.x; state.playerY = Number(state.returnY) || rooms[returnRoom].spawn.y; state.task = tasks[returnRoom];

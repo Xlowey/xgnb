@@ -88,7 +88,7 @@ async function finishAndCapture(p, status, hp) {
     // ---------- 1. boss mode, win ----------
     say('PHASE 1 start'); flush();
     let ctx = await b.newContext(V);
-    let { p, errors } = await openDungeon(ctx, DUNGEON() + '?from=novel&user=u_test&returnScene=scene-30', true);
+    let { p, errors } = await openDungeon(ctx, DUNGEON() + '?from=novel&user=u_test&returnScene=scene-28', true);
     say('PHASE 1 page open'); flush();
     const wired = await p.evaluate(() => ({
       hasContinue: !!document.getElementById('result-continue'),
@@ -126,7 +126,7 @@ async function finishAndCapture(p, status, hp) {
     // ---------- 2. boss mode, lose ----------
     say('PHASE 2 start'); flush();
     ctx = await b.newContext(V);
-    ({ p, errors } = await openDungeon(ctx, DUNGEON() + '?from=novel&user=u_test&returnScene=scene-30', true));
+    ({ p, errors } = await openDungeon(ctx, DUNGEON() + '?from=novel&user=u_test&returnScene=scene-28', true));
     const loseCap = await finishAndCapture(p, 'lose', 0);
     await p.waitForTimeout(1200);
     const lr = loseCap ? JSON.parse(loseCap) : null;

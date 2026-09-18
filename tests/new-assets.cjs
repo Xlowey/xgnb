@@ -22,16 +22,16 @@ function check(label, ok, detail) { console.log((ok ? 'PASS ' : 'FAIL ') + label
     await page.getByRole('button', {name:'跳过动画'}).click();
     check('CG skip exposes the normal continue action', await page.locator('#event-next').isVisible());
 
-    await page.goto('http://127.0.0.1:8822/pages/novel.html?scene=scene-10&preview=1');
+    await page.goto('http://127.0.0.1:8822/pages/novel.html?scene=scene-09&preview=1');
     await page.waitForSelector('.video-cg-player');
     await page.getByRole('button', {name:'跳过动画'}).click();
     await page.locator('#event-next').click();
-    check('scene-10 uses the new dark-corner story art', await page.locator('.novel-background').evaluate(el => /dark-corner\.webp/.test(el.style.getPropertyValue('--scene-background'))));
+    check('scene-09 uses the new dark-corner story art', await page.locator('.novel-background').evaluate(el => /dark-corner\.webp/.test(el.style.getPropertyValue('--scene-background'))));
 
     const mapping = await page.evaluate(() => ({ doctor: MuseumPortraits.character('医生（录像）'), oldman: MuseumPortraits.character('老人（录像）'), son: MuseumPortraits.character('儿子（录像）') }));
     check('new hospital cast maps to portraits', mapping.doctor === 'doctor' && mapping.oldman === 'oldman' && mapping.son === 'son', mapping);
 
-    await page.goto('http://127.0.0.1:8822/pages/novel.html?scene=scene-17-diary&preview=1');
+    await page.goto('http://127.0.0.1:8822/pages/novel.html?scene=scene-15-diary&preview=1');
     await page.waitForSelector('.novel-stage');
     const diary = await page.evaluate(() => ({ src: MuseumAssets.url('director-diary-cover.webp'), item: MuseumItems['director-diary'] }));
     check('diary item is registered with cover and pages', /director-diary-cover\.webp$/.test(diary.src) && diary.item && diary.item.reverseImage === 'director-diary-pages.webp', diary);
