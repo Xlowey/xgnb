@@ -723,6 +723,12 @@
   }
 
   function showEndingScreen() {
+    var card=els.end.querySelector(".novel-end-card");
+    var art=card.querySelector(".ending-art");
+    if(currentScene.endArt){
+      if(!art){art=document.createElement("img");art.className="ending-art";card.prepend(art);}
+      art.src=window.MuseumAssets.url(currentScene.endArt,"cg");art.alt=currentScene.title;
+    }else if(art)art.remove();
     var descriptions = {
       "ending-a": "你选择回头。这个结局已记录到当前档案。",
       "ending-b": "你执行了系统建议。这个结局已记录到当前档案。",

@@ -142,6 +142,7 @@
     document.body.dataset.event = event ? event.type : "dialogue";
     root.className = "scene-events";
     var background = event && event.background || hooks.scene && hooks.scene.background;
+    document.querySelector(".novel-background").style.backgroundSize=event && event.backgroundFit === "contain" ? "contain" : "";
     // Let the scene theme provide the room background when an event has no
     // explicit artwork.  A hard-coded dorm image here used to replace the
     // patrol and office backgrounds on every dialogue line.

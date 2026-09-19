@@ -31,6 +31,11 @@
   };
 
   Object.assign(paths, {
+  "ending-a-card.png": "cg/endings/ending-a-card.png",
+  "ending-b-card.png": "cg/endings/ending-b-card.png",
+  "hospital-farewell.png": "cg/endings/hospital-farewell.png",
+  "hero-casual.png": "characters/portraits/hero-casual.png",
+  "zhaoling-patient.png": "characters/portraits/zhaoling-patient.png",
   "食堂地图.webp": "maps/rooms/食堂地图.webp",
   "宿舍背景图.webp": "story-backgrounds/locations/dorm/宿舍背景图.webp",
   "宿舍门正常版.webp": "story-backgrounds/locations/dorm/宿舍门正常版.webp",

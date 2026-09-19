@@ -314,6 +314,9 @@ body[data-theme="nightmare"] .novel-vignette { background: radial-gradient(ellip
   font-size: clamp(28px, 4vw, 48px);
 }
 
+.novel-end-card:has(.ending-art) { width:min(700px,100%); max-height:calc(100dvh - 48px); overflow:auto; padding:20px; }
+.ending-art { display:block; width:100%; max-height:52dvh; object-fit:contain; margin:0 auto 12px; }
+
 .novel-end-card p {
   color: var(--muted);
   line-height: 1.8;

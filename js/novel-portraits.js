@@ -24,7 +24,7 @@
     img.src=base+entry[1]+"?v="+assetVersion;
     img.alt=entry[2];img.draggable=false;img.className="novel-portrait portrait-"+entry[0];img.hidden=true;
     layer.appendChild(img);
-    portraits[entry[0]]={img:img,listener:entry[3]};
+    portraits[entry[0]]={img:img,listener:entry[3],defaultSource:entry[1]};
   });
 
   function character(speaker){
@@ -47,9 +47,12 @@
 
   function render(scene,line){
     var speaker=String(line.speaker || ""),active=character(speaker);
-    var dialogue=(!line.type || line.type==="dialogue") && !!line.text && !/^(旁白|画面|场景|舞台|MOSS|系统)/.test(speaker);
+    var dialogue=!line.hidePortraits && (!line.type || line.type==="dialogue") && !!line.text && !/^(旁白|画面|场景|舞台|MOSS|系统)/.test(speaker);
     layer.hidden=!dialogue;document.body.classList.toggle("has-portraits",dialogue);
     Object.keys(portraits).forEach(function(id){
+      var source=(line.portraitVariants || {})[id] || portraits[id].defaultSource;
+      var url=base+source+"?v="+assetVersion;
+      if(portraits[id].img.src!==url)portraits[id].img.src=url;
       portraits[id].img.hidden=true;
       portraits[id].img.classList.remove("is-speaking");
       portraits[id].img.style.removeProperty("--portrait-offset");

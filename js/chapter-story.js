@@ -85,7 +85,21 @@
   prepend("scene-26",[itemEvent("赵灵红色制服里的纸片.webp")]);
   var perfect=scenes["ending-c"];
   perfect.events=[];
-  perfect.lines.forEach(function(l){perfect.events.push(dialogue(l));if(/梦魇不希望我进入/.test(l.text))perfect.events.push(itemEvent("张明诚契约.webp"));});
+  var inRealHospital=false;
+  perfect.lines.forEach(function(l){
+    if(l.text === "赵灵？")inRealHospital=true;
+    var event=dialogue(l);
+    if(inRealHospital)event.portraitVariants={hero:"portraits/hero-casual.png",zhaoling:"portraits/zhaoling-patient.png"};
+    // This CG already contains the revived Zhang Mingcheng: show it only at the farewell.
+    if(/^有缘再见/.test(l.text)){
+      perfect.events.push({type:"cg",background:"hospital-farewell.png",backgroundFit:"contain",action:"继续"});
+      event.background="hospital-farewell.png";event.backgroundFit="contain";event.hidePortraits=true;
+    }
+    perfect.events.push(event);
+    if(/梦魇不希望我进入/.test(l.text))perfect.events.push(itemEvent("张明诚契约.webp"));
+  });
+  scenes["ending-a"].endArt="ending-a-card.png";
+  scenes["ending-b"].endArt="ending-b-card.png";
   // Repeat re-inspections (wardrobe-repeat / note-repeat / mirror) are wired to
   // the recorded inspection scenes in novel-prologue.js.  They are deliberately
   // not re-pointed here, because cloning scene-02 / scene-03 made "re-open the
