@@ -298,10 +298,25 @@
     ],
     returnToMap: false,
     choices: [
-      { id: "boss-fight", label: "迎战梦魇", action: "battle", demo: "pixel-dungeon", battleContext: "final-boss", afterBattle: "scene-28" }
+      { id: "boss-fight", label: "迎战梦魇（进入小游戏）", action: "battle", demo: "pixel-dungeon", battleContext: "final-boss", afterBattle: "scene-28" },
+      { id: "boss-skip", label: "不进入小游戏，前往出口", effect: "skip-nightmare", nextScene: "scene-28" }
     ]
   };
   if (scenes["scene-27"]) scenes["scene-27"].nextScene = "scene-27-boss";
+
+  // A/C 共用最终抉择，实际结局取决于此前主动进入或跳过梦魇小游戏。
+  ["scene-29", "ending-choice"].forEach(function (id) {
+    (scenes[id].choices || []).forEach(function (choice) {
+      if (choice.id === "ending-a" || choice.id === "ending-c") choice.endingFromNightmareChoice = true;
+    });
+  });
+  ["a", "b", "c", "d", "e"].forEach(function (suffix) {
+    var id = "ending-" + suffix;
+    if (!scenes[id]) return;
+    scenes[id].ending = true;
+    scenes[id].endingId = id;
+    scenes[id].returnToMap = false;
+  });
 
   // ---------------------------------------------------------------------------
   // 3. 重看入口（最后一步，必须盖过上面的别名克隆）

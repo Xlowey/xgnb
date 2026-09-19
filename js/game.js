@@ -74,8 +74,17 @@
   setMiniMapVisible(false);
   function addUnique(list, value) { if (list.indexOf(value) === -1) list.push(value); }
   function has(list, value) { return list.indexOf(value) !== -1; }
-  function markDiscovered(id) { addUnique(state.discovered, id); }
-  function addClue(id) { addUnique(state.clues, id); }
+  function unlockAchievement(id, persistNow) {
+    if (!state || !window.MuseumAchievements) return false;
+    return window.MuseumAchievements.unlock(state, id, { save: persistNow ? save : function () {} });
+  }
+  function syncAchievementProgress() {
+    if (!state || !window.MuseumAchievements) return;
+    window.MuseumAchievements.setProgress(state, "clue-collector", state.clues.length, { save: function () {} });
+    window.MuseumAchievements.setProgress(state, "area-explorer", state.unlockedRooms.length, { save: function () {} });
+  }
+  function markDiscovered(id) { addUnique(state.discovered, id); unlockAchievement("first-investigation", true); }
+  function addClue(id) { addUnique(state.clues, id); syncAchievementProgress(); }
   // addItem() 已删除：全仓没有调用者，物品发放走 items.js / 剧情事件。
   function showToast(message) { if (!el.toast) return; el.toast.textContent = message; el.toast.classList.add("visible"); window.clearTimeout(showToast.timer); showToast.timer = window.setTimeout(function () { el.toast.classList.remove("visible"); }, 2600); }
   function showMapTutorial() {
@@ -192,7 +201,10 @@
     if (!blocked(room, state.playerX, nextY, room.id === "museum" ? 10 : 22)) state.playerY = nextY;
     var distance = Math.hypot(state.playerX - previousX, state.playerY - previousY);
     avatarMoving = distance > 0; avatarTravelled += distance;
-    if (distance > 0 && !window.MuseumTutorial.isDone("movement")) window.MuseumTutorial.complete("movement");
+    if (distance > 0) {
+      unlockAchievement("first-step", true);
+      if (!window.MuseumTutorial.isDone("movement")) window.MuseumTutorial.complete("movement");
+    }
     if (Math.abs(dx) > Math.abs(dy)) state.facing = dx > 0 ? "right" : "left"; else state.facing = dy > 0 ? "down" : "up";
   }
   function playerDirection() {
@@ -230,7 +242,9 @@
   function switchRoom(id, x, y) {
     if (!rooms[id]) return;
     state.roomId = id; state.currentNode = id; state.chapter = rooms[id].chapter; state.playerX = x === undefined ? rooms[id].spawn.x : x; state.playerY = y === undefined ? rooms[id].spawn.y : y; state.mode = "explore"; if (el.pause) el.pause.hidden = true; state.task = window.MuseumChapterProgress.objective(state).text;
-    addUnique(state.unlockedRooms, id); renderAll(); save("已进入" + rooms[id].title + "。");
+    addUnique(state.unlockedRooms, id); syncAchievementProgress();
+    if (id === "corridor") unlockAchievement("dorm-escape", true);
+    renderAll(); save("已进入" + rooms[id].title + "。");
   }
 
   function switchRoomAt(id, entry) {
@@ -321,6 +335,7 @@
     useButton.focus();
   }
   function openRules() {
+    markDiscovered("hall-rules");
     if (state.flags.rulesGameCompleted) { showToast("告示上的规则你已经记住了。"); return; }
     state.mode = "mini";
     el.rules.hidden = false;
@@ -402,7 +417,7 @@
     else if (object.type === "terminal") openTerminal();
     else if (object.type === "mirror") openMirror();
     else if (object.type === "scene") startNovel(object.scene);
-    else if (object.type === "door") { if (!state.flags.hasKey) showToast("门锁着。衣柜里也许有能用的东西。"); else { state.flags.openedDormDoor = true; addUnique(state.unlockedRooms, "corridor"); switchRoomAt(object.target || "corridor", object.entry || {x:1040,y:400}); if (!state.flags.scene04Seen) startNovel("scene-04"); } }
+    else if (object.type === "door") { if (!state.flags.hasKey) showToast("门锁着。衣柜里也许有能用的东西。"); else { state.flags.openedDormDoor = true; addUnique(state.unlockedRooms, "corridor"); unlockAchievement("dorm-escape", true); switchRoomAt(object.target || "corridor", object.entry || {x:1040,y:400}); if (!state.flags.scene04Seen) startNovel("scene-04"); } }
     else if (object.type === "returnDorm") switchRoom("dorm", 1330, 460);
     else if (object.type === "rules") openRules();
     else if (object.type === "waxDoor") { if (!state.flags.scene06Seen) showToast("东侧入口被无形的锁封住了。先去大厅听馆长的训话。"); else { state.flags.waxDoorUnlocked = true; switchRoom("wax"); } }
@@ -588,7 +603,7 @@
   }
 
   function renderRooms() { el.rooms.textContent = ""; Object.keys(rooms).forEach(function (id) { if (!rooms[id]) return; var button = document.createElement("button"); button.type = "button"; var unlocked = has(state.unlockedRooms, id); button.className = "room-button" + (state.roomId === id ? " current" : ""); button.disabled = true; button.innerHTML = "<strong>" + roomName(id) + "</strong><small>" + (unlocked ? (state.roomId === id ? "当前位置" : "已探索") : "尚未开放") + "</small>";  el.rooms.appendChild(button); }); }
-  function renderStats() { var objective=window.MuseumChapterProgress.objective(state); state.task=objective.text; var hint=document.getElementById("chapter-objective"); if(hint)hint.textContent=objective.text;  el.hp.textContent = String(state.hp); el.trust.textContent = String(state.systemTrust); el.clues.textContent = String(state.clues.length); el.task.textContent = objective.text || tasks[state.roomId] || "继续探索。"; window.MuseumAchievements.refresh(); window.MuseumPoints.refresh(); window.MuseumPanel.refresh(); }
+  function renderStats() { var objective=window.MuseumChapterProgress.objective(state); state.task=objective.text; var hint=document.getElementById("chapter-objective"); if(hint)hint.textContent=objective.text; syncAchievementProgress(); el.hp.textContent = String(state.hp); el.trust.textContent = String(state.systemTrust); el.clues.textContent = String(state.clues.length); el.task.textContent = objective.text || tasks[state.roomId] || "继续探索。"; window.MuseumAchievements.refresh(); window.MuseumPoints.refresh(); window.MuseumPanel.refresh(); }
   function renderAll() {
     if (!state) return; var room = currentRoom();
     if (!Number.isFinite(state.playerX) || !Number.isFinite(state.playerY) || blocked(room,state.playerX,state.playerY,room.id === "museum" ? 10 : 22)) {
@@ -652,7 +667,7 @@
       // 生存点已经从 hp 拆出来，所以这里只发钱；上面那行 state.hp 仍然按剩余血量覆盖。
       window.MuseumPoints.add(finalBoss ? 70 : 50, finalBoss ? "首领战胜利" : "馆长战胜利");
       if (!finalBoss) {
-        state.flags.battleDemoCompleted = true; state.flags.waxDoorUnlocked = true; addClue("director-account"); addUnique(state.unlockedRooms, "wax");
+        state.flags.battleDemoCompleted = true; state.flags.waxDoorUnlocked = true; addClue("director-account"); addUnique(state.unlockedRooms, "wax"); syncAchievementProgress(); unlockAchievement("first-battle", false);
       }
       // 战斗旗标刚写完就结算：下面马上要跳去剧情页，晚一步这次就扫不到了。
       if (window.MuseumMilestones) window.MuseumMilestones.settle(state);

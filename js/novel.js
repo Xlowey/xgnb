@@ -18,6 +18,15 @@
     } catch (error) { return null; }
   }
   var state = preview ? (readPreviewState() || MuseumState.create(user)) : (MuseumState.load(user.id) || MuseumState.create(user));
+  function unlockAchievement(id, persistNow) {
+    if (!state || !window.MuseumAchievements) return false;
+    return window.MuseumAchievements.unlock(state, id, { save: persistNow ? persist : function () {} });
+  }
+  function syncAchievementProgress() {
+    if (!state || !window.MuseumAchievements) return;
+    window.MuseumAchievements.setProgress(state, "clue-collector", state.clues.length, { save: function () {} });
+    window.MuseumAchievements.setProgress(state, "area-explorer", state.unlockedRooms.length, { save: function () {} });
+  }
   if (previewResume) {
     // The preview battle does not pass through game.js, so finish the small
     // amount of result handling here before showing the continuation scene.
@@ -35,6 +44,7 @@
         state.flags.waxDoorUnlocked = true;
         if (state.clues.indexOf("director-account") === -1) state.clues.push("director-account");
         if (state.unlockedRooms.indexOf("wax") === -1) state.unlockedRooms.push("wax");
+        unlockAchievement("first-battle", false);
       } else {
         state.roomId = "museum";
         state.currentNode = "museum";
@@ -47,6 +57,7 @@
   }
   function persist() {
     try {
+      syncAchievementProgress();
       if (preview) { sessionStorage.setItem("museum_class_preview", JSON.stringify(state)); return true; }
       return MuseumState.save(state, user.id) !== false;
     } catch (error) {
@@ -317,7 +328,12 @@
       state.flags.readNote = true;
       state.task = window.MuseumChapterProgress.objective(state).text;
       state.returnRoom = state.returnRoom || "dorm";
+      unlockAchievement("blood-note", false);
     }
+    if (currentSceneId === "scene-04") unlockAchievement("corridor-meeting", false);
+    if (/^scene-09-[a-d]$/.test(currentSceneId)) unlockAchievement("director-talk", false);
+    if (currentSceneId === "scene-17") unlockAchievement("diary-reader", false);
+    syncAchievementProgress();
     // 012 §4.2：一场结束就结算里程碑（每日存活、以及挂在场次旗标上的成就条件）。
     // 放在函数最后——上面各分支写的旗标这一轮扫描就都看得到。settle 是幂等的。
     if (window.MuseumMilestones) window.MuseumMilestones.settle(state);
@@ -331,6 +347,10 @@
     state.narrativeChoice = endingChoice;
     state.ending = currentScene.endingId || endingChoice || state.ending;
     state.endingComplete = true;
+    var endingId = state.ending;
+    if (endingId && state.endingHistory.indexOf(endingId) === -1) state.endingHistory.push(endingId);
+    unlockAchievement("first-ending", false);
+    window.MuseumAchievements.setProgress(state, "ending-collector", state.endingHistory.length, { save: function () {} });
     return persist();
   }
 
@@ -562,6 +582,14 @@
 
   function applyChoice(choice) {
     endingChoice = choice.id;
+    if (choice.effect === "skip-nightmare") {
+      state.flags.nightmareMinigameChoice = "skip";
+      state.returnRoom = "museum";
+      state.returnX = 610;
+      state.returnY = 620;
+      state.battleContext = null;
+      state.returnScene = null;
+    }
     if (choice.effect === "read-note") {
       state.flags.readNote = true;
       state.systemTrust += 3;
@@ -603,6 +631,7 @@
   function startBattle(choice) {
     var beforeBattle=JSON.parse(JSON.stringify(state));
     if (choice.battleContext === "final-boss") {
+      state.flags.nightmareMinigameChoice = "enter";
       // 最终战发生在食堂内部，胜利后必须从博物馆大门继续，而不是回到
       // 进入剧情前的食堂出生点。
       state.returnRoom = "museum";
@@ -629,6 +658,11 @@
   }
 
   function choose(choice) {
+    if (choice.endingFromNightmareChoice) {
+      // 老存档没有主动选择记录时走 A，不推断玩家打过哪些 Boss 阶段。
+      var destination = state.flags.nightmareMinigameChoice === "enter" ? "ending-c" : "ending-a";
+      choice = Object.assign({}, choice, { id: destination, nextScene: destination });
+    }
     if (!window.MuseumTutorial.isDone("branch")) window.MuseumTutorial.complete("branch");
     // A battle choice must NOT complete the scene yet: doing so awarded scene11Seen and
     // completed:scene-11 the moment 战斗 was clicked, so losing the fight still unlocked
@@ -671,7 +705,7 @@
   }
 
   function completeEnding() {
-    saveEnding();
+    if (!saveEnding()) { showToast("结局保存失败，请重试。"); return; }
     showEndingScreen();
   }
 
