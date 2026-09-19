@@ -10,7 +10,8 @@
   function register(def){
     if(!def || typeof def.id!=="string" || !def.id.trim() || typeof def.name!=="string" || !def.name.trim() || definitions.some(function(d){return d.id===def.id;}))return false;
     var target=def.target===undefined?1:Number(def.target);if(!Number.isFinite(target)||target<1)return false;
-    definitions.push({id:def.id,name:def.name,description:String(def.description || ""),target:Math.floor(target),hidden:!!def.hidden});refresh();return true;
+    // reward 要一起留下来：012 §4.2 给每个成就配了 20 点，unlock 时按它发钱。
+    var reward=Number(def.reward);definitions.push({id:def.id,name:def.name,description:String(def.description || ""),target:Math.floor(target),hidden:!!def.hidden,reward:Number.isFinite(reward)&&reward>0?Math.round(reward):0});refresh();return true;
   }
   function normalize(state){
     state.achievements=Array.from(new Set((Array.isArray(state.achievements)?state.achievements:[]).filter(function(id){return typeof id==="string" && id.length>0;})));
@@ -33,7 +34,11 @@
   }
   function unlock(state,id,options){
     var def=find(id);if(!def)return false;normalize(state);if(state.achievements.includes(id))return false;
-    state.achievements.push(id);state.achievementRecords[id]={progress:def.target,unlockedAt:new Date().toISOString()};persist(state,options);
+    state.achievements.push(id);state.achievementRecords[id]={progress:def.target,unlockedAt:new Date().toISOString()};
+    // 012 §4.2：解锁即发钱（每项只发一次——上面那道 includes 守卫保证了这里只走一次）。
+    // 放在 persist 之前，一次存档就把成就和生存点一起写下去。
+    if(def.reward && window.MuseumPoints)window.MuseumPoints.add(def.reward,"成就 · "+def.name);
+    persist(state,options);
     if(!options || options.notify!==false){ensureUI();queue.push(def.name);if(!timer)nextNotice();}return true;
   }
   function setProgress(state,id,value,options){
