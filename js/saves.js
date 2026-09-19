@@ -1,100 +1,10 @@
-(function () {
-  "use strict";
-
-  var user = MuseumAuth.getCurrentUser();
-  var userLabel = document.getElementById("save-page-user");
-  var message = document.getElementById("save-page-message");
-  var autoSummary = document.getElementById("auto-save-summary");
-  var list = document.getElementById("manual-save-list");
-
-  function roomLabel(state) {
-    return { museum: "博物馆", classroom: "教室展厅", canteenPassage: "食堂门前走廊", dorm: "员工宿舍", hall: "中央大厅", corridor: "博物馆走廊", office: "馆长办公室", wax: "蜡像馆" }[state && state.roomId] || "未知地点";
-  }
-
-  function timeLabel(value) {
-    if (!value) return "—";
-    var date = new Date(value);
-    return Number.isNaN(date.getTime()) ? "时间未知" : date.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
-  }
-
-  function setMessage(text) {
-    message.textContent = text;
-  }
-
-  function renderSlot(entry, index, state) {
-    var card = document.createElement("article");
-    card.className = "save-page-slot" + (entry ? " occupied" : " empty");
-    var info = document.createElement("div");
-    var title = document.createElement("strong");
-    title.textContent = "存档位 " + (index + 1);
-    var summary = document.createElement("span");
-    summary.textContent = entry ? roomLabel(entry.state) + " · 线索 " + ((entry.state.clues || []).length) : "空存档位";
-    var time = document.createElement("small");
-    time.textContent = entry ? timeLabel(entry.savedAt) : "—";
-    info.appendChild(title);
-    info.appendChild(summary);
-    info.appendChild(time);
-
-    var actions = document.createElement("div");
-    actions.className = "save-page-actions";
-    var saveButton = document.createElement("button");
-    saveButton.type = "button";
-    saveButton.className = "button button-small";
-    saveButton.textContent = entry ? "覆盖" : "保存";
-    saveButton.disabled = !state;
-    saveButton.addEventListener("click", function () {
-      if (!MuseumState.saveSlot(state, user.id, index)) { setMessage("保存失败，请检查浏览器存储空间后重试。"); return; }
-      setMessage("已保存到存档位 " + (index + 1) + "。");
-      render();
-    });
-    actions.appendChild(saveButton);
-
-    var loadButton = document.createElement("button");
-    loadButton.type = "button";
-    loadButton.className = "button button-small";
-    loadButton.textContent = "读取";
-    loadButton.disabled = !entry;
-    loadButton.addEventListener("click", function () {
-      if (!MuseumState.save(entry.state, user.id)) { setMessage("读取失败，当前进度未切换，请重试。"); return; }
-      window.location.href = "../index.html?fromSave=1";
-    });
-    actions.appendChild(loadButton);
-
-    if (entry) {
-      var deleteButton = document.createElement("button");
-      deleteButton.type = "button";
-      deleteButton.className = "text-button danger-button";
-      deleteButton.textContent = "删除";
-      deleteButton.addEventListener("click", function () {
-        if (!MuseumState.deleteSlot(user.id, index)) { setMessage("删除失败，请重试。"); return; }
-        setMessage("已删除存档位 " + (index + 1) + "。");
-        render();
-      });
-      actions.appendChild(deleteButton);
-    }
-
-    card.appendChild(info);
-    card.appendChild(actions);
-    return card;
-  }
-
-  function render() {
-    if (!user) {
-      userLabel.textContent = "未登录";
-      autoSummary.textContent = "请先从主页登录。";
-      list.textContent = "";
-      setMessage("登录后才能查看当前档案的存档。");
-      return;
-    }
-
-    userLabel.textContent = user.username;
-    var state = MuseumState.load(user.id);
-    autoSummary.textContent = state ? roomLabel(state) + " · 线索 " + ((state.clues || []).length) + " · 最近保存 " + timeLabel(state.savedAt) : "尚未开始探索";
-    list.textContent = "";
-    MuseumState.listSlots(user.id).forEach(function (entry, index) {
-      list.appendChild(renderSlot(entry, index, state));
-    });
-  }
-
-  render();
+(function(){
+'use strict';
+var user=MuseumAuth.getCurrentUser();
+if(!user){window.location.href='login.html?next=saves';return;}
+var state=MuseumState.load(user.id);
+document.getElementById('save-page-user').textContent=user.username;
+document.querySelector('.save-page-panel').hidden=true;
+function open(){MuseumSaveDialog.open({user:user,state:function(){return state;},save:function(){return state?MuseumState.save(state,user.id):false;},pause:function(){},resume:function(){},load:function(loaded){if(!loaded||!MuseumState.save(loaded,user.id))return false;window.location.href='../index.html?fromSave=1';return true;}},'load');}
+var button=document.createElement('button');button.className='button';button.textContent='打开存档管理';button.onclick=open;document.getElementById('save-page-message').after(button);open();
 }());

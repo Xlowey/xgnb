@@ -797,7 +797,9 @@
       showToast("当前没有可读取的剧情存档。");
       return;
     }
-    state = loaded;persist();
+    var previousState=state;state=loaded;
+    if(!persist()){state=previousState;return false;}
+    pausePlayback();clearChoices();els.end.hidden=true;els.review.hidden=true;
     if (state.mode === "novel" || state.mode === "ending") {
       currentSceneId = state.narrativeNode || story.fallback;
       currentScene = getScene(currentSceneId);
