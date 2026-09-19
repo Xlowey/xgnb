@@ -663,7 +663,9 @@
       var remainingHp = Number(result.remainingHp);
       if (Number.isFinite(remainingHp)) state.hp = Math.max(0, remainingHp);
       var finalBoss = state.battleContext === "final-boss";
-      // 012 §4.1 / §4.2：战斗胜利是收入来源之一，第十一场（馆长）+50、第二十八场（BOSS）+70。
+      // 012 §4.1 / §4.2：战斗胜利是收入来源之一，第十一场（馆长）+50、第二十九场（BOSS）+70。
+      // 第二十九场是「出口前（最终抉择）」——三选一之后才分出结局 A / C 的战斗；
+      // 第二十八场「出口前（决战）」只是 BOSS 发起攻击、赵灵挡下致命一击。
       // 生存点已经从 hp 拆出来，所以这里只发钱；上面那行 state.hp 仍然按剩余血量覆盖。
       window.MuseumPoints.add(finalBoss ? 70 : 50, finalBoss ? "首领战胜利" : "馆长战胜利");
       if (!finalBoss) {

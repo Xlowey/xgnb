@@ -10,7 +10,8 @@
  *   2. **老存档要能补发**：玩家今天之前就答对过守则、打赢过馆长，旗标已经在存档里了，
  *      扫描一跑就该把成就补上——只在事件点调用的话老存档永远拿不到；
  *   3. 一切只发一次（幂等），重复扫描、重复进地图都不许再发；
- *   4. 每日存活按 **009 原文核过的**两个节点发（不是照抄 012 的转述）。
+ *   4. 每日存活按 **009 docx 原文核过的**三个节点发（不是照抄 012 的转述）：第十二场
+ *      「回宿舍睡觉」、第二十三场「等待第三天的到来」、第二十五场「赵灵拍门」。
  *
  * 跑法：node tests/milestones.cjs
  */
@@ -88,8 +89,8 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
     check('成就取并集：远端 13 条 + 我们独有的 4 条 = 17 条', table.achievements.length === 17, { count: table.achievements.length });
     check('其中恰好 6 条发钱、各 20 点，合计 120（012 §4.2）', paying.length === 6 && paying.every(a => a.reward === 20) && paying.reduce((n, a) => n + a.reward, 0) === 120, { paying: paying.map(a => a.id) });
     check('其余 11 条纯追踪，不发钱', table.achievements.length - paying.length === 11 && table.achievements.filter(a => !a.reward).every(a => !a.reward), { free: table.achievements.filter(a => !a.reward).map(a => a.id) });
-    check('每日存活有两条，各 20 点', table.milestones.length === 2 && table.milestones.every(m => m.points === 20), { milestones: table.milestones });
-    check('每日存活挂在 009 的场次旗标上（scene12Seen / scene23Seen）', JSON.stringify(table.milestones.map(m => m.flag).sort()) === JSON.stringify(['scene12Seen', 'scene23Seen']), { flags: table.milestones.map(m => m.flag) });
+    check('每日存活有三条，各 20 点（共 60）', table.milestones.length === 3 && table.milestones.every(m => m.points === 20), { milestones: table.milestones });
+    check('每日存活挂在 009 的场次旗标上（scene12Seen / scene23Seen / scene25Seen）', JSON.stringify(table.milestones.map(m => m.flag).sort()) === JSON.stringify(['scene12Seen', 'scene23Seen', 'scene25Seen']), { flags: table.milestones.map(m => m.flag) });
     const before = await snapshot(p, (await p.evaluate(() => MuseumAuth.getCurrentUser().id)));
     check('新档一个成就都没解锁', before.achievements.length === 0, before.achievements);
     await p.close();
@@ -163,6 +164,15 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
     await p.waitForTimeout(500);
     const n2again = await snapshot(p, bothNights.userId);
     check('每日存活重复进地图也不再发', n2again.points === 280, { points: n2again.points });
+    await p.close();
+
+    // 第三夜（第二十五场「赵灵拍门」）—— 2026-09-19 按 009 docx 原文补的第三个节点
+    const threeNights = await seed('s.flags.scene12Seen = true; s.flags.scene23Seen = true; s.flags.scene25Seen = true;');
+    p = await openMap();
+    const n3 = await snapshot(p, threeNights.userId);
+    check('三夜都过 → 共发 60 点（240 → 300）', n3.points === 300, { points: n3.points });
+    const n3log = n3.log.filter(e => /存活过/.test(e.source));
+    check('三条存活来源都在明细里', n3log.length === 3 && n3log.some(e => e.source === '存活过第三夜'), { log: n3log.map(e => e.source) });
     await p.close();
 
     // ---------- G. 两个机制不互相干扰 ----------
