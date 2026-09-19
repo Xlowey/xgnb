@@ -49,9 +49,13 @@
     narrativeChoices: [],
     chapter: "序章",
     day: 1,
-    hp: 25,
+    // 013 落地（2026-09-19）：`hp` 就是**人性值**，量纲 0–100。
+    // 字段名保留 `hp` 是为了不牵动太多代码；语义看 js/humanity.js。
+    hp: 100,
+    // 老存档的 hp 是 0–25 的旧量纲，hydrate 靠这个标记区分并换算（见下方）。
+    // 新档走 createState()，天然带 1，不会被误换算。
+    humanityVersion: 1,
     // 012 §3.1：生存点从 hp 拆出来，成为纯货币（商城 / 券机 / 终局兑换都花它）。
-    // hp 保持原样，仍然是战斗血量与结局 D 的判定；013 落地后再把它接成人性值。
     // 老存档没有这两个键，hydrate 会用这里的默认值补齐，不需要迁移脚本。
     points: 240,
     pointsLog: [],
@@ -62,6 +66,9 @@
     npcTrust: 31,
     // 012 §3.2 规则三：券机入口旁常驻的那行券机自己的账。接入券机（第 4 步）后由它写入。
     machine: { tickets: 0, spent: 0, bestNet: 0 },
+    // 012 §4.2：两个小游戏的「复玩封顶再 +30」要按**次数**发钱，所以得记玩了几次。
+    // 首通是旗标（一次性、发完就完），复玩靠这个计数（增量，见 js/milestones.js 的 count 分支）。
+    minigamePlays: { forest: 0, dungeon: 0 },
     // 商城的持有物：{ 商品 id: 件数 }。012 §5.6 的战斗向是叠加式（买几份叠几层），
     // 所以记的是件数而不是"有没有"。【规则豁免】消耗一次就减一件。
     shopOwned: {},
@@ -107,6 +114,20 @@
     state.tutorial = Object.assign({}, DEFAULT_TUTORIAL, loaded.tutorial || {});
     state.tutorialDismissed = loaded.tutorialDismissed && typeof loaded.tutorialDismissed === "object" ? loaded.tutorialDismissed : {};
     state.flags = Object.assign({}, DEFAULT_FLAGS, loaded.flags || {});
+    // 013 落地（2026-09-19）：hp 从 0–25 的「战斗血量」变成 0–100 的「人性值」。
+    // 老存档没有 humanityVersion 标记，按比例换算，**保住玩家当前的伤势比例**——
+    // 不换算的话，旧档的满血 25 会被当成 25/100，凭空变残。
+    //
+    // ⚠️ 判断的是 `loaded` 而不是 `state`：`state` 已经被上面的白名单回填过，
+    //    humanityVersion 一定是 1，认不出旧档。也不能用 schemaVersion——
+    //    那是个只写不读的死字段（上面刚无条件写成 6）。
+    if (loaded.humanityVersion === undefined && loaded.hp !== undefined) {
+      state.hp = Math.round(Number(loaded.hp) / 25 * 100);
+    }
+    // hp 此前是全仓唯一没有数值校验的数值字段（面板那格是裸的 String(state.hp)，
+    // 坏值会直接显示 NaN），顺手把兜底和钳制补上。
+    if (!Number.isFinite(state.hp)) state.hp = DEFAULT_STATE.hp;
+    state.hp = Math.max(0, Math.min(100, Math.round(state.hp)));
     // 生存点是货币，坏值一律退回默认值，不能让 NaN 顺着加减法污染整个存档。
     if (!Number.isFinite(state.points)) state.points = DEFAULT_STATE.points;
     state.pointsLog = Array.isArray(state.pointsLog) ? state.pointsLog.filter(function (entry) { return entry && Number.isFinite(Number(entry.delta)); }) : [];
@@ -115,6 +136,9 @@
     if (!Number.isFinite(state.npcTrust)) state.npcTrust = DEFAULT_STATE.npcTrust;
     state.machine = Object.assign({}, DEFAULT_STATE.machine, (state.machine && typeof state.machine === "object") ? state.machine : {});
     ["tickets", "spent", "bestNet"].forEach(function (key) { if (!Number.isFinite(state.machine[key])) state.machine[key] = DEFAULT_STATE.machine[key]; });
+    // 小游戏的复玩次数：老存档没有这个键，读进来补 0（不写迁移脚本，同 points 的做法）。
+    state.minigamePlays = Object.assign({}, DEFAULT_STATE.minigamePlays, (state.minigamePlays && typeof state.minigamePlays === "object") ? state.minigamePlays : {});
+    ["forest", "dungeon"].forEach(function (key) { if (!Number.isFinite(state.minigamePlays[key]) || state.minigamePlays[key] < 0) state.minigamePlays[key] = DEFAULT_STATE.minigamePlays[key]; });
     // 持有物只认"商品 id -> 正整数件数"，坏值直接丢掉，免得商城渲染时拿到 NaN。
     var owned = (state.shopOwned && typeof state.shopOwned === "object") ? state.shopOwned : {};
     state.shopOwned = {};

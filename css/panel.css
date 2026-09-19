@@ -95,3 +95,14 @@
   .panel-entries { min-width: 0; }
   .map-panel-button { padding: 9px 11px; font-size: 12px; }
 }
+
+/* ---------- 人性值（013）----------
+   013 §二要求那一格「不显示为血条，显示为一具逐渐蜡像化的人形」。人形本身还没做，
+   这里先把接口铺好：js/humanity.js 的 refresh() 会写 data-humanity-ratio（0–1）
+   并在低于预警线时给整行挂 .is-low。下一轮加人形只需要动这一段。 */
+.panel-humanity-figure[hidden] { display: none; }
+
+/* 013 §8.2：「人性值低于 30 时……并有明确文字提示。让玩家死得明白，而不是被偷袭。」
+   人形没做之前，最低限度先让数字本身变色。 */
+.panel-stat.is-low .panel-human { color: #e08b7a; text-shadow: 0 0 12px rgba(224, 139, 122, .35); }
+.panel-stat.is-low .panel-label { color: #e08b7a; }

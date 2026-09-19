@@ -6,7 +6,7 @@
  *
  *   等级      state.level      Lv.03  ← 009 第四场面板
  *   生存点    state.points     240    ← 012 §3.1
- *   生命      state.hp         25     ← 013 的人性值落地后改叫「人性值」，量纲 100
+ *   人性值    state.hp         100    ← 013 已落地（2026-09-19）：量纲 0–100，读写走 js/humanity.js
  *   NPC 信任度 state.npcTrust   31%    ← 009 第四场面板 / 008（009 第十二场「角色信任松动」靠它）
  *   任务列表   009 第一场        ①②③ + 隐藏任务
  *   券机的账   state.machine.*        ← 012 §3.2 规则三
@@ -120,10 +120,21 @@
     pointsRow.appendChild(node("span", "panel-caret", "▾"));
     stats.appendChild(pointsRow);
 
+    // 013 落地（2026-09-19）：这一格从「生命」改叫「人性值」，量纲 0–100。
+    // 013 §二要求「不显示为血条，显示为一具逐渐蜡像化的人形」——那一版还没做，
+    // 这里先给容器挂上 .panel-human，下一轮往里塞随数值分段丢失细节的 SVG 即可。
     var humanRow = node("div", "panel-stat");
-    humanRow.appendChild(node("span", "panel-label", "生命"));
-    humanCell = node("strong", "panel-value");
+    humanRow.setAttribute("data-humanity-row", "");
+    humanRow.appendChild(node("span", "panel-label", "人性值"));
+    humanCell = node("strong", "panel-value panel-human");
     humanRow.appendChild(humanCell);
+    // 013 §二那具「逐渐蜡像化的人形」本轮不做（先做数字）。这里留一个占位容器：
+    // js/humanity.js 的 refresh() 会把当前比值写成 data-humanity-ratio、低于预警线时
+    // 给整行挂 .is-low，下一轮只需要往里填 SVG 和写 css/panel.css，不用再动 JS。
+    var figure = node("div", "panel-humanity-figure");
+    figure.setAttribute("data-humanity-figure", "");
+    figure.hidden = true;
+    humanRow.appendChild(figure);
     stats.appendChild(humanRow);
     vitals.appendChild(stats);
 
@@ -231,7 +242,12 @@
     if (!state) return;
     levelCell.textContent = "Lv." + String(Math.max(0, Math.round(state.level))).padStart(2, "0");
     pointsCell.textContent = String(window.MuseumPoints ? window.MuseumPoints.balance() : state.points);
-    humanCell.textContent = String(state.hp);
+    // 人性值走 js/humanity.js（013）。显示成 `91 / 100`，和旁边生存点那种纯数字区分开——
+    // 它是有限的生命预算，不是可以一直涨的货币。
+    // 兜底那支是给「humanity.js 还没加载」的场景（老页面缓存），不至于整格空白。
+    humanCell.textContent = window.MuseumHumanity
+      ? window.MuseumHumanity.value() + " / " + window.MuseumHumanity.MAX
+      : String(state.hp);
     trustCell.textContent = Math.round(state.npcTrust) + "%";
 
     // 012 §3.2 规则三：这行数字应该一直是负的，而且系统不会提醒你。

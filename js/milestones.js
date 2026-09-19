@@ -33,8 +33,39 @@
     }
 
     milestones().forEach(function (item) {
-      if (!item || !item.flag || claimed(state, item.id)) return;
-      if (!state.flags[item.flag]) return;
+      if (!item || !item.id) return;
+
+      // ---- ② 增量条目（count / per / cap）----
+      // 用于「复玩按次给钱、封顶」这类要记次数的事（012 §4.2 的两个小游戏）。
+      // 已发多少记在同一个旗标袋里（存数字而不是布尔），所以老存档照样能补发。
+      if (typeof item.count === "function") {
+        var reached = 0;
+        try { reached = Math.max(0, Math.floor(Number(item.count(state)) || 0)); } catch (error) { console.warn("里程碑计数出错，已跳过：" + item.id, error); return; }
+        var per = Math.max(0, Number(item.per) || 0);
+        var cap = Math.max(0, Number(item.cap) || 0);
+        var earned = Math.min(cap, reached * per);
+        var paidKey = "milestone:" + item.id;
+        var paid = Math.max(0, Number(state.flags[paidKey]) || 0);
+        if (earned <= paid) return;
+        // 先记已发额再发钱：万一 add 抛错，也不会变成每次扫描都重发一遍。
+        state.flags[paidKey] = earned;
+        window.MuseumPoints.add(earned - paid, item.source);
+        fired.push(item.id);
+        return;
+      }
+
+      // ---- ① 一次性条目 ----
+      // 锚点有两种：`flag`（某个场次/事件旗标）或 `check(state)`（要按存档内容算条件，
+      // 比如「线索够不够几条」）。二者取其一。
+      if (!item.flag && typeof item.check !== "function") return;
+      if (claimed(state, item.id)) return;
+      var hit = false;
+      if (typeof item.check === "function") {
+        try { hit = Boolean(item.check(state)); } catch (error) { console.warn("里程碑判定出错，已跳过：" + item.id, error); return; }
+      } else {
+        hit = Boolean(state.flags[item.flag]);
+      }
+      if (!hit) return;
       // 先记旗标再发钱：万一 add 抛错，也不会变成每次扫描都发一遍。
       state.flags["milestone:" + item.id] = true;
       window.MuseumPoints.add(item.points, item.source);

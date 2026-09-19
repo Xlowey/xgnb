@@ -74,6 +74,34 @@
     return true;
   }
 
+  // 用掉一件持有物并结算它的效果（013 §3.3 的【锚点】）。
+  //
+  // ⚠️ 这是 js/shop.js 里**第一个"应用效果"的落点**。既定惯例是「效果写在调用方」
+  //    （【规则豁免】由 js/game.js 的守则小游戏读 count("waiver") 自己分支），但【锚点】
+  //    没有对应的场景调用点——「与赵灵的一次独处」不对应任何一场戏，买下来随时能用，
+  //    所以只能由商品表自己声明 effect。
+  //
+  // 【回滚】不走这里：它在人性值归零时由 js/humanity.js 的 spendRollback() **自动**消耗，
+  // 玩家不需要也不该手动点（effect.revive 只是个标记，用来摘掉「效果待接入」标签）。
+  function use(id) {
+    var item = window.MuseumShopData.find(id);
+    if (!item || !item.effect || !item.effect.humanity) return false;
+    if (count(id) <= 0) return false;
+    if (!window.MuseumHumanity) return false;
+    // 满了就别让玩家白花。买来存着等掉血再用是合理玩法（013 §3.3 的「锚点」就是这个定位），
+    // 但满血时点「使用」是纯亏，这里挡一下。
+    if (window.MuseumHumanity.value() >= window.MuseumHumanity.MAX) {
+      window.MuseumHumanity.notice("人性值已满，留着下次再用");
+      return false;
+    }
+    // 顺序不能反：先扣持有物、再用效果。反过来一旦 consume 失败就是白送。
+    // consume 的 source 参数**不传**——传了会多弹一条生存点的「用掉一张…」，
+    // 而人性值那边的 heal() 自己会飘 `+15`，两条频道串味。
+    if (!consume(id)) return false;
+    window.MuseumHumanity.heal(item.effect.humanity, item.name);
+    return true;
+  }
+
   function renderItem(item) {
     var held = count(item.id);
     var soldOut = held >= item.limit;
@@ -100,6 +128,15 @@
     buyButton.disabled = soldOut;
     buyButton.addEventListener("click", function () { buy(item.id); });
     foot.appendChild(buyButton);
+    // 有持有物、且这件商品的效果是「点一下用掉」的（目前只有【锚点】），多给一个「使用」。
+    // 【回滚】没有这个按钮——它是自动消耗的。
+    if (item.effect && item.effect.humanity && held > 0) {
+      var useButton = node("button", "shop-use", "使用");
+      useButton.type = "button";
+      useButton.setAttribute("aria-label", "使用" + item.name + "，回复 " + item.effect.humanity + " 点人性值");
+      useButton.addEventListener("click", function () { use(item.id); });
+      foot.appendChild(useButton);
+    }
     card.appendChild(foot);
     return card;
   }
@@ -157,6 +194,7 @@
     unmount: unmount,
     render: render,
     buy: buy,
+    use: use,
     consume: consume,
     count: count,
     own: own

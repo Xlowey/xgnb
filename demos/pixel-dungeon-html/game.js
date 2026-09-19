@@ -983,6 +983,10 @@ function initialState() {
             y: 900,
             r: 15,
             hp: PLAYER_MAX_HP,
+            // 挨打次数：013 §3.2 的战斗损耗是「基础 + 每被击中一次 ×6」，要单独计数。
+            // **不能**拿 `PLAYER_MAX_HP - hp` 反推——applyDamage 是护甲先整块吸收、
+            // 护甲破了才掉血，所以掉了多少血 ≠ 挨了几下。
+            hitsTaken: 0,
             armor: MAX_ARMOR,
             energy: MAX_ENERGY,
             angle: 0,
@@ -1549,6 +1553,12 @@ function startDungeon() {
             const hurtPlayer = (damage)=>{
                 if (p.invincible > 0 || p.hp <= 0) return false;
                 applyDamage(p, damage);
+                // 计「挨了几下」，不是「掉了多少血」——护甲会先整块吸收伤害（见 applyDamage），
+                // 有护甲时 hp 一点不掉，但这一下确实算挨打。主游戏按 013 §3.2 用它算损耗。
+                p.hitsTaken += 1;
+                // 结算时要把这个数回传给主游戏。地牢的 HUD 里没有这个数字（不像血量能读界面），
+                // 所以直接挂在 window 上，与 __dungeonHp / __dungeonStatus 同一条约定。
+                window.__dungeonHits = p.hitsTaken;
                 p.hurt = 240;
                 g.shake = 6;
                 burst(p.x, p.y, '#ff6e72', 10);
@@ -2466,10 +2476,13 @@ startDungeon();
   var userId = query.get('user') || null;
   var storage = preview ? sessionStorage : localStorage;
 
-  // 主游戏里的生存点是 0-25 左右，地牢是 7 点血；直接搬过去会让玩家一进最终结局
-  // 就剩 1 点生存点。所以按比例折算，并且至少留 1 点——输了才走 ending-d。
+  // 主游戏的「人性值」是 0-100（013），地牢是 7 点血；直接搬过去会让玩家一进最终结局
+  // 就只剩个位数。所以按比例折算，并且至少留 1 点——输了才是 0。
+  //
+  // ⚠️ 2026-09-19 起，主游戏**不再用 remainingHp 算战斗损耗**：013 §3.2 的公式改成
+  //    「基础 14 + 挨打次数 ×6」，靠下面的 hitsTaken。remainingHp 留着只是给结算看。
   var DUNGEON_MAX_HP = 7;
-  var MUSEUM_MAX_HP = 25;
+  var MUSEUM_MAX_HP = 100;
 
   function museumHpFrom(dungeonHp) {
     var ratio = Math.max(0, Math.min(1, Number(dungeonHp) / DUNGEON_MAX_HP));
@@ -2483,6 +2496,10 @@ startDungeon();
     var result = {
       status: status,
       remainingHp: status === 'win' ? museumHpFrom(hp) : 0,
+      // 013 §3.2：主游戏按「基础 14 + 挨打次数 ×6」算人性值损耗，所以要把这一场挨了几下
+      // 一起带回去。由 hurtPlayer 累计、挂在 window.__dungeonHits 上（地牢的 HUD 里
+      // 没有这个数字，没法像血量那样从界面文本反读）。
+      hitsTaken: status === 'win' ? (Number(window.__dungeonHits) || 0) : 0,
       rewards: status === 'win' ? ['boss_defeated'] : [],
       flags: status === 'win' ? ['boss_defeated'] : [],
       userId: userId,

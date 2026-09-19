@@ -113,7 +113,10 @@ async function finishAndCapture(p, status, hp) {
     if (captured) {
       const r = JSON.parse(captured);
       check('结果是 win', r.status === 'win', r);
-      check('生存点按地牢 7 点血折算到本作 25 点制，且至少 1 点', r.remainingHp === 25, { remainingHp: r.remainingHp });
+      // 2026-09-19：主游戏的人性值量纲改成 0–100（013），所以地牢 7 点血满血折算成 100。
+      // ⚠️ remainingHp 现在**只是给结算看的**——013 §3.2 起主游戏按 hitsTaken 算损耗。
+      check('生存点按地牢 7 点血折算到本作 100 点制（013 量纲），且至少 1 点', r.remainingHp === 100, { remainingHp: r.remainingHp });
+      check('结果带 hitsTaken（013 §3.2 的战斗损耗靠它，不是 remainingHp）', r.hitsTaken === 0, { hitsTaken: r.hitsTaken });
       check('结果带 userId（主游戏据此校验账号）', r.userId === 'u_test', { userId: r.userId });
       check('结果带 boss_defeated 旗标', String(r.flags || '').includes('boss_defeated'), { flags: r.flags });
     }
@@ -130,7 +133,9 @@ async function finishAndCapture(p, status, hp) {
     const loseCap = await finishAndCapture(p, 'lose', 0);
     await p.waitForTimeout(1200);
     const lr = loseCap ? JSON.parse(loseCap) : null;
-    check('失败结果是 lose 且生存点为 0（主游戏据此走 ending-d）', Boolean(lr) && lr.status === 'lose' && lr.remainingHp === 0, lr);
+    // 契约没变（失败时 remainingHp 仍是 0），但**主游戏不再据此走 ending-d** 了——
+    // 013 §3.2 起失败 = 生存点 −300 + 退回存档点重打；结局 D 改由「人性值归零且无【回滚】」触发。
+    check('失败结果是 lose 且 remainingHp 为 0（契约字段；但主游戏不再据此判死）', Boolean(lr) && lr.status === 'lose' && lr.remainingHp === 0, lr);
     await ctx.close();
 
     // ---------- 3. standalone: no returnScene, unchanged ----------

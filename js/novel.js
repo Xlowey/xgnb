@@ -52,7 +52,19 @@
         state.playerY = 620;
       }
     }
-    if (previewBattleResult && Number.isFinite(Number(previewBattleResult.remainingHp))) state.hp = Math.max(0, Number(previewBattleResult.remainingHp));
+    // 课堂预览的战斗结果不走 game.js 的 applyBattleResult，所以要在这里自己结算人性值损耗。
+    // 013 §3.2 的公式与 game.js 保持一致（旋钮统一在 js/humanity-data.js 的 MuseumHumanityTuning）。
+    // 原来这里直接搬 remainingHp——那是 0–25 的旧量纲，语义也已经不用了。
+    if (previewBattleResult && previewBattleResult.status === "win" && window.MuseumHumanity) {
+      var previewHits = Number(previewBattleResult.hitsTaken);
+      if (!Number.isFinite(previewHits) || previewHits < 0) previewHits = 0;
+      var previewKnobs = window.MuseumHumanityTuning || {};
+      var previewBase = Number.isFinite(Number(previewKnobs.battleBaseDrain)) ? Number(previewKnobs.battleBaseDrain) : 14;
+      var previewPerHit = Number.isFinite(Number(previewKnobs.battleHitDrain)) ? Number(previewKnobs.battleHitDrain) : 6;
+      // 用显式传 state 的版本：这段代码在 IIFE 顶部，早于下面 MuseumHumanity.bind()，
+      // 走 damage() 的话 current() 还是 null，会静默不生效。存盘由下面的 persist() 负责。
+      window.MuseumHumanity.damageOn(state, previewBase + previewHits * previewPerHit, "战斗损耗");
+    }
     persist();
   }
   function persist() {
@@ -65,6 +77,20 @@
       return false;
     }
   }
+  // 人性值归零、且身上没有【回滚】时的去处（013 §二：归零 = 完全怪谈化 → 结局 D）。
+  // 由 js/humanity.js 的 settleZero() 通过 bind 的 onZero 回调触发。
+  //
+  // 剧情页这边不能像地图页（js/game.js 的 goEndingD）那样跳 "pages/novel.html?..."——
+  // 它本来就在这一页上。所以保留原有的查询参数（preview / user 等）、只换 scene，
+  // 用当前路径重进，让播放器去加载 ending-d。
+  function goEndingD() {
+    if (!state) return;
+    persist();
+    var query = new URLSearchParams(window.location.search);
+    query.set("scene", "ending-d");
+    window.location.href = window.location.pathname + "?" + query.toString();
+  }
+
   var story = window.MuseumStory;
   var currentSceneId = params.get("scene") || state.narrativeNode || story.fallback;
   var currentScene = getScene(currentSceneId);
@@ -145,6 +171,7 @@
   window.MuseumInventory.bind({getState:function(){return state;},save:persist,canOpen:function(){return els.review.hidden && els.end.hidden && els.pause.hidden && !stage.isOpen();},onOpen:function(){pausePlayback();window.MuseumTutorial.complete("inventory");},onClose:function(){schedulePlayback();}});
   window.MuseumAchievements.bind({getState:function(){return state;},save:persist,canOpen:function(){return els.review.hidden && els.end.hidden && els.pause.hidden && !stage.isOpen();},onOpen:pausePlayback,onClose:function(){schedulePlayback();}});
   window.MuseumPoints.bind({getState:function(){return state;},save:persist});
+  if (window.MuseumHumanity) window.MuseumHumanity.bind({getState:function(){return state;},save:persist,onZero:goEndingD});
   window.MuseumPanel.bind({getState:function(){return state;},save:persist,canOpen:function(){return els.review.hidden && els.end.hidden && els.pause.hidden && !stage.isOpen();},onOpen:pausePlayback,onClose:function(){schedulePlayback();}});
   window.MuseumShop.bind({getState:function(){return state;},save:persist});
   var panelButton = document.getElementById("novel-panel-button");
@@ -339,6 +366,8 @@
     // 012 §4.2：一场结束就结算里程碑（每日存活、以及挂在场次旗标上的成就条件）。
     // 放在函数最后——上面各分支写的旗标这一轮扫描就都看得到。settle 是幂等的。
     if (window.MuseumMilestones) window.MuseumMilestones.settle(state);
+    // 013 §3.1：时间流逝（每过一天 −10）与线索回血也挂在场次旗标上，同一轮扫掉。
+    if (window.MuseumHumanity) window.MuseumHumanity.settle(state);
   }
 
   function saveEnding() {

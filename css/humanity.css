@@ -1,0 +1,86 @@
+/* 人性值飘字（013 §一：这条数值掉下去的意思不是「你受伤了」，而是「你正在变成
+   怪谈的一部分」——所以每一次增减都必须看得见）。
+
+   位置：与生存点飘字（css/points.css）**同在左侧，但在更低的带**。
+   这不是美观问题：每日存活那一下会同时触发 `+20 存活过第一夜` 和 `−10 时间在走`，
+   两张飘字同帧出现；共用一条通道就会叠在一起，玩家看不见自己正在失去什么。
+   左侧中段留给生存点（top:50%），左侧下段（top:66%）留给人性值。 */
+.humanity-floats {
+  position: fixed;
+  z-index: 44; /* 压在成就 / 背包弹窗（46）之下，高于地图 HUD（3—5） */
+  left: 28px;
+  top: 66%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.humanity-float {
+  padding: 4px 10px;
+  border: 1px solid rgba(155, 214, 212, .28);
+  border-radius: 4px;
+  background: rgba(12, 24, 29, .74);
+  color: var(--text);
+  font: 14px system-ui, sans-serif;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  animation: humanity-float 2.6s ease-out forwards; /* 时长与 humanity.js 的 FLOAT_LIFETIME 对齐 */
+}
+
+/* 回血：找回真相、用掉锚点——往「人」的方向走。 */
+.humanity-float.is-heal {
+  border-color: rgba(217, 185, 137, .55);
+  color: var(--accent-strong);
+  text-shadow: 0 0 12px rgba(217, 185, 137, .35);
+}
+
+/* 流失：战斗、时间——往「蜡像」的方向走。比生存点的 is-cost 更冷一点，
+   因为它不是花钱，是不能再生的东西。 */
+.humanity-float.is-drain {
+  border-color: rgba(190, 140, 190, .5);
+  color: #d7a9d7;
+}
+
+.humanity-float.is-notice {
+  border-color: rgba(170, 183, 182, .35);
+  color: var(--muted);
+}
+
+@keyframes humanity-float {
+  0% { opacity: 0; transform: translateY(10px) scale(.96); }
+  12% { opacity: 1; transform: translateY(0) scale(1); }
+  70% { opacity: 1; transform: translateY(-6px); }
+  100% { opacity: 0; transform: translateY(-20px); }
+}
+
+/* 飘字只做视觉反馈；读屏走这个播报最新一条，避免连加减时被逐条刷屏。 */
+.humanity-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 620px) {
+  .humanity-floats { left: 14px; top: 76%; }
+  .humanity-float { padding: 3px 8px; font-size: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .humanity-float { animation-name: humanity-float-fade; }
+  @keyframes humanity-float-fade {
+    0% { opacity: 0; }
+    12% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+}

@@ -50,9 +50,11 @@ const aliases = W.MuseumState && W.MuseumState.sceneAliases ? W.MuseumState.scen
 for (const [alias, canonical] of Object.entries(aliases)) add(canonical, 'alias:' + alias);
 // Dynamic entries the static graph cannot see:
 //   ending-d  <- the final choice's 15 s timeout (novel.js startFinalChoiceTimer)
-//   ending-d  <- losing the battle with hp 0 (game.js applyBattleResult)
+//   ending-d  <- 人性值归零且没有【回滚】 (js/humanity.js settleZero -> 各页的 onZero)
 add('ending-d', 'timeout of the final choice (novel.js)');
-add('ending-d', 'battle loss with hp 0 (game.js)');
+add('ending-d', 'humanity zeroed with no rollback (js/humanity.js settleZero)');
+// ⚠️ 2026-09-19 起「战斗失败」**不再**通向 ending-d：013 §3.2 把它改成了
+//    「生存点 −300 + 退回上一个存档点重打」(game.js applyBattleResult)。
 //   ending-e  <- loading the "选择前检查点" from the save panel (game.js loadSelected)
 add('ending-e', 'load the pre-choice checkpoint (game.js)');
 // scene-17/scene-18 are inlined into the scene-16 branches rather than opened by id.

@@ -115,7 +115,7 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
     let panel = await readPanel(p);
     check('等级显示 Lv.03（state.level = 3）', panel.level === 'Lv.03', { level: panel.level });
     check('生存点读的是 points（240）', panel.points === '240', { points: panel.points });
-    check('生命读的是 hp（25）', panel.human === '25', { human: panel.human });
+    check('人性值读的是 hp（100 / 100，013 量纲）', panel.human === '100 / 100', { human: panel.human });
     check('NPC 信任度读的是 npcTrust（31%）', panel.trust === '31%', { trust: panel.trust });
     check('任务列表是 009 的三条 + 隐藏任务「？？？？？」', panel.tasks.length === 4 && /存活三天/.test(panel.tasks[0]) && /找出异变源头/.test(panel.tasks[1]) && /找出唯一活人/.test(panel.tasks[2]) && /？？？？？/.test(panel.tasks[3]), { tasks: panel.tasks });
     check('明细默认收起', panel.ledgerHidden === true, {});
@@ -133,7 +133,7 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
     panel = await readPanel(p);
     check('改 level 后面板跟着变（Lv.07）', panel.level === 'Lv.07', { level: panel.level });
     check('改 npcTrust 后面板跟着变（12%）', panel.trust === '12%', { trust: panel.trust });
-    check('改 hp 后面板跟着变（80）', panel.human === '80', { human: panel.human });
+    check('改 hp 后面板跟着变（80 / 100）', panel.human === '80 / 100', { human: panel.human });
     check('加钱后面板跟着变（300）', panel.points === '300', { points: panel.points });
     // 012 §3.2 规则三：券机入口旁这行账，而且它应该一直是负的
     check('券机的账读的是 machine.tickets / machine.spent', panel.machine === '已购 23 张 · 累计 −187 点', { machine: panel.machine });

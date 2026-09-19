@@ -50,10 +50,13 @@
     {
       id: "humanity",
       label: "人性类",
-      hint: "013 落地前，这两件买得到但加成无处安放。",
+      hint: "买下来存着，掉血了再点「使用」。013 §3.3：免费用人性化行为回血，花钱的这两件随时能用。",
       items: [
-        { id: "anchor-zhaoling", name: "【锚点 · 与赵灵的一次独处】", price: 60, limit: 4, note: "人性 +15", ready: false, dep: "013 人性值" },
-        { id: "anchor-hairpin", name: "【锚点 · 那枚银色发卡】", price: 50, limit: 2, note: "人性 +10", ready: false, dep: "013 人性值" }
+        // 013 §3.3 落地（2026-09-19）：这一类现在真的能回血了。effect.humanity 由 js/shop.js 的
+        // use() 分发（这是商城第一件「效果由商品表自己声明」的商品——【锚点】没有对应的场景调用点，
+        // 不像【规则豁免】那样能挂在 game.js 的守则小游戏上）。
+        { id: "anchor-zhaoling", name: "【锚点 · 与赵灵的一次独处】", price: 60, limit: 4, note: "人性 +15", ready: true, effect: { humanity: 15 } },
+        { id: "anchor-hairpin", name: "【锚点 · 那枚银色发卡】", price: 50, limit: 2, note: "人性 +10", ready: true, effect: { humanity: 10 } }
       ]
     },
     {
@@ -61,7 +64,9 @@
       label: "剧情类",
       hint: "009 结局 E 本来就写好的东西，012 只是给它标了个价。",
       items: [
-        { id: "rollback", name: "【回滚 · 回到最近存档点】", price: 300, limit: 3, note: "一次免死，回满人性", ready: false, dep: "013 人性值 + 结局 E" }
+        // 013 §四落地（2026-09-19）：人性值归零时自动消耗一枚、回满 100（见 js/humanity.js
+        // 的 spendRollback）。**不需要**点「使用」——所以这里只打标记、不写 effect.humanity。
+        { id: "rollback", name: "【回滚 · 回到最近存档点】", price: 300, limit: 3, note: "一次免死，回满人性（归零时自动消耗）", ready: true, effect: { revive: true } }
       ]
     },
     {

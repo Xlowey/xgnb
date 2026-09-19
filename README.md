@@ -81,6 +81,7 @@ node tests/world-flow-browser.cjs  # 地图↔剧情往返、存读档、课堂�
 node tests/story-endings.cjs       # 多结局：提交关闸、最终三选一、超时、空白页
 node tests/story-logic-fixes.cjs   # 镜子指错、战斗提前记通关、上一句抹进度
 node tests/save-multi-tab.cjs      # 双开标签页不得覆盖更新的进度
+node tests/humanity.cjs            # 人性值（013）：0–100 量纲、老档迁移、每日流失、战斗损耗、回滚复活、失败重打
 node tests/layout-responsive.cjs   # 6 种视口下的 16:9 映射、点击命中、触屏方向键
 node tests/layout-text-fit.cjs     # 对白框不溢出视口、剧情页不可横向拖动
 node tests/a11y-focus.cjs          # 6 个浮层的焦点移入、Tab 不逃逸、关闭归还焦点

@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="css/inventory.css?v=38">
   <link rel="stylesheet" href="css/achievements.css?v=38">
   <link rel="stylesheet" href="css/points.css?v=1">
+  <link rel="stylesheet" href="css/humanity.css?v=1">
   <link rel="stylesheet" href="css/panel.css?v=1">
   <link rel="stylesheet" href="css/shop.css?v=1">
   <link rel="stylesheet" href="css/tutorial.css?v=38">
@@ -67,9 +68,9 @@
           <details class="pause-help"><summary>操作说明</summary><p>WASD / 方向键移动；按住 Shift 以 1.5 倍速疾跑；按 Tab 显示或隐藏小地图；靠近物品后按 E 调查；Esc 暂停或继续。</p></details>
           <section class="pause-status" aria-label="当前状态">
             <div class="card-heading"><span>当前状态</span><span class="system-dot" aria-label="系统在线"></span></div>
-            <!-- 生存点是货币（012 §3.1），由 js/points.js 负责写入；下面的「生命」是原来的 state.hp，
-                 现在只剩战斗血量和结局 D 判定两件事，013 落地后改叫「人性值」。 -->
-            <dl class="stat-list"><div><dt>生存点</dt><dd data-points-value>240</dd></div><div><dt>生命</dt><dd id="hp-value">25</dd></div><div><dt>系统信任</dt><dd id="trust-value">50</dd></div><div><dt>线索</dt><dd id="clue-value">0</dd></div></dl>
+            <!-- 生存点是货币（012 §3.1），由 js/points.js 负责写入。
+                 「人性值」是 013 的落地（2026-09-19）：原来的 state.hp，量纲已从 0–25 改成 0–100。 -->
+            <dl class="stat-list"><div><dt>生存点</dt><dd data-points-value>240</dd></div><div><dt>人性值</dt><dd id="hp-value" data-humanity-value>100</dd></div><div><dt>系统信任</dt><dd id="trust-value">50</dd></div><div><dt>线索</dt><dd id="clue-value">0</dd></div></dl>
             <p id="task-value" class="task-text">调查宿舍，寻找离开的办法。</p>
             <div class="card-heading pause-section-heading"><span>馆内区域</span></div><div id="room-list" class="room-list"></div>
           </section>
@@ -96,6 +97,8 @@
   <script src="js/achievements-data.js?v=40"></script>
   <script src="js/achievements.js?v=39"></script>
   <script src="js/points.js?v=1"></script>
+  <script src="js/humanity-data.js?v=1"></script>
+  <script src="js/humanity.js?v=1"></script>
   <script src="js/milestones-data.js?v=1"></script>
   <script src="js/milestones.js?v=1"></script>
   <script src="js/panel.js?v=1"></script>

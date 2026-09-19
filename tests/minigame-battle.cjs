@@ -113,7 +113,8 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     // 答对会顺带解锁成就【规则记录员】并 +20（012 §4.2 的成就收入），所以不能再断言"分文不动"。
     // 这里要守的是「答对不会被扣罚」——答错的 −60 才是惩罚，见上一节。
     check('选对不会被扣罚', right.points >= beforeRight.points, { points: beforeRight.points + ' -> ' + right.points });
-    check('选对顺带解锁【规则记录员】并 +20', right.points === beforeRight.points + 20, { points: beforeRight.points + ' -> ' + right.points });
+    // 答对会同时：解锁成就【规则记录员】+20（012 §4.2）、并拿到「红制服的规则」线索 +10（012 §4.1）。
+    check('选对顺带解锁【规则记录员】+20 并拿到线索 +10', right.points === beforeRight.points + 30, { points: beforeRight.points + ' -> ' + right.points });
     check('选对也不动 hp', right.hp === beforeRight.hp, { hp: beforeRight.hp + ' -> ' + right.hp });
     // Clicking again must not double-count.
     const cluesAfter = (await st(p)).clues.length;
@@ -173,25 +174,31 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     // Simulate a WIN by writing the pending result the demo would leave behind, then loading the map.
     p = await seed('hall', 1490, 700, { scene06Seen: true, battleDemoCompleted: false, waxDoorUnlocked: true });
     await p.evaluate(() => {
-      localStorage.setItem('museum_pending_battle_v1', JSON.stringify({ status: 'win', remainingHp: 7 }));
+      // 013 §3.2：主游戏按 hitsTaken 算人性值损耗（基础 14 + 挨打 ×6），不再看 remainingHp。
+      // 这里挨 2 次：100 − (14 + 2×6) = 74。
+      localStorage.setItem('museum_pending_battle_v1', JSON.stringify({ status: 'win', remainingHp: 7, hitsTaken: 2 }));
     });
     await p.reload(); await p.waitForTimeout(1500);
     const win = await st(p);
-    check('战斗胜利会结算：hp 采用战斗结果', win.hp === 7, { hp: win.hp });
+    // 74 之后再被「找回线索」补回 +2（这一战会 addClue("director-account")）→ 76
+    check('战斗胜利按 013 §3.2 扣人性值（100 − 26 + 线索 2 = 76）', win.hp === 76, { hp: win.hp });
     check('战斗胜利会解锁蜡像馆', String(win.unlockedRooms).includes('wax'), { rooms: win.unlockedRooms });
     check('战斗胜利会标记 demo 完成', win.flags.battleDemoCompleted === true, { flag: win.flags.battleDemoCompleted });
     check('结算后待处理结果被清掉（不会重复结算）', await p.evaluate(() => localStorage.getItem('museum_pending_battle_v1')) === null, { pending: await p.evaluate(() => localStorage.getItem('museum_pending_battle_v1')) });
     await p.close();
 
-    // Simulate a LOSS -> ending-d.
+    // Simulate a LOSS —— 013 §3.2 修正后的口径（2026-09-19）：**不再是 ending-d**。
+    // 现在是「扣生存点 300 + 退回上一个存档点重打」；结局 D 的唯一触发口变成了
+    // 「人性值归零且没有【回滚】」。这个 seed 没有建 checkpoint，所以走兜底分支（回地图）。
     p = await seed('hall', 1490, 700, { scene06Seen: true, battleDemoCompleted: false, waxDoorUnlocked: true });
     await p.evaluate(() => {
       localStorage.setItem('museum_pending_battle_v1', JSON.stringify({ status: 'lose', remainingHp: 0 }));
     });
     await p.reload(); await p.waitForTimeout(1500);
     const lose = await p.evaluate(() => ({ url: location.href, s: MuseumState.load(MuseumAuth.getCurrentUser().id) }));
-    check('战斗失败走到 ending-d（死亡）', /ending-d/.test(String(lose.s.narrativeNode || lose.s.ending || '')) || /ending-d/.test(lose.url), { node: lose.s.narrativeNode, ending: lose.s.ending, url: lose.url });
-    check('战斗失败把 hp 记为 0', lose.s.hp === 0, { hp: lose.s.hp });
+    check('战斗失败扣生存点 300（与【回滚】同价，扣到 0 为止）', lose.s.points === 0, { points: lose.s.points });
+    check('战斗失败**不再**动人性值（失败是花钱重来，不是掉血）', lose.s.hp === 100, { hp: lose.s.hp });
+    check('战斗失败**不再**走 ending-d', !/ending-d/.test(String(lose.s.narrativeNode || lose.s.ending || '')) && !/ending-d/.test(lose.url), { node: lose.s.narrativeNode, url: lose.url });
     await p.close();
   } finally { await b.close(); server.close(); }
   console.log(fails ? '\n' + fails + ' FAILED' : '\nOK');

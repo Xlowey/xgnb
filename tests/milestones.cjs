@@ -81,7 +81,7 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
     let p = await openMap();
     const table = await p.evaluate(() => ({
       achievements: window.MuseumAchievementDefinitions.map(d => ({ id: d.id, name: d.name, reward: d.reward })),
-      milestones: window.MuseumMilestoneDefinitions.map(m => ({ id: m.id, flag: m.flag, points: m.points, source: m.source }))
+      milestones: window.MuseumMilestoneDefinitions.map(m => ({ id: m.id, flag: m.flag, points: m.points, source: m.source, hasCheck: typeof m.check === 'function', hasCount: typeof m.count === 'function', per: m.per, cap: m.cap }))
     }));
     // 并集口径（2026-09-19 合并 origin/main 时定的）：远端 13 条只追踪不发钱，
     // 我们 6 条各 20。总条数变了，但发钱的口子还是 6 个、合计还是 120。
@@ -89,8 +89,18 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
     check('成就取并集：远端 13 条 + 我们独有的 4 条 = 17 条', table.achievements.length === 17, { count: table.achievements.length });
     check('其中恰好 6 条发钱、各 20 点，合计 120（012 §4.2）', paying.length === 6 && paying.every(a => a.reward === 20) && paying.reduce((n, a) => n + a.reward, 0) === 120, { paying: paying.map(a => a.id) });
     check('其余 11 条纯追踪，不发钱', table.achievements.length - paying.length === 11 && table.achievements.filter(a => !a.reward).every(a => !a.reward), { free: table.achievements.filter(a => !a.reward).map(a => a.id) });
-    check('每日存活有三条，各 20 点（共 60）', table.milestones.length === 3 && table.milestones.every(m => m.points === 20), { milestones: table.milestones });
-    check('每日存活挂在 009 的场次旗标上（scene12Seen / scene23Seen / scene25Seen）', JSON.stringify(table.milestones.map(m => m.flag).sort()) === JSON.stringify(['scene12Seen', 'scene23Seen', 'scene25Seen']), { flags: table.milestones.map(m => m.flag) });
+    const nights = table.milestones.filter(m => /^survive-night-/.test(m.id));
+    check('每日存活有三条，各 20 点（共 60）', nights.length === 3 && nights.every(m => m.points === 20), { nights });
+    check('每日存活挂在 009 的场次旗标上（scene12Seen / scene23Seen / scene25Seen）', JSON.stringify(nights.map(m => m.flag).sort()) === JSON.stringify(['scene12Seen', 'scene23Seen', 'scene25Seen']), { flags: nights.map(m => m.flag) });
+
+    // 012 §4.1 的另外三笔（2026-09-19 接入）
+    const acts = table.milestones.filter(m => /^act-/.test(m.id));
+    check('幕结算 10 条 × 25 = 250（012 §4.1）', acts.length === 10 && acts.reduce((n, m) => n + m.points, 0) === 250, { count: acts.length, sum: acts.reduce((n, m) => n + m.points, 0) });
+    check('幕结算挂在各幕最后一场的旗标上（不重不漏）', new Set(acts.map(m => m.flag)).size === 10 && acts.every(m => /^scene\d\dSeen$/.test(m.flag)), { flags: acts.map(m => m.flag) });
+    const clueItems = table.milestones.filter(m => /^clue-/.test(m.id));
+    check('线索条目按 check(state) 判（不是旗标）', clueItems.length > 0 && clueItems.every(m => m.hasCheck && !m.flag), { clues: clueItems.map(m => m.id) });
+    const plays = table.milestones.filter(m => m.hasCount);
+    check('小游戏复玩是增量条目（per 10 / cap 30）', plays.length === 2 && plays.every(m => m.per === 10 && m.cap === 30), { plays: plays.map(m => m.id) });
     const before = await snapshot(p, (await p.evaluate(() => MuseumAuth.getCurrentUser().id)));
     check('新档一个成就都没解锁', before.achievements.length === 0, before.achievements);
     await p.close();
@@ -102,7 +112,8 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
     // 这两个 id 在合并时改成了远端的命名（rule-keeper → rules-reader、
     // director-account → first-battle），因为远端的代码就是按后者调的。
     check('老存档进地图就补发了【规则记录员】与【夜班交涉】', after.achievements.indexOf('rules-reader') !== -1 && after.achievements.indexOf('first-battle') !== -1, { achievements: after.achievements });
-    check('补发是真的发钱（240 + 20 + 20 = 280）', after.points === 280, { points: after.points });
+    // 240 + 成就 20 + 成就 20 + 暗影地牢首通 10（battleDemoCompleted 是 012 §4.1 的锚点）= 290
+    check('补发是真的发钱（240 + 20 + 20 + 首通 10 = 290）', after.points === 290, { points: after.points });
     const srcs = after.log.filter(e => /成就/.test(e.source)).map(e => e.source).sort();
     check('飘字/明细的来源写作「成就 · 名字」', srcs.length === 2 && srcs[0] === '成就 · 夜班交涉' && srcs[1] === '成就 · 规则记录员', { log: srcs });
 
@@ -113,7 +124,7 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
     await p.waitForSelector('#game-screen:not([hidden])', { timeout: 8000 });
     await p.waitForTimeout(500);
     const again = await snapshot(p, seeded.userId);
-    check('重复进地图不再发第二遍', again.points === 280 && again.achievements.length === 2, { points: again.points, achievements: again.achievements });
+    check('重复进地图不再发第二遍', again.points === 290 && again.achievements.length === 2, { points: again.points, achievements: again.achievements });
     await p.close();
 
     // ---------- D. 面具那一对是互斥的 ----------

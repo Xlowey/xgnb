@@ -28,6 +28,9 @@ const server = http.createServer((req, res) => {
 });
 let PORT = 0;
 const BASE = () => 'http://127.0.0.1:' + PORT;
+// 种子的生存点起点。seedRaw 会把 012 §4.1 可能补发的那几笔预先标成已结算，
+// 所以它就是新档的初值 240（见 seedRaw 里的说明）。
+const SEED_POINTS = 240;
 let fails = 0;
 const errors = [];
 const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + label + (ok || detail === undefined ? '' : '  <- ' + JSON.stringify(detail))); if (!ok) fails += 1; };
@@ -48,6 +51,12 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
       const s = MuseumState.create(u);
       s.mode = 'explore';
       s.flags = Object.assign({}, s.flags, { scene01Seen: true, scene03Seen: true, scene04Seen: true, scene05Seen: true, scene06Seen: true, hasKey: true });
+      // ⚠️ 012 §4.1 的几笔收入（幕结算 / 玩法通关）是按旗标**扫描补发**的——老存档也能补。
+      // 这个种子摆的是「已经走完第一到第六场」的存档，所以一进地图就会补发 55 点
+      // （第一幕结算 25 + G② 10 + G⑪ 10 + G⑫ 10），并往收支明细里写 4 条。
+      // 那会污染本文件真正要测的东西（生存点模块本身的行为，下面有 `pointsLog.length === 1`
+      // 这类断言）。所以这里把它们预先标成「已结算」，让起点干净地停在 240。
+      ['act-1', 'g02', 'g11', 'g12'].forEach(function (id) { s.flags['milestone:' + id] = true; });
       Object.keys(s.tutorial).forEach(k => s.tutorial[k] = true);
       // eslint-disable-next-line no-new-func
       new Function('s', mutateSource)(s);
@@ -84,22 +93,22 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
     await seedRaw('');
     let p = await openMap();
     let snapshot = await readSave();
-    check('新档初始生存点 240（012 §3.1）', snapshot.points === 240, { points: snapshot.points });
-    check('新档初始 hp 仍然是 25，没有被动过', snapshot.hp === 25, { hp: snapshot.hp });
+    check('种子存档起点 240（012 §3.1；补发那几笔已预先标成已结算）', snapshot.points === SEED_POINTS, { points: snapshot.points });
+    check('新档初始人性值 100（013 §二），与生存点各走各的', snapshot.hp === 100, { hp: snapshot.hp });
 
     // ---------- 2. 老存档补字段 ----------
     await p.close();
     await seedRaw('delete s.points; delete s.pointsLog;');
     p = await openMap();
     snapshot = await readSave();
-    check('老存档（没有 points 字段）读进来补 240', snapshot.points === 240, { points: snapshot.points });
+    check('老存档（没有 points 字段）读进来补 240', snapshot.points === SEED_POINTS, { points: snapshot.points });
 
     // ---------- 3. 坏值回退 ----------
     await p.close();
     await seedRaw("s.points = 'not a number'; s.pointsLog = 'nope';");
     p = await openMap();
     snapshot = await readSave();
-    check('points 是坏值时退回 240', snapshot.points === 240, { points: snapshot.points });
+    check('points 是坏值时退回 240', snapshot.points === SEED_POINTS, { points: snapshot.points });
     check('pointsLog 不是数组时退回空数组', Array.isArray(snapshot.pointsLog) && snapshot.pointsLog.length === 0, { pointsLog: snapshot.pointsLog });
 
     // ---------- 4. 收入：加钱 + 飘字 + 明细 ----------
@@ -117,7 +126,7 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
       };
     });
     check('收入飘字带来源，写作 +25 第一幕结算', gain.text === '+25 第一幕结算', { text: gain.text });
-    check('收入后余额 = 240 + 25', gain.balance === 265, { balance: gain.balance });
+    check('收入后余额 = SEED_POINTS + 25', gain.balance === SEED_POINTS + 25, { balance: gain.balance });
     check('飘字同时播报给读屏（.points-live）', gain.spoken === '+25 第一幕结算', { spoken: gain.spoken });
     check('收支明细记下这一笔（delta 与来源）', gain.recent.length === 1 && gain.recent[0].delta === 25 && gain.recent[0].source === '第一幕结算', { recent: gain.recent });
 
@@ -178,8 +187,8 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
       return { text: dd ? dd.textContent : null, hpText: document.getElementById('hp-value').textContent, labels: Array.from(document.querySelectorAll('.stat-list dt')).map(d => d.textContent) };
     });
     check('暂停面板的「生存点」显示的是新货币', panel.text === '155', panel);
-    check('暂停面板上「生存点」这个标签只出现一次（hp 那格已改叫「生命」）', panel.labels.filter(l => l === '生存点').length === 1, { labels: panel.labels });
-    check('面板上两格数字各自独立（生存点 155 / 生命 25）', panel.text === '155' && panel.hpText === '25', panel);
+    check('暂停面板上「生存点」这个标签只出现一次（hp 那格已改叫「人性值」）', panel.labels.filter(l => l === '生存点').length === 1, { labels: panel.labels });
+    check('面板上两格数字各自独立（生存点 155 / 人性值 100）', panel.text === '155' && panel.hpText === '100', panel);
 
     // ---------- 9b. 违规扣罚：余额不够也照扣，扣到 0 ----------
     // 和 spend 的唯一区别就在这里；走 spend 的话只好剩下 50 点的玩家答错会一分不扣。
@@ -208,12 +217,17 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
     // bonus 是这一场顺带解锁的成就奖励：馆长战会置 battleDemoCompleted，于是【夜班交涉】+20；
     // 最终 BOSS 战**不置任何旗标**（applyBattleResult 里 `if (!finalBoss)` 把旗标那一整块跳过了），
     // 所以它没有成就奖励——这也是为什么两个 case 的和刚好都是 310，必须分开写清楚。
-    const battleWin = async (context, expected, bonus, label) => {
+    // extra = 这一战顺带触发的**其他**收入（2026-09-19 接入的三笔）。
+    // 馆长战会同时解锁「暗影地牢 · 首通」(+10) 并拿到「馆长的口供」线索 (+20)；
+    // BOSS 战只发战斗那 70 点——battleDemoCompleted 只有馆长战会置，所以首通不会重复发。
+    const battleWin = async (context, expected, bonus, label, expectedHp, extra) => {
       const { userId } = await seedRaw('s.battleContext = ' + (context ? JSON.stringify(context) : 'null') + ';');
       const sh = await ctx.newPage();
       await sh.goto(BASE() + '/pages/saves.html');
       await sh.evaluate(({ userId }) => {
-        localStorage.setItem('museum_pending_battle_v1', JSON.stringify({ status: 'win', remainingHp: 25, rewards: [], flags: [], userId: userId }));
+        // 013 §3.2 起主游戏按 hitsTaken 算人性值损耗，不再看 remainingHp（那栏留着只是给结算看）。
+        // 这里固定挨打 2 次：损耗 = 基础 14 + 2 × 6 = 26。
+        localStorage.setItem('museum_pending_battle_v1', JSON.stringify({ status: 'win', remainingHp: 25, hitsTaken: 2, rewards: [], flags: [], userId: userId }));
       }, { userId });
       await sh.close();
       const bp = await ctx.newPage();
@@ -221,13 +235,18 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
       await bp.goto(BASE() + '/index.html?fromBattle=1');
       await bp.waitForTimeout(2200); // 结算后会跳去剧情页，等它落定
       const after = await readSave();
-      check(label, after.points === 240 + expected + bonus, { points: after.points, expected: 240 + expected + bonus, bonus: bonus });
-      // 拆分的意义：hp 仍然是"剩余血量"，和赚到的钱各走各的
-      check(label + '：hp 仍按剩余血量覆盖', after.hp === 25, { hp: after.hp });
+      const want = SEED_POINTS + expected + bonus + (extra || 0);
+      check(label, after.points === want, { points: after.points, expected: want, bonus: bonus, extra: extra || 0 });
+      // 拆分的意义：人性值和赚到的钱各走各的——但两者在同一场战斗里**同时**变动，
+      // 所以这条同时守着「生存点收入」与「人性值损耗」互不干扰。
+      check(label + '：人性值按 013 §3.2 的公式扣（100 − 26 + 线索回血）', after.hp === expectedHp, { hp: after.hp, expected: expectedHp });
       await bp.close().catch(() => null);
     };
-    await battleWin(null, 50, 20, '第十一场（馆长）胜利 +50，并解锁【夜班交涉】+20');
-    await battleWin('final-boss', 70, 0, '第二十八场（BOSS）胜利 +70（最终 BOSS 不置旗标，所以没有成就奖励）');
+    // 馆长战：100 − 26 = 74，再加「找回线索」的 +2（这一战会调 addClue("director-account")）
+    // 馆长战合计：战斗 +50、成就【夜班交涉】+20、暗影地牢首通 +10、线索「馆长的口供」+20
+    await battleWin(null, 50, 20, '第十一场（馆长）胜利 +50，并解锁【夜班交涉】+20', 76, 30);
+    // BOSS 战：100 − 26 = 74。最终 BOSS 不置旗标、也不发线索，所以没有那 +2。
+    await battleWin('final-boss', 70, 0, '第二十九场（BOSS）胜利 +70（最终 BOSS 不置旗标，所以没有成就奖励）', 74);
 
     check('全程没有页面报错', errors.length === 0, errors.slice(0, 3));
   } finally {

@@ -360,6 +360,7 @@
           el.rulesFeedback.textContent = "判断正确。红制服员工的规则暂时可信，去观察他吧。";
           state.task = "观察大厅里的红制服员工。";
           if (window.MuseumMilestones) window.MuseumMilestones.settle(state);
+          if (window.MuseumHumanity) window.MuseumHumanity.settle(state);
           save();
         } else {
           offerRuleWaiver();
@@ -603,7 +604,7 @@
   }
 
   function renderRooms() { el.rooms.textContent = ""; Object.keys(rooms).forEach(function (id) { if (!rooms[id]) return; var button = document.createElement("button"); button.type = "button"; var unlocked = has(state.unlockedRooms, id); button.className = "room-button" + (state.roomId === id ? " current" : ""); button.disabled = true; button.innerHTML = "<strong>" + roomName(id) + "</strong><small>" + (unlocked ? (state.roomId === id ? "当前位置" : "已探索") : "尚未开放") + "</small>";  el.rooms.appendChild(button); }); }
-  function renderStats() { var objective=window.MuseumChapterProgress.objective(state); state.task=objective.text; var hint=document.getElementById("chapter-objective"); if(hint)hint.textContent=objective.text; syncAchievementProgress(); el.hp.textContent = String(state.hp); el.trust.textContent = String(state.systemTrust); el.clues.textContent = String(state.clues.length); el.task.textContent = objective.text || tasks[state.roomId] || "继续探索。"; window.MuseumAchievements.refresh(); window.MuseumPoints.refresh(); window.MuseumPanel.refresh(); }
+  function renderStats() { var objective=window.MuseumChapterProgress.objective(state); state.task=objective.text; var hint=document.getElementById("chapter-objective"); if(hint)hint.textContent=objective.text; syncAchievementProgress(); el.hp.textContent = window.MuseumHumanity ? String(window.MuseumHumanity.value()) : String(state.hp); el.trust.textContent = String(state.systemTrust); el.clues.textContent = String(state.clues.length); el.task.textContent = objective.text || tasks[state.roomId] || "继续探索。"; window.MuseumAchievements.refresh(); window.MuseumPoints.refresh(); if (window.MuseumHumanity) window.MuseumHumanity.refresh(); window.MuseumPanel.refresh(); }
   function renderAll() {
     if (!state) return; var room = currentRoom();
     if (!Number.isFinite(state.playerX) || !Number.isFinite(state.playerY) || blocked(room,state.playerX,state.playerY,room.id === "museum" ? 10 : 22)) {
@@ -657,22 +658,78 @@
   }
   function openLogPanel() { if (!currentUser) return showAuth("game"); renderLogPanel(); el.logPanel.hidden = false; }
 
+  // 人性值归零、且身上没有【回滚】时的唯一去处（013 §二：归零 = 完全怪谈化 → 结局 D）。
+  // 由 js/humanity.js 的 settleZero() 通过 bind 的 onZero 回调触发。
+  //
+  // ⚠️ 战斗失败**不**走这里了——它改成扣生存点 300 + 退回存档点重打，见 applyBattleResult。
+  //    所以结局 D 现在唯一的触发口是「人性值归零且买不起回滚」。
+  function goEndingD() {
+    if (!state || !currentUser) return;
+    state.mode = "novel";
+    state.narrativeNode = "ending-d";
+    state.narrativeIndex = 0;
+    state.narrativeChoice = "ending-d";
+    // 013 §8.2：结局 D 必须是「正确的失败」，不是惩罚——所以这里先存盘再跳，
+    // 存不下就不能假装已经进了结局（沿用 startNovel / finishToMap 的写法）。
+    if (MuseumState.save(state, currentUser.id)) { window.location.href = "pages/novel.html?scene=ending-d"; return; }
+    state.mode = "explore";
+    showToast("结局无法写入存档，请检查浏览器存储空间后重试。");
+    renderAll();
+  }
+
+  // 013 §3.2 / §8.1 的战斗旋钮统一放在 js/humanity-data.js 的 MuseumHumanityTuning——
+  // 回合制那场战斗（js/battle.js）要用同一套数，各写一份迟早分叉。这里只负责读取和兜底。
+  function knob(name, fallback) {
+    var table = window.MuseumHumanityTuning || {};
+    var value = Number(table[name]);
+    return Number.isFinite(value) ? value : fallback;
+  }
+  // 013 §3.2 修正后的口径（2026-09-19 拍板）：战斗失败**不扣人性值**，改扣生存点 300
+  // ——与【回滚】同价，也就是 013 §6.3 那句「一次死亡 = 一次道具钱」里的「道具钱」。
+  function battleFailPenalty() { return knob("battleFailPenalty", 300); }
+
   function applyBattleResult(result) {
     if (!result || !state) return;
+    var finalBoss = state.battleContext === "final-boss";
     if (result.status === "win") {
-      var remainingHp = Number(result.remainingHp);
-      if (Number.isFinite(remainingHp)) state.hp = Math.max(0, remainingHp);
-      var finalBoss = state.battleContext === "final-boss";
+      // 013 §3.2：**不按剩余血量折算**。地牢的护甲会先把伤害整块吃掉（见
+      // demos/pixel-dungeon-html/game.js 的 applyDamage），所以「掉了多少血」反推不出
+      // 「挨了几下」——地牢那边单独记了 hitsTaken 一起回传。
+      var hits = Number(result.hitsTaken);
+      if (!Number.isFinite(hits) || hits < 0) hits = 0;
+      if (window.MuseumHumanity) {
+        var drain = knob("battleBaseDrain", 14) + hits * knob("battleHitDrain", 6);
+        window.MuseumHumanity.damage(drain, finalBoss ? "首领战损耗" : "馆长战损耗");
+        // 损耗有可能直接把人打死（013 §5.2 那张表的「硬拼」一行：−88 → 归零）。
+        // damage() 内部已经结算过了——消耗【回滚】回满、或走结局 D。回满的话值是 100，
+        // 所以这里 `<= 0` 只可能是结局 D，此时**不发战绩也不发钱**：赢了，但没活着回来。
+        if (window.MuseumHumanity.value() <= 0) return;
+      }
       // 012 §4.1 / §4.2：战斗胜利是收入来源之一，第十一场（馆长）+50、第二十九场（BOSS）+70。
       // 第二十九场是「出口前（最终抉择）」——三选一之后才分出结局 A / C 的战斗；
       // 第二十八场「出口前（决战）」只是 BOSS 发起攻击、赵灵挡下致命一击。
-      // 生存点已经从 hp 拆出来，所以这里只发钱；上面那行 state.hp 仍然按剩余血量覆盖。
       window.MuseumPoints.add(finalBoss ? 70 : 50, finalBoss ? "首领战胜利" : "馆长战胜利");
       if (!finalBoss) {
         state.flags.battleDemoCompleted = true; state.flags.waxDoorUnlocked = true; addClue("director-account"); addUnique(state.unlockedRooms, "wax"); syncAchievementProgress(); unlockAchievement("first-battle", false);
+      } else {
+        // 接上一处断链：地牢一直在回传 `flags: ['boss_defeated']`，而这里原先的
+        // `if (!finalBoss)` 把整块旗标跳过了——**那个旗标从来没被消费过**。
+        // 012 §4.1 的「暗影地牢」要认它，所以最终战也写下来。
+        state.flags.boss_defeated = true;
       }
+      // 012 §4.2：小游戏的复玩按次数发钱（首通 +10，复玩累计封顶再 +30）。
+      // 011 把馆长战与 BOSS 战都算作「暗影地牢」，所以每打赢一场就记一次。
+      if (!state.minigamePlays || typeof state.minigamePlays !== "object") state.minigamePlays = { forest: 0, dungeon: 0 };
+      state.minigamePlays.dungeon = Math.max(0, Number(state.minigamePlays.dungeon) || 0) + 1;
       // 战斗旗标刚写完就结算：下面马上要跳去剧情页，晚一步这次就扫不到了。
       if (window.MuseumMilestones) window.MuseumMilestones.settle(state);
+      // 人性值那边也要扫一遍：旗标（时间流逝、线索回血）可能在战斗这条路上集齐了。
+      // 每日流失是负的，所以这一轮也可能把人打倒——同样要提前退出去，
+      // 否则下面设置 returnScene 的那几行会把结局 D 的跳转**覆盖掉**。
+      if (window.MuseumHumanity) {
+        window.MuseumHumanity.settle(state);
+        if (window.MuseumHumanity.value() <= 0) return;
+      }
       var returnRoom = rooms[state.returnRoom] ? state.returnRoom : "hall";
       state.roomId = returnRoom; state.currentNode = returnRoom; state.chapter = rooms[returnRoom].chapter; state.playerX = Number(state.returnX) || rooms[returnRoom].spawn.x; state.playerY = Number(state.returnY) || rooms[returnRoom].spawn.y; state.task = tasks[returnRoom];
       state.mode = "novel"; state.narrativeNode = state.returnScene || "guard-after-battle"; state.narrativeIndex = 0; state.narrativeChoice = null; var nextScene = state.narrativeNode; state.returnScene = null; state.battleContext = null;
@@ -680,19 +737,38 @@
       else { state.mode = "explore"; showToast("战斗结果无法写入存档，请检查浏览器存储空间后重试。"); save(); renderAll(); }
       return;
     }
-    state.hp = Math.max(0, Number(result.remainingHp) || 0);
-    if (state.hp <= 0) {
-      state.mode = "novel";
-      state.narrativeNode = "ending-d";
-      state.narrativeIndex = 0;
-      state.narrativeChoice = "ending-d";
-      if (MuseumState.save(state, currentUser.id)) { window.location.href = "pages/novel.html?scene=ending-d"; }
-      else { state.mode = "explore"; showToast("结局无法写入存档，请检查浏览器存储空间后重试。"); renderAll(); }
+    // ---- 战斗失败（013 §3.2 修正后的口径）----
+    // 扣生存点 300，然后退回上一个存档点重打。013 §5.4：「死亡永远是可逆的，只要你有生存点。」
+    // 注意这里**不再动 state.hp**——人性值只被战斗损耗和时间流逝消耗，
+    // 失败是「花钱重来」，不是「掉血」。结局 D 现在唯一的触发口是人性值归零且无【回滚】。
+    var checkpoint = currentUser ? MuseumState.loadCheckpoint(currentUser.id) : null;
+    if (!checkpoint) {
+      // 罕见：玩家在没有任何检查点时就打了仗（检查点是在每次出现选项时写的）。
+      // 退化成回地图，不让流程卡死——checkpoint 缺失是记账缺口，不是剧情失败，不该一击致死。
+      var missed = window.MuseumPoints ? window.MuseumPoints.penalize(battleFailPenalty(), "战斗失败") : 0;
+      state.mode = "explore";
+      showToast(missed > 0 ? "交涉失败，生存点 −" + missed + "。" : "交涉失败。");
+      save();
+      renderAll();
+      return;
+    }
+    // ⚠️ 顺序是**先换 state、再扣钱**，不能反过来。checkpoint 是开战前的快照，
+    // 它的 points 是旧值；先扣的话会被下面这行整份覆盖掉——账面上那 300 点根本没扣。
+    state = checkpoint;
+    var paid = window.MuseumPoints ? window.MuseumPoints.penalize(battleFailPenalty(), "战斗失败") : 0;
+    // 退回「选项出现时」的现场重打。**不**复用 loadSelected(..., {checkpoint:true})：
+    // 那条会把玩家送进 ending-e「循环」结局演出，而这里要的是重打（013 §3.2 的「可重试」）。
+    // checkpoint 的 localStorage 那份全程没被碰过，所以可以无限次重试。
+    state.mode = "novel";
+    if (!state.narrativeNode) state.narrativeNode = "scene-10";
+    // penalize 内部的 persist 可能被多标签页守卫挡掉（返回 "stale"），所以这里显式再存一次——
+    // 否则「退回存档点」这件事本身没落盘，刷新之后玩家还站在战场上。
+    if (MuseumState.save(state, currentUser.id)) {
+      window.location.href = "pages/novel.html?scene=" + encodeURIComponent(state.narrativeNode);
       return;
     }
     state.mode = "explore";
-    showToast("交涉失败，生存点已更新。");
-    save();
+    showToast(paid > 0 ? "交涉失败，生存点 −" + paid + "，但存档写入失败。" : "交涉失败，但存档写入失败。");
     renderAll();
   }
   function consumeBattleResult() { var raw = localStorage.getItem(BATTLE_RESULT_KEY); if (!raw) return null; var result; try { result = JSON.parse(raw); } catch (error) { localStorage.removeItem(BATTLE_RESULT_KEY); return null; } if (result && result.userId && currentUser && result.userId !== currentUser.id) return null; localStorage.removeItem(BATTLE_RESULT_KEY); return result; }
@@ -819,6 +895,7 @@
   window.MuseumAchievements.bind({getState:function(){return state;},save:save,canOpen:function(){return el.game && !el.game.hidden && !overlaysOpen();},onOpen:function(){keys={};heldTouch=null;avatarMoving=false;drawRoom(currentRoom());},onClose:function(){keys={};heldTouch=null;renderAll();}});
   document.getElementById("map-achievements-button").addEventListener("click",function(){window.MuseumAchievements.open();});
   window.MuseumPoints.bind({getState:function(){return state;},save:save});
+  if (window.MuseumHumanity) window.MuseumHumanity.bind({getState:function(){return state;},save:save,onZero:goEndingD});
   window.MuseumPanel.bind({getState:function(){return state;},save:save,canOpen:function(){return el.game && !el.game.hidden && !overlaysOpen();},onOpen:function(){keys={};heldTouch=null;avatarMoving=false;drawRoom(currentRoom());},onClose:function(){keys={};heldTouch=null;renderAll();}});
   window.MuseumShop.bind({getState:function(){return state;},save:save});
   document.getElementById("map-panel-button").addEventListener("click",function(){window.MuseumPanel.open();});
@@ -858,5 +935,7 @@
   // 回到地图时结算一次里程碑。玩家的成就条件可能在别处刚被满足——最典型的是券机：
   // 它是另一个页面，累计购券数和单张最高净收益都在那边增长，回到这里才扫得到。
   if (currentUser && state && window.MuseumMilestones) window.MuseumMilestones.settle(state);
+  // 人性值那边同理：时间流逝（scene12/23/25Seen）与线索回血都在这张表上。
+  if (currentUser && state && window.MuseumHumanity) window.MuseumHumanity.settle(state);
   window.requestAnimationFrame(frame);
 }());

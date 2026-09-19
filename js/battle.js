@@ -15,7 +15,10 @@
     enemyHpBar: document.getElementById("enemy-hp-bar"), playerHpBar: document.getElementById("player-hp-bar"), enemyIntent: document.getElementById("enemy-intent"),
     playerStatus: document.getElementById("player-status"), ruleText: document.getElementById("rule-text"), log: document.getElementById("battle-log"), returnLink: document.getElementById("return-link")
   };
-  function initialState() { return { playerHp:MAX_PLAYER_HP, enemyHp:MAX_ENEMY_HP, turn:1, defending:false, observed:false, ruleSolved:false, finished:false }; }
+  // hitsTaken：013 §3.2 的战斗损耗是「基础 14 + 每被击中一次 ×6」，所以要把挨打次数单独记下来
+  // 一起回传（见 makeResult）。不能拿 MAX_PLAYER_HP - playerHp 反推——观察回合不掉血、
+  // 防御回合伤害减半，掉血量与挨打次数不是一回事。
+  function initialState() { return { playerHp:MAX_PLAYER_HP, enemyHp:MAX_ENEMY_HP, turn:1, defending:false, observed:false, ruleSolved:false, finished:false, hitsTaken:0 }; }
   function addLog(message) { var line=document.createElement("p"); line.textContent="· "+message; elements.log.appendChild(line); elements.log.scrollTop=elements.log.scrollHeight; }
   function setButtonsDisabled(disabled) { document.querySelectorAll(".action-button").forEach(function (button) { button.disabled=disabled; }); }
   function updateView() {
@@ -25,7 +28,19 @@
     elements.enemyIntent.textContent=state.observed ? "已观察：下一次行动是“"+(enemyActionLabels[nextAction] || "未知行动")+"”。" : "正在观察你的表情。";
     elements.ruleText.textContent=state.ruleSolved ? "规则已破解：你已看穿馆长的虚实，他本回合停止行动。" : "馆长深不可测。先观察，才能发现他的弱点。";
   }
-  function makeResult(status) { return { status:status, remainingHp:state.playerHp, rewards:status === "win" ? ["director_account"] : [], flags:status === "win" ? ["director_defeated"] : ["battle_failed"] }; }
+  function makeResult(status) {
+    return {
+      status: status,
+      // remainingHp 按**人性值的 0–100 量纲**给出——本文件里的 MAX_PLAYER_HP 只是这一战的
+      // 内部血条（25 点，同时驱动屏幕上的血条宽度和这场 demo 的节奏，所以不动它）。
+      // ⚠️ 主游戏**不再用它算损耗**：013 §3.2 的公式改用下面的 hitsTaken。
+      //    它留着只是给结算界面和测试看。
+      remainingHp: Math.round(state.playerHp / MAX_PLAYER_HP * 100),
+      hitsTaken: state.hitsTaken || 0,
+      rewards: status === "win" ? ["director_account"] : [],
+      flags: status === "win" ? ["director_defeated"] : ["battle_failed"]
+    };
+  }
   function finish(status,message) {
     state.finished=true;
     setButtonsDisabled(true);
@@ -47,6 +62,8 @@
     var action=enemyPatterns[state.turn % enemyPatterns.length]; var damage=action === "heavyAttack" ? 9 : 4;
     if (action === "observe") { addLog("馆长靠近了一步，没有造成伤害。"); return; }
     if (state.defending) damage=Math.ceil(damage/2); state.playerHp=Math.max(0,state.playerHp-damage);
+    // 只有真的挨了这一下才计数。上面的 observe 分支已经 return 了，所以「观察回合」天然不计。
+    state.hitsTaken+=1;
     addLog("馆长发动"+(action === "heavyAttack" ? "重击" : "攻击")+"，你受到 "+damage+" 点伤害。");
   }
   function takeAction(action) {

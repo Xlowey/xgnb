@@ -32,6 +32,12 @@
 .shop-buy:focus-visible { outline: 2px solid #e0c088; outline-offset: 2px; }
 .shop-buy:disabled { color: #6f7c7f; border-color: #b89e6930; background: #141f25; cursor: not-allowed; }
 
+/* 「使用」（013 §3.3 的【锚点】）：有持有物时才出现，点了立刻回人性值。
+   和「购买」的区别用暖色强调——它是把已经花掉的钱兑现，不是再花一笔。 */
+.shop-use { margin-left: 8px; border: 1px solid #d9b98988; border-radius: 5px; background: #33291c; color: #e6c892; padding: 7px 14px; font: 13px system-ui, sans-serif; cursor: pointer; }
+.shop-use:hover { background: #453722; }
+.shop-use:focus-visible { outline: 2px solid #e0c088; outline-offset: 2px; }
+
 .shop-balance { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 16px 0 0; padding-top: 14px; border-top: 1px solid #b89e6924; color: #909da0; font-size: 12px; }
 .shop-balance strong { color: #e6c892; font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; }
 
