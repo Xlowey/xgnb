@@ -1,0 +1,80 @@
+/* 生存点飘字（012 §3.2 规则一：每一次增减都要飘字，并注明来源）。
+   位置取屏幕**左侧**中部。地图页的右侧被「馆内导览」小地图占着（而且它随时可展开，
+   高度不固定，放右边一定会被压住）；左侧只有顶部有房间牌和当前目标，中段是空的。
+   剧情页同位置也不挡对话框。两个页面共用同一份样式，所以用 fixed 而不是 absolute。 */
+.points-floats {
+  position: fixed;
+  z-index: 44; /* 压在成就 / 背包弹窗（46）之下，高于地图 HUD（3—5） */
+  left: 28px;
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.points-float {
+  padding: 4px 10px;
+  border: 1px solid rgba(155, 214, 212, .28);
+  border-radius: 4px;
+  background: rgba(12, 24, 29, .74);
+  color: var(--text);
+  font: 14px system-ui, sans-serif;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  animation: points-float 2.6s ease-out forwards; /* 时长与 points.js 的 FLOAT_LIFETIME 对齐 */
+}
+
+.points-float.is-gain {
+  border-color: rgba(217, 185, 137, .55);
+  color: var(--accent-strong);
+  text-shadow: 0 0 12px rgba(217, 185, 137, .35);
+}
+
+.points-float.is-cost {
+  border-color: rgba(225, 155, 155, .5);
+  color: var(--danger);
+}
+
+.points-float.is-denied {
+  border-color: rgba(170, 183, 182, .35);
+  color: var(--muted);
+}
+
+@keyframes points-float {
+  0% { opacity: 0; transform: translateY(10px) scale(.96); }
+  12% { opacity: 1; transform: translateY(0) scale(1); }
+  70% { opacity: 1; transform: translateY(-6px); }
+  100% { opacity: 0; transform: translateY(-20px); }
+}
+
+/* 飘字只做视觉反馈；读屏走这个播报最新一条，避免连加减时被逐条刷屏。 */
+.points-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 620px) {
+  .points-floats { left: 14px; }
+  .points-float { padding: 3px 8px; font-size: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .points-float { animation-name: points-float-fade; }
+  @keyframes points-float-fade {
+    0% { opacity: 0; }
+    12% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+}
