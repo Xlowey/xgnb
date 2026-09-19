@@ -55,8 +55,7 @@ add('ending-d', 'timeout of the final choice (novel.js)');
 add('ending-d', 'humanity zeroed with no rollback (js/humanity.js settleZero)');
 // ⚠️ 2026-09-19 起「战斗失败」**不再**通向 ending-d：013 §3.2 把它改成了
 //    「生存点 −300 + 退回上一个存档点重打」(game.js applyBattleResult)。
-//   ending-e  <- loading the "选择前检查点" from the save panel (game.js loadSelected)
-add('ending-e', 'load the pre-choice checkpoint (game.js)');
+// E 的触发规则尚未定义。普通读取检查点只恢复游戏，不伪造一个已不存在的结局入口。
 // scene-17/scene-18 are inlined into the scene-16 branches rather than opened by id.
 add('scene-17', 'lines inlined into scene-16-mask/no-mask');
 add('scene-18', 'lines inlined into scene-16-mask/no-mask');
@@ -89,7 +88,8 @@ while (queue.length) {
 const all = Object.keys(S);
 // `opening` is a declared alias of scene-01 with no unique content (see the entry points).
 const DECLARED_ALIASES = new Set(['opening']);
-const orphans = all.filter(id => !reached.has(id) && !DECLARED_ALIASES.has(id));
+const RESERVED_SCENES = new Set(['ending-e']);
+const orphans = all.filter(id => !reached.has(id) && !DECLARED_ALIASES.has(id) && !RESERVED_SCENES.has(id));
 
 console.log('最终场景数：' + all.length + '   可达：' + reached.size + '   孤儿：' + orphans.length);
 console.log('\n=== 可被触发的场景（入口）===');
@@ -147,7 +147,7 @@ console.log('\n=== 结局 ===');
 all.filter(id => /^ending/.test(id) || (S[id].endingId)).sort().forEach(id => {
   const sc = S[id];
   const via = reached.get(id);
-  console.log('  ' + (via ? '可达  ' : '孤儿  ') + id.padEnd(20) + 'endingId=' + JSON.stringify(sc.endingId || null) +
+  console.log('  ' + (via ? '可达  ' : RESERVED_SCENES.has(id) ? '预留（未开放）  ' : '孤儿  ') + id.padEnd(20) + 'endingId=' + JSON.stringify(sc.endingId || null) +
     '  choices=' + ((sc.choices || []).length) + (via ? '   入口：' + via.filter(w => /choice|afterBattle/.test(w)).slice(0, 2).join(', ') : ''));
 });
 

@@ -8,10 +8,18 @@
   var READ_PREFIX = "museum_read_v1_";
   var COLLECTION_PREFIX = "museum_collection_v1_";
   var migratedCollections = Object.create(null);
+  var snapshotRevisions = new WeakMap();
+  // E has no authored route yet. Keep legacy E records without making an
+  // unreachable ending a requirement for the currently playable collection.
+  var COLLECTIBLE_ENDINGS = Object.freeze(["ending-a", "ending-b", "ending-c", "ending-d"]);
+  function collectedEndingCount(state) {
+    var history = state && Array.isArray(state.endingHistory) ? state.endingHistory : [];
+    return COLLECTIBLE_ENDINGS.filter(function (id) { return history.indexOf(id) !== -1; }).length;
+  }
 
   // Account collection survives loading an earlier slot and starting a new game.
   // Never merge money, inventory, story flags or the current ending into it.
-  function syncCollection(state, userId) {
+  function syncCollection(state, userId, options) {
     if (!userId || userId === "class-preview") return true;
     var collection = { achievements: [], achievementRecords: {}, endingHistory: [] };
     function merge(source) {
@@ -53,16 +61,28 @@
       });
       }
       merge(state);
-      if (collection.endingHistory.length) {
-        merge({ achievements: ["first-ending"], achievementRecords: { "ending-collector": { progress: collection.endingHistory.length } } });
-        if (collection.endingHistory.length === 5) merge({ achievements: ["ending-collector"] });
+      var endingCount = collectedEndingCount(collection);
+      if (collection.endingHistory.length) merge({ achievements: ["first-ending"] });
+      var collector = collection.achievementRecords["ending-collector"] || { unlockedAt: null };
+      collector.progress = endingCount;
+      collection.achievementRecords["ending-collector"] = collector;
+      if (endingCount === COLLECTIBLE_ENDINGS.length) merge({ achievements: ["ending-collector"] });
+      else {
+        collection.achievements = collection.achievements.filter(function (id) { return id !== "ending-collector"; });
+        collector.unlockedAt = null;
       }
       var raw = JSON.stringify(collection);
-      if (raw !== previous && !write(userKey(COLLECTION_PREFIX, userId), raw)) return false;
-      migratedCollections[userId] = true;
+      var deferred = options && options.defer;
       state.achievements = collection.achievements;
       state.achievementRecords = collection.achievementRecords;
       state.endingHistory = collection.endingHistory;
+      if (!deferred && raw !== previous && !write(userKey(COLLECTION_PREFIX, userId), raw)) {
+        // A saved primary snapshot can rebuild this index even when the player
+        // immediately loads an older slot in this same page.
+        migratedCollections[userId] = false;
+        return false;
+      }
+      if (!deferred) migratedCollections[userId] = true;
       return true;
     } catch (error) { console.warn("账号收集记录保存失败。", error); return false; }
   }
@@ -147,6 +167,8 @@
     returnY: null,
     returnFacing: "down",
     battleContext: null,
+    battleAttempt: null,
+    lastBattleResultId: null,
     returnScene: null,
     ending: null,
     endingComplete: false,
@@ -160,15 +182,21 @@
 
   function clone(value) { return JSON.parse(JSON.stringify(value)); }
   function userKey(prefix, userId) { return prefix + encodeURIComponent(userId || "guest"); }
-  function createState(user) {
+  function createState(user, hydrating) {
     var state = clone(DEFAULT_STATE);
     if (user) { state.userId = user.id; state.playerName = user.username; }
+    // Capture what this page has actually read, before another page can save.
+    // Hydrating a slot for display must not adopt a newer autosave implicitly.
+    if (state.userId && state.userId !== "class-preview" && !hydrating) {
+      var revision = readRevision(state.userId);
+      snapshotRevisions.set(state, { id: state.userId, revision: revision });
+    }
     syncCollection(state, state.userId);
     return state;
   }
   function hydrate(loaded, userId) {
     if (!loaded || typeof loaded !== "object") return null;
-    var state = createState({ id: userId, username: loaded.playerName || "" });
+    var state = createState({ id: userId, username: loaded.playerName || "" }, true);
     Object.keys(state).forEach(function (key) { if (loaded[key] !== undefined) state[key] = loaded[key]; });
     state.userId = userId;
     state.schemaVersion = 6;
@@ -221,7 +249,22 @@
     if(window.MuseumAchievements)window.MuseumAchievements.normalize(state);
     state.dialogueLog = Array.isArray(state.dialogueLog) ? state.dialogueLog : [];
     state.narrativeLogKeys = Array.isArray(state.narrativeLogKeys) ? state.narrativeLogKeys : [];
-    if (state.mode === "dialogue" || state.mode === "mini" || state.mode === "battle" || state.mode === "paused") state.mode = "explore";
+    var attempt = state.battleAttempt;
+    if (attempt && typeof attempt === "object" && typeof attempt.id === "string" && attempt.id &&
+        ["pixel-dungeon", "battle"].indexOf(attempt.source) !== -1 &&
+        typeof attempt.retryScene === "string" && attempt.retryScene &&
+        typeof attempt.returnScene === "string" && attempt.returnScene) {
+      state.battleAttempt = {
+        id: attempt.id, source: attempt.source, retryScene: attempt.retryScene,
+        retryIndex: Number.isFinite(attempt.retryIndex) ? Math.max(0, Math.floor(attempt.retryIndex)) : 0,
+        returnScene: attempt.returnScene
+      };
+      state.returnScene = attempt.returnScene;
+    } else state.battleAttempt = null;
+    // A battle snapshot is a suspended story, not an exploration save. Keeping
+    // its return contract lets the entry page resume/retry instead of skipping it.
+    if (state.mode === "battle" && !(typeof state.returnScene === "string" && state.returnScene)) state.mode = "explore";
+    if (state.mode === "dialogue" || state.mode === "mini" || state.mode === "paused") state.mode = "explore";
     if (loaded.currentNode && !loaded.roomId) state.roomId = loaded.currentNode;
     if (!Number.isFinite(state.playerX)) state.playerX = state.roomId === "hall" ? 260 : 300;
     if (!Number.isFinite(state.playerY)) state.playerY = state.roomId === "dorm" ? 520 : 460;
@@ -233,29 +276,27 @@
     try { return JSON.parse(raw); } catch (error) { console.warn("存档数据损坏，已忽略。", error); return fallback; }
   }
   function snapshot(state, userId) { var data = clone(state); data.userId = userId || state.userId; data.savedAt = new Date().toISOString(); return data; }
+  function prepareSnapshot(state, userId) {
+    var data = snapshot(state, userId);
+    return syncCollection(data, userId, { defer: true }) ? data : null;
+  }
+  function finishSnapshot(state, data, userId) {
+    // The primary save already contains the merged collection. A quota failure
+    // in this auxiliary index is recoverable from it on load; it must not turn
+    // a successful save into a failure or consume rewards before a failed save.
+    syncCollection(data, userId);
+    ["achievements", "achievementRecords", "endingHistory"].forEach(function (key) { state[key] = data[key]; });
+    state.savedAt = data.savedAt;
+  }
   function write(key, value) {
     try { localStorage.setItem(key, value); return true; }
     catch (error) { console.warn("存档写入失败。", error); return false; }
   }
   function remove(key) { try { localStorage.removeItem(key); } catch (error) { console.warn("存档清理失败。", error); } }
 
-  // ---------------------------------------------------------------------------
-  // 自动存档的写入保护（多标签页 / 切后台）。
-  //
-  // 地图页只在加载时读一次 state，之后每 6 秒和 pagehide 都会把那份快照写回去，
-  // 于是停着不动的那一个标签页会把另一个标签页的新进度整份覆盖掉。
-  //
-  // 做法：给存档配一个**单调递增的修订号**（REVISION_PREFIX）。任何一次写入都推进它。
-  // 每个页面加载时取一个 writerId；写入前比较：
-  //   存档修订号 > 我自己写过的最大修订号 -> 别人写过，放弃本次写入
-  //   否则                                -> 正常写入，基线前移
-  //
-  // 注意：**不能**用 savedAt 时间戳判断新旧。第一版就是这么写的，有两个致命缺陷：
-  //   a) 被拒绝时什么都不更新，同一个拒绝会永远重复——该标签页的自动存档、pagehide、
-  //      保存面板、"保存并返回标题"全部失效，还会误报"存储空间不足"。
-  //   b) savedAt 只在自己写入时更新，别人写的新档反而可能看起来更旧。
-  // 修订号由每次写入推进，所以基线永远不会卡住，也永远能发现别人的写入。
-  // ---------------------------------------------------------------------------
+  // Autosave ownership follows a state object, not a page. The save dialog may
+  // read newer data for display while gameplay still holds an older snapshot.
+  // Only adopting that data or explicitly restoring a slot permits new writes.
   var GUARD_PREFIX = "museum_save_guard_v1_";
   var REVISION_PREFIX = "museum_save_rev_v1_";
   var WRITER_ID = "w_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7);
@@ -269,38 +310,18 @@
     write(userKey(REVISION_PREFIX, userId), String(next));
     return next;
   }
-  function readGuard(userId) {
-    var raw = localStorage.getItem(userKey(GUARD_PREFIX, userId));
-    if (!raw) return null;
-    try { return JSON.parse(raw); } catch (error) { return null; }
-  }
   function writeGuard(userId, revision) {
     write(userKey(GUARD_PREFIX, userId), JSON.stringify({ writerId: WRITER_ID, revision: revision, at: Date.now() }));
   }
-  // 本页最后一次"见过"的修订号。**必须存在内存里**，不能每次去读 guard 键：
-  // guard 键在存档里，别的页面会覆盖它，于是"别的页面写过了"这件事会被它自己的写入抹掉，
-  // 判断就永远放行。这是第三版之前的 bug。
-  // 页面加载时用见到的修订号初始化（见 initGuard），之后每次本页写入都前移。
-  var BASELINE = null;
-
-  function baselineFor(userId) {
-    if (BASELINE !== null && BASELINE.id === userId) return BASELINE.revision;
-    var seen = readGuard(userId);
-    var revision = (seen && Number.isFinite(seen.revision)) ? seen.revision : 0;
-    BASELINE = { id: userId, revision: revision };
-    return revision;
-  }
-  function setBaseline(userId, revision) { BASELINE = { id: userId, revision: revision }; }
-
   function save(state, userId) {
     var id = userId || state.userId; if (!id) return false;
-    if (!syncCollection(state, id)) return false;
-    var data = snapshot(state, id); if (!write(userKey(AUTO_PREFIX, id), JSON.stringify(data))) return false;
-    state.savedAt = data.savedAt;
-    // 每一次写入都推进修订号，别处才能发现"这个存档变了"；并把本页基线前移。
+    var data = prepareSnapshot(state, id);
+    if (!data || !write(userKey(AUTO_PREFIX, id), JSON.stringify(data))) return false;
+    // Advance the revision only after the primary write succeeds.
     var revision = bumpRevision(id);
     writeGuard(id, revision);
-    setBaseline(id, revision);
+    snapshotRevisions.set(state, { id: id, revision: revision });
+    finishSnapshot(state, data, id);
     return data.savedAt;
   }
   // 只在没有别的页面写过更新的快照时才写入。
@@ -312,20 +333,30 @@
     var id = userId || state.userId;
     if (!id) return false;
     var stored = readRevision(id);
-    var seen = baselineFor(id);
-    if (stored > seen) return "stale";
+    // Reading an autosave to display its card must not authorize some other,
+    // older object still used by the map. Ownership belongs to the snapshot.
+    var owner = snapshotRevisions.get(state);
+    if (!owner || owner.id !== id) {
+      if (stored > 0) return "stale";
+    } else if (stored > owner.revision) return "stale";
     return save(state, id);
   }
-  // 页面切回前台/重新可见时调用：接受当前存档版本，之后本页才有权继续写入。
-  function adoptRevision(userId) {
+  // Only an explicit slot/checkpoint restore should pass a state here. Calling
+  // without one just reads the revision and grants no unrelated object access.
+  function adoptRevision(userId, state) {
     if (!userId) return;
-    setBaseline(userId, readRevision(userId));
+    var revision = readRevision(userId);
+    if (state && state.userId === userId) snapshotRevisions.set(state, { id: userId, revision: revision });
+    return revision;
   }
   function load(userId) {
     if (!userId) return null;
+    var revision = readRevision(userId);
     var raw = localStorage.getItem(userKey(AUTO_PREFIX, userId));
     if (!raw) LEGACY_PREFIXES.some(function (prefix) { raw = localStorage.getItem(userKey(prefix, userId)); return Boolean(raw); });
-    return hydrate(parse(raw, null), userId);
+    var state = hydrate(parse(raw, null), userId);
+    if (state) snapshotRevisions.set(state, { id: userId, revision: revision });
+    return state;
   }
   function normalizeSlots(slots) {
     if (!Array.isArray(slots)) slots = [];
@@ -348,17 +379,19 @@
   }
   function saveSlot(state, userId, slotIndex) {
     if (!userId || slotIndex < 0 || slotIndex >= SLOT_LIMIT) return null;
-    if (!syncCollection(state, userId)) return null;
-    var slots = readSlots(userId); var data = snapshot(state, userId); slots[slotIndex] = { savedAt: data.savedAt, state: data };
+    var data = prepareSnapshot(state, userId); if (!data) return null;
+    var slots = readSlots(userId); slots[slotIndex] = { savedAt: data.savedAt, state: data };
     var dataRaw = JSON.stringify(slots); if (!write(userKey(SLOTS_PREFIX, userId), dataRaw)) return null;
+    finishSnapshot(state, data, userId);
     save(state, userId); return clone(slots[slotIndex]);
   }
   function loadSlot(userId, slotIndex) { var entry = userId && slotIndex >= 0 && slotIndex < SLOT_LIMIT ? readSlots(userId)[slotIndex] : null; return entry ? hydrate(entry.state, userId) : null; }
   function saveCheckpoint(state, userId, meta) {
     var id = userId || state.userId; if (!id) return false;
-    if (!syncCollection(state, id)) return false;
-    var data = snapshot(state, id); data.checkpoint = Object.assign({}, meta || {}, { savedAt: data.savedAt });
+    var data = prepareSnapshot(state, id); if (!data) return false;
+    data.checkpoint = Object.assign({}, meta || {}, { savedAt: data.savedAt });
     if (!write(userKey(CHECKPOINT_PREFIX, id), JSON.stringify(data))) return false;
+    finishSnapshot(state, data, id);
     state.checkpoint = data.checkpoint; return clone(data);
   }
   function loadCheckpoint(userId) {
@@ -404,5 +437,5 @@
     state.flags["completed:" + canonicalScene(id)] = true;
   }
 
-  window.MuseumState = { sceneCompleted: sceneCompleted, completeScene: completeScene, SLOT_LIMIT: SLOT_LIMIT, create: createState, save: save, saveGuarded: saveGuarded, adoptRevision: adoptRevision, load: load, saveSlot: saveSlot, loadSlot: loadSlot, saveCheckpoint: saveCheckpoint, loadCheckpoint: loadCheckpoint, markRead: markRead, hasRead: hasRead, deleteSlot: deleteSlot, listSlots: listSlots, clear: clear, hasSave: hasSave };
+  window.MuseumState = { COLLECTIBLE_ENDINGS: COLLECTIBLE_ENDINGS, collectedEndingCount: collectedEndingCount, sceneCompleted: sceneCompleted, completeScene: completeScene, SLOT_LIMIT: SLOT_LIMIT, create: createState, save: save, saveGuarded: saveGuarded, adoptRevision: adoptRevision, load: load, saveSlot: saveSlot, loadSlot: loadSlot, saveCheckpoint: saveCheckpoint, loadCheckpoint: loadCheckpoint, markRead: markRead, hasRead: hasRead, deleteSlot: deleteSlot, listSlots: listSlots, clear: clear, hasSave: hasSave };
 }());

@@ -37,6 +37,8 @@
       //    它留着只是给结算界面和测试看。
       remainingHp: Math.round(state.playerHp / MAX_PLAYER_HP * 100),
       hitsTaken: state.hitsTaken || 0,
+      battleAttempt: query.get("battleAttempt") || null,
+      source: "battle",
       rewards: status === "win" ? ["director_account"] : [],
       flags: status === "win" ? ["director_defeated"] : ["battle_failed"]
     };

@@ -37,7 +37,7 @@
     state.achievements.push(id);state.achievementRecords[id]={progress:def.target,unlockedAt:new Date().toISOString()};
     // 012 §4.2：解锁即发钱（每项只发一次——上面那道 includes 守卫保证了这里只走一次）。
     // 放在 persist 之前，一次存档就把成就和生存点一起写下去。
-    if(def.reward && window.MuseumPoints)window.MuseumPoints.add(def.reward,"成就 · "+def.name);
+    if(def.reward && window.MuseumPoints)window.MuseumPoints.addOn(state,def.reward,"成就 · "+def.name,{save:false,notify:!options || options.notify!==false});
     persist(state,options);
     if(!options || options.notify!==false){ensureUI();queue.push(def.name);if(!timer)nextNotice();}return true;
   }

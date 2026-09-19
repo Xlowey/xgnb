@@ -13,6 +13,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/25102/.c
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg' };
 const server = http.createServer((req, res) => {
   const url = decodeURIComponent(req.url.split('?')[0]);
+  if (url === '/__seed.html') { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end('<script src="/js/auth.js"></script><script src="/js/state.js"></script>'); return; }
   const file = path.join(ROOT, url === '/' ? 'index.html' : url.replace(/^\/+/, ''));
   if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
   const body = fs.readFileSync(file);
@@ -30,7 +31,7 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
   // Seed in a page without game.js so the seed survives (a game page writes old state back).
   const seed = async (room, x, y, flags) => {
     const sh = await ctx.newPage();
-    await sh.goto('http://127.0.0.1:8843/pages/saves.html');
+    await sh.goto('http://127.0.0.1:8843/__seed.html');
     await sh.evaluate(({ room, x, y, flags }) => {
       localStorage.clear();
       const u = MuseumAuth.register('小游戏', 'x').user;
@@ -173,12 +174,17 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
 
     // Simulate a WIN by writing the pending result the demo would leave behind, then loading the map.
     p = await seed('hall', 1490, 700, { scene06Seen: true, battleDemoCompleted: false, waxDoorUnlocked: true });
+    await p.goto('http://127.0.0.1:8843/__seed.html');
     await p.evaluate(() => {
       // 013 §3.2：主游戏按 hitsTaken 算人性值损耗（基础 14 + 挨打 ×6），不再看 remainingHp。
       // 这里挨 2 次：100 − (14 + 2×6) = 74。
-      localStorage.setItem('museum_pending_battle_v1', JSON.stringify({ status: 'win', remainingHp: 7, hitsTaken: 2 }));
+      const user = MuseumAuth.getCurrentUser(), state = MuseumState.load(user.id);
+      state.mode = 'battle'; state.returnScene = state.narrativeNode = 'guard-after-battle';
+      state.battleAttempt = { id: 'director-win', source: 'battle', retryScene: 'scene-11', retryIndex: 0, returnScene: state.returnScene };
+      MuseumState.save(state, user.id);
+      localStorage.setItem('museum_pending_battle_v1', JSON.stringify({ status: 'win', remainingHp: 7, hitsTaken: 2, userId: user.id, source: 'battle', battleAttempt: 'director-win' }));
     });
-    await p.reload(); await p.waitForTimeout(1500);
+    await p.goto('http://127.0.0.1:8843/index.html?fromBattle=1'); await p.waitForTimeout(1500);
     const win = await st(p);
     // 74 之后再被「找回线索」补回 +2（这一战会 addClue("director-account")）→ 76
     check('战斗胜利按 013 §3.2 扣人性值（100 − 26 + 线索 2 = 76）', win.hp === 76, { hp: win.hp });
@@ -191,10 +197,15 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     // 现在是「扣生存点 300 + 退回上一个存档点重打」；结局 D 的唯一触发口变成了
     // 「人性值归零且没有【回滚】」。这个 seed 没有建 checkpoint，所以走兜底分支（回地图）。
     p = await seed('hall', 1490, 700, { scene06Seen: true, battleDemoCompleted: false, waxDoorUnlocked: true });
+    await p.goto('http://127.0.0.1:8843/__seed.html');
     await p.evaluate(() => {
-      localStorage.setItem('museum_pending_battle_v1', JSON.stringify({ status: 'lose', remainingHp: 0 }));
+      const user = MuseumAuth.getCurrentUser(), state = MuseumState.load(user.id);
+      state.mode = 'battle'; state.returnScene = state.narrativeNode = 'guard-after-battle';
+      state.battleAttempt = { id: 'director-lose', source: 'battle', retryScene: 'scene-11', retryIndex: 0, returnScene: state.returnScene };
+      MuseumState.save(state, user.id);
+      localStorage.setItem('museum_pending_battle_v1', JSON.stringify({ status: 'lose', remainingHp: 0, userId: user.id, source: 'battle', battleAttempt: 'director-lose' }));
     });
-    await p.reload(); await p.waitForTimeout(1500);
+    await p.goto('http://127.0.0.1:8843/index.html?fromBattle=1'); await p.waitForTimeout(1500);
     const lose = await p.evaluate(() => ({ url: location.href, s: MuseumState.load(MuseumAuth.getCurrentUser().id) }));
     check('战斗失败扣生存点 300（与【回滚】同价，扣到 0 为止）', lose.s.points === 0, { points: lose.s.points });
     check('战斗失败**不再**动人性值（失败是花钱重来，不是掉血）', lose.s.hp === 100, { hp: lose.s.hp });

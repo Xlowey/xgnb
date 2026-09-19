@@ -62,7 +62,8 @@
   // 曾经还有 ending-escape / ending-turn-back / ending-understand 三个副本，分别是
   // ending-a/b/c 的克隆，但**没有任何代码会打开它们**（全仓 grep 0 处引用）。它们是
   // 永远播不到的死内容，还让"一共有几个结局"数不清。已删除。
-  // 现在的结局入口：a/b/c 来自最终抉择，d 来自超时或战斗失败，e 来自读取"选择前检查点"。
+  // A/C 来自最终抉择与梦魇选择；B 也可从第十六场进入。
+  // D 来自超时或人性归零；E 保留资料，尚无确定的触发规则。
 
   // ---------------------------------------------------------------------------
   // 2. 开场页：被 △ 过滤清空的场次
@@ -236,16 +237,8 @@
     scenes["scene-28"].events = null;
   }
 
-  // C 结局的新对白：回到原世界，契约揭示不再重复解释梦魇为何阻止出口。
-  if (scenes["ending-c"]) {
-    rewriteSceneText(scenes["ending-c"], function (text) {
-      return text
-        .replace("你打开病房的门，就可以进入下一个试炼了。", "你打开病房的门，就可以回到原来的世界。")
-        .replace("你想知道为什么我笃定那个出口是错的吗？", "还有一件事，你应该知道。")
-        .replace("梦魇不希望我进入到那个所谓的出口，原因就是因为这个！这个不是你的，是张明诚的。他也和梦魇签订了一份契约，梦魇之所以不想让我进入那里，应该就是不想让我见到这个东西。”", "这不是你的，是张明诚的——他也和梦魇签了一份契约。")
-        .replace("为什么？", "什么事？");
-    });
-  }
+  // Ending dialogue is authored once in novel-data; presentation uses explicit
+  // cue IDs in chapter-story instead of patching whichever wording happened to load.
 
   // △ 说明永远不进入对白页，避免“地图/演出说明”再次混到播放器里。
   Object.keys(scenes).forEach(function (id) {
@@ -282,7 +275,7 @@
   // 但原文只有台词、没有战斗入口，玩家读完就直接进第三十场——这场戏等于被跳过了。
   // 这里补上真正的战斗，接像素地牢（demos/pixel-dungeon-html）：
   //   打赢 -> scene-28（正在消失的出口）-> 最终抉择
-  //   打输 -> game.js 走 ending-d（死亡）
+  //   打输 -> game.js 扣生存点并返回开战选项；人性归零且无回滚才走 D。
   // 放在 chapter-finalize 里是因为它必须在所有故事文件之后生效，而且要让
   // tests/story-reachability.cjs 能从选项图里走到它。
   // ---------------------------------------------------------------------------

@@ -36,7 +36,10 @@
   function persist() { if (context && context.save) context.save(); }
 
   function balance() {
-    var state = current();
+    return balanceOn(current());
+  }
+
+  function balanceOn(state) {
     var value = state ? Number(state.points) : 0;
     return Number.isFinite(value) ? value : 0;
   }
@@ -85,8 +88,8 @@
     live.textContent = text;
   }
 
-  function record(delta, source) {
-    var state = current();
+  function record(delta, source, target) {
+    var state = target || current();
     if (!state) return null;
     if (!Array.isArray(state.pointsLog)) state.pointsLog = [];
     var entry = { delta: delta, source: source || "", at: new Date().toISOString() };
@@ -96,21 +99,26 @@
   }
 
   // 收入。delta 必须是正数——扣钱一律走 spend，这样"够不够付"只有一个判定点。
-  function add(delta, source) {
+  function addOn(state, delta, source, options) {
     var amount = Math.round(Number(delta));
     if (!Number.isFinite(amount) || amount <= 0) {
       console.warn("生存点收入必须是正数，已忽略：", delta, source);
-      return balance();
+      return balanceOn(state);
     }
-    var state = current();
     if (!state) return 0;
-    state.points = balance() + amount;
-    record(amount, source);
-    float(amount, source);
-    refresh();
-    persist();
+    state.points = balanceOn(state) + amount;
+    record(amount, source, state);
+    // Result settlement can run before UI binding, or on a restored snapshot.
+    // Credit that snapshot; never redirect its reward into the bound account.
+    if (state === current()) {
+      if (!options || options.notify !== false) float(amount, source);
+      refresh();
+      if (!options || options.save !== false) persist();
+    }
     return state.points;
   }
+
+  function add(delta, source) { return addOn(current(), delta, source); }
 
   // 支出。余额不足时**不动余额**并返回 false，由调用方决定怎么提示。
   function spend(cost, source) {
@@ -190,6 +198,7 @@
 
   window.MuseumPoints = {
     add: add,
+    addOn: addOn,
     spend: spend,
     penalize: penalize,
     notice: notice,

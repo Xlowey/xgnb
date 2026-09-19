@@ -17,8 +17,7 @@
 process.chdir(require('path').resolve(__dirname, '..'));
 const fs = require('fs'), vm = require('vm'), assert = require('assert/strict');
 
-function freshStateModule() {
-  const store = new Map();
+function freshStateModule(store = new Map()) {
   const sandbox = {
     window: {}, console, Date, Math, JSON, Number, Object, Array, String, Boolean,
     localStorage: {
@@ -31,9 +30,66 @@ function freshStateModule() {
   vm.runInContext(fs.readFileSync('js/state.js', 'utf8'), sandbox);
   return { S: sandbox.window.MuseumState, store };
 }
+
 const autoKey = id => 'museum_save_v5_auto_' + encodeURIComponent(id);
 const revKey = id => 'museum_save_rev_v1_' + encodeURIComponent(id);
 const guardKey = id => 'museum_save_guard_v1_' + encodeURIComponent(id);
+
+// A page can remain idle after loading. Its FIRST autosave must still detect
+// an ending written by another page in the meantime.
+{
+  const { S: first, store } = freshStateModule();
+  const id = 'ending-race';
+  first.save(first.create({ id }), id);
+  const { S: idle } = freshStateModule(store);
+  const oldState = idle.load(id);
+  const completed = first.load(id);
+  completed.mode = 'ending'; completed.ending = 'ending-c';
+  completed.endingComplete = true; completed.narrativeNode = 'ending-c';
+  first.save(completed, id);
+  const before = store.get(autoKey(id));
+  assert.equal(idle.saveGuarded(oldState, id), 'stale');
+  assert.equal(store.get(autoKey(id)), before);
+  console.log('PASS 页面首次自动存档不能覆盖另一页刚完成的结局');
+}
+
+{
+  const { S: first, store } = freshStateModule();
+  const id = 'inspect-slot-race';
+  const initial = first.create({ id });
+  first.saveSlot(initial, id, 0);
+  first.saveCheckpoint(initial, id, {});
+  const { S: idle } = freshStateModule(store);
+  const oldState = idle.load(id);
+  const completed = first.load(id);
+  completed.mode = 'ending'; completed.ending = 'ending-a'; completed.endingComplete = true;
+  first.save(completed, id);
+  idle.loadSlot(id, 0); idle.loadCheckpoint(id);
+  assert.equal(idle.saveGuarded(oldState, id), 'stale');
+  console.log('PASS 预览旧档位和检查点不会重新授予旧状态写入权限');
+  const preview = idle.load(id); // Save dialog renders the automatic slot this way.
+  assert.equal(idle.saveGuarded(oldState, id), 'stale');
+  assert.notEqual(idle.saveGuarded(preview, id), 'stale');
+  console.log('PASS 预览自动档不会授权旧状态；实际采用新快照后可以保存');
+  const chosenSlot = idle.loadSlot(id, 0);
+  assert.equal(idle.saveGuarded(chosenSlot, id), 'stale');
+  idle.adoptRevision(id, chosenSlot);
+  assert.notEqual(idle.saveGuarded(chosenSlot, id), 'stale');
+  assert.equal(idle.saveGuarded(oldState, id), 'stale');
+  console.log('PASS 明确选择旧档后可恢复写入，但不会授予其他旧快照权限');
+}
+
+// The same race is possible while a first-time user has no autosave yet.
+{
+  const { S: idle, store } = freshStateModule();
+  const id = 'new-game-race';
+  const oldState = idle.create({ id });
+  const { S: newer } = freshStateModule(store);
+  const progress = newer.create({ id }); progress.narrativeNode = 'scene-10';
+  newer.save(progress, id);
+  assert.equal(idle.saveGuarded(oldState, id), 'stale');
+  console.log('PASS 新建游戏后等待期间也保留初始修订号');
+}
 let fails = 0;
 const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || d === undefined ? '' : '  <- ' + JSON.stringify(d))); if (!ok) fails += 1; };
 

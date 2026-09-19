@@ -18,6 +18,9 @@
     } catch (error) { return null; }
   }
   var state = preview ? (readPreviewState() || MuseumState.create(user)) : (MuseumState.load(user.id) || MuseumState.create(user));
+  var endingFlow = window.MuseumEndingFlow;
+  var pendingDeath = false;
+  var settlingPreview = false;
   function unlockAchievement(id, persistNow) {
     if (!state || !window.MuseumAchievements) return false;
     return window.MuseumAchievements.unlock(state, id, { save: persistNow ? persist : function () {} });
@@ -27,51 +30,13 @@
     window.MuseumAchievements.setProgress(state, "clue-collector", state.clues.length, { save: function () {} });
     window.MuseumAchievements.setProgress(state, "area-explorer", state.unlockedRooms.length, { save: function () {} });
   }
-  if (previewResume) {
-    // The preview battle does not pass through game.js, so finish the small
-    // amount of result handling here before showing the continuation scene.
-    var previewBattleResult = null;
-    try {
-      var previewBattleRaw = sessionStorage.getItem("museum_pending_battle_v1");
-      previewBattleResult = previewBattleRaw ? JSON.parse(previewBattleRaw) : null;
-    } catch (error) { previewBattleResult = null; }
-    sessionStorage.removeItem("museum_pending_battle_v1");
-    state.mode = "novel";
-    state.returnScene = null;
-    if (previewBattleResult && previewBattleResult.status === "win") {
-      if (state.battleContext !== "final-boss") {
-        state.flags.battleDemoCompleted = true;
-        state.flags.waxDoorUnlocked = true;
-        if (state.clues.indexOf("director-account") === -1) state.clues.push("director-account");
-        if (state.unlockedRooms.indexOf("wax") === -1) state.unlockedRooms.push("wax");
-        unlockAchievement("first-battle", false);
-      } else {
-        state.roomId = "museum";
-        state.currentNode = "museum";
-        state.playerX = 610;
-        state.playerY = 620;
-      }
-    }
-    // 课堂预览的战斗结果不走 game.js 的 applyBattleResult，所以要在这里自己结算人性值损耗。
-    // 013 §3.2 的公式与 game.js 保持一致（旋钮统一在 js/humanity-data.js 的 MuseumHumanityTuning）。
-    // 原来这里直接搬 remainingHp——那是 0–25 的旧量纲，语义也已经不用了。
-    if (previewBattleResult && previewBattleResult.status === "win" && window.MuseumHumanity) {
-      var previewHits = Number(previewBattleResult.hitsTaken);
-      if (!Number.isFinite(previewHits) || previewHits < 0) previewHits = 0;
-      var previewKnobs = window.MuseumHumanityTuning || {};
-      var previewBase = Number.isFinite(Number(previewKnobs.battleBaseDrain)) ? Number(previewKnobs.battleBaseDrain) : 14;
-      var previewPerHit = Number.isFinite(Number(previewKnobs.battleHitDrain)) ? Number(previewKnobs.battleHitDrain) : 6;
-      // 用显式传 state 的版本：这段代码在 IIFE 顶部，早于下面 MuseumHumanity.bind()，
-      // 走 damage() 的话 current() 还是 null，会静默不生效。存盘由下面的 persist() 负责。
-      window.MuseumHumanity.damageOn(state, previewBase + previewHits * previewPerHit, "战斗损耗");
-    }
-    persist();
-  }
   function persist() {
     try {
+      if (settlingPreview) return true;
       syncAchievementProgress();
       if (preview) { sessionStorage.setItem("museum_class_preview", JSON.stringify(state)); return true; }
-      return MuseumState.save(state, user.id) !== false;
+      var saved = MuseumState.saveGuarded(state, user.id);
+      return saved !== false && saved !== "stale";
     } catch (error) {
       console.warn("剧情存档写入失败。", error);
       return false;
@@ -80,15 +45,16 @@
   // 人性值归零、且身上没有【回滚】时的去处（013 §二：归零 = 完全怪谈化 → 结局 D）。
   // 由 js/humanity.js 的 settleZero() 通过 bind 的 onZero 回调触发。
   //
-  // 剧情页这边不能像地图页（js/game.js 的 goEndingD）那样跳 "pages/novel.html?..."——
-  // 它本来就在这一页上。所以保留原有的查询参数（preview / user 等）、只换 scene，
-  // 用当前路径重进，让播放器去加载 ending-d。
+  // A terminal outcome must stop the current scene before its normal nextScene
+  // can run. The local transition below also preserves preview state.
   function goEndingD() {
-    if (!state) return;
-    persist();
-    var query = new URLSearchParams(window.location.search);
-    query.set("scene", "ending-d");
-    window.location.href = window.location.pathname + "?" + query.toString();
+    if (!state || pendingDeath || (currentScene && currentScene.ending)) return;
+    pendingDeath = true;
+    state.flags.endingCause = "humanity";
+    if (settlingPreview) return;
+    pausePlayback();
+    // Finish settlement first; callers must not advance past a terminal outcome.
+    window.setTimeout(function () { pendingDeath = false; loadScene("ending-d"); }, 0);
   }
 
   var story = window.MuseumStory;
@@ -137,6 +103,7 @@
   }
   function schedulePlayback() {
     pausePlayback();
+    if (document.hidden || pendingDeath || !els.pause.hidden || !els.review.hidden || !els.end.hidden || stage.isOpen()) return;
     if (!revealComplete) { resumeTextReveal(); return; }
     if (!els.choices.hidden) { startFinalChoiceTimer(); return; }
     if (!automatic || !els.review.hidden || !els.end.hidden || stage.isOpen()) return;
@@ -367,22 +334,23 @@
     // 放在函数最后——上面各分支写的旗标这一轮扫描就都看得到。settle 是幂等的。
     if (window.MuseumMilestones) window.MuseumMilestones.settle(state);
     // 013 §3.1：时间流逝（每过一天 −10）与线索回血也挂在场次旗标上，同一轮扫掉。
-    if (window.MuseumHumanity) window.MuseumHumanity.settle(state);
+    if (window.MuseumHumanity && !currentScene.ending) window.MuseumHumanity.settle(state);
+    return !pendingDeath;
   }
 
   function saveEnding() {
-    state.mode = "ending";
+    if (!currentScene.ending || lineIndex < currentPages.length - 1) return false;
+    var before = JSON.parse(JSON.stringify(state));
+    endingFlow.complete(state, currentScene.endingId);
     markSceneRead();
     state.narrativeNode = currentSceneId;
     state.narrativeIndex = lineIndex;
     state.narrativeChoice = endingChoice;
-    state.ending = currentScene.endingId || endingChoice || state.ending;
-    state.endingComplete = true;
-    var endingId = state.ending;
-    if (endingId && state.endingHistory.indexOf(endingId) === -1) state.endingHistory.push(endingId);
     unlockAchievement("first-ending", false);
-    window.MuseumAchievements.setProgress(state, "ending-collector", state.endingHistory.length, { save: function () {} });
-    return persist();
+    window.MuseumAchievements.setProgress(state, "ending-collector", MuseumState.collectedEndingCount(state), { save: function () {} });
+    if (persist()) return true;
+    Object.assign(state, before);
+    return false;
   }
 
   function saveChoiceCheckpoint() {
@@ -445,6 +413,8 @@
     // Keep the source id supported for direct testing and old saves as well.
     if ((currentSceneId !== "scene-29" && currentSceneId !== "ending-choice") || finalChoiceTimer || els.choices.hidden) return;
     if (finalChoiceRemaining === null) finalChoiceRemaining = finalChoiceSeconds;
+    els.next.hidden = false;
+    eventNext.hidden = true;
     els.next.textContent = "请选择行动 · " + finalChoiceRemaining + " 秒";
     finalChoiceTimer = window.setInterval(function () {
       finalChoiceRemaining -= 1;
@@ -457,7 +427,7 @@
         var offered = currentScene.choices || [];
         var timeoutChoice = offered.filter(function (choice) { return choice.id === "ending-d"; })[0]
           || (currentSceneId === "scene-29" || currentSceneId === "ending-choice" ? { id: "ending-d", nextScene: "ending-d" } : null);
-        if (timeoutChoice) choose(timeoutChoice);
+        if (timeoutChoice) { state.flags.endingCause = "timeout"; choose(timeoutChoice); }
       }
     }, 1000);
   }
@@ -615,11 +585,13 @@
     endingChoice = choice.id;
     if (choice.effect === "skip-nightmare") {
       state.flags.nightmareMinigameChoice = "skip";
+      state.flags.nightmareMinigameWon = false;
       state.returnRoom = "museum";
       state.returnX = 610;
       state.returnY = 620;
       state.battleContext = null;
       state.returnScene = null;
+      state.battleAttempt = null;
     }
     if (choice.effect === "read-note") {
       state.flags.readNote = true;
@@ -649,13 +621,14 @@
 
   function loadScene(sceneId) {
     pausePlayback();clearChoices();
+    endingFlow.enter(state, sceneId);
     currentSceneId = sceneId;
     currentScene = getScene(sceneId);
     currentPages = buildPages(currentScene);
     lineIndex = 0;
     endingChoice = currentScene.endingId || endingChoice;
     els.end.hidden = true;
-    window.history.replaceState({}, "", "?scene=" + encodeURIComponent(sceneId) + (preview ? "&preview=1" : ""));
+    window.history.replaceState({}, "", "?scene=" + encodeURIComponent(sceneId) + (preview ? "&preview=1&resume=1" : ""));
     render();
   }
 
@@ -663,6 +636,7 @@
     var beforeBattle=JSON.parse(JSON.stringify(state));
     if (choice.battleContext === "final-boss") {
       state.flags.nightmareMinigameChoice = "enter";
+      state.flags.nightmareMinigameWon = false;
       // 最终战发生在食堂内部，胜利后必须从博物馆大门继续，而不是回到
       // 进入剧情前的食堂出生点。
       state.returnRoom = "museum";
@@ -676,30 +650,38 @@
       state.battleContext = null;
     }
     state.returnScene = choice.afterBattle || "guard-after-battle";
+    state.battleAttempt = {
+      id: Date.now().toString(36) + "-" + Math.random().toString(36).slice(2),
+      source: choice.demo === "pixel-dungeon" ? "pixel-dungeon" : "battle",
+      retryScene: currentSceneId, retryIndex: lineIndex, returnScene: state.returnScene
+    };
     state.mode = "battle";
     state.narrativeNode = state.returnScene;
-    if (!persist()) { state=beforeBattle; render(); showToast("保存失败，暂未进入战斗，请重试。"); return; }
+    if (!persist()) { Object.assign(state,beforeBattle); render(); showToast("保存失败，暂未进入战斗，请重试。"); return; }
     // 最终 boss 战走像素地牢（demos/pixel-dungeon-html），普通交涉走回合制 demo。
     // 两边与主游戏的约定完全一样（写法相同：写 museum_pending_battle_v1 后回
     // index.html?fromBattle=1），所以 game.js 的结算逻辑不用分叉。
     var demo = choice.demo === "pixel-dungeon" ? "pixel-dungeon-html" : "battle";
     var battleUrl = "../demos/" + demo + "/index.html?from=novel&user=" + encodeURIComponent(user.id) + "&returnScene=" + encodeURIComponent(state.returnScene);
+    battleUrl += "&battleAttempt=" + encodeURIComponent(state.battleAttempt.id);
     if (preview) battleUrl += "&preview=1&resume=1";
     window.location.href = battleUrl;
   }
 
   function choose(choice) {
-    if (choice.endingFromNightmareChoice) {
-      // 老存档没有主动选择记录时走 A，不推断玩家打过哪些 Boss 阶段。
-      var destination = state.flags.nightmareMinigameChoice === "enter" ? "ending-c" : "ending-a";
-      choice = Object.assign({}, choice, { id: destination, nextScene: destination });
+    if (pendingDeath) return;
+    choice = endingFlow.resolveChoice(state, choice);
+    if (choice.nextScene === "scene-27-boss" && choice.id === "scene-27-boss") {
+      loadScene("scene-27-boss");
+      showToast("上次的梦魇挑战尚未完成，请重新选择行动。");
+      return;
     }
     if (!window.MuseumTutorial.isDone("branch")) window.MuseumTutorial.complete("branch");
     // A battle choice must NOT complete the scene yet: doing so awarded scene11Seen and
     // completed:scene-11 the moment 战斗 was clicked, so losing the fight still unlocked
     // scene-10. The outcome is decided by the battle itself, and the after-battle scene
     // (scene-11-after / guard-after-battle) is what records the completion.
-    if (choice.action !== "battle") completeCurrentScene();
+    if (choice.action !== "battle" && !completeCurrentScene()) return;
     applyChoice(choice);
     clearChoices();
     if (choice.effect === "take-key") { persist(); render(); showToast("获得物品：宿舍钥匙"); return; }
@@ -718,11 +700,12 @@
     if (preview) { window.location.href = "showcase.html"; return; }
     var before=JSON.parse(JSON.stringify(state));
     window.MuseumTransition.leaveStory(state);
-    if(!persist()){state=before;showToast("保存失败，请重试后再返回地图。");return;}
+    if(!persist()){Object.assign(state,before);showToast("保存失败，请重试后再返回地图。");return;}
     window.location.href = "../index.html?fromStory=1";
   }
 
   function showEndingScreen() {
+    pausePlayback();
     var card=els.end.querySelector(".novel-end-card");
     var art=card.querySelector(".ending-art");
     if(currentScene.endArt){
@@ -733,7 +716,7 @@
       "ending-a": "你选择回头。这个结局已记录到当前档案。",
       "ending-b": "你执行了系统建议。这个结局已记录到当前档案。",
       "ending-c": "你拒绝了最优解。这个结局已记录到当前档案。",
-      "ending-d": "选择超时，生命体征归零。这个结局已记录到当前档案。",
+      "ending-d": state.flags.endingCause === "humanity" ? "人性值归零，你成为了怪谈的一部分。这个结局已记录到当前档案。" : "出口关闭了。这个结局已记录到当前档案。",
       "ending-e": "你回到了最近的存档点。这个结局已记录到当前档案。"
     };
     els.endTitle.textContent = currentScene.title;
@@ -747,7 +730,7 @@
   }
 
   function advance() {
-    if (!els.review.hidden || !els.end.hidden || stage.isOpen() || !eventAdvance) return;
+    if (pendingDeath || !els.pause.hidden || !els.review.hidden || !els.end.hidden || stage.isOpen() || !eventAdvance) return;
     if (!revealComplete) { finishTextReveal(); schedulePlayback(); return; }
     if (!els.choices.hidden) return;
     if ((!currentLine().type || currentLine().type === "dialogue") && !window.MuseumTutorial.isDone("dialogue")) window.MuseumTutorial.complete("dialogue");
@@ -760,7 +743,7 @@
       renderNamePrompt();
       return;
     }
-    completeCurrentScene();
+    if (!completeCurrentScene()) return;
     if (currentScene.nextScene) {
       loadScene(currentScene.nextScene);
       return;
@@ -804,6 +787,7 @@
       return;
     }
     var previousState=state;state=loaded;
+    if (!preview) MuseumState.adoptRevision(user.id, state);
     if(!persist()){state=previousState;return false;}
     pausePlayback();clearChoices();els.end.hidden=true;els.review.hidden=true;
     if (state.mode === "novel" || state.mode === "ending") {
@@ -812,9 +796,9 @@
       currentPages = buildPages(currentScene);
       lineIndex = Math.min(Math.max(Number(state.narrativeIndex) || 0, 0), Math.max(0, currentPages.length - 1));
       endingChoice = state.narrativeChoice || state.ending || null;
-      window.history.replaceState({}, "", "?scene=" + encodeURIComponent(currentSceneId) + (preview ? "&preview=1" : ""));
+      window.history.replaceState({}, "", "?scene=" + encodeURIComponent(currentSceneId) + (preview ? "&preview=1&resume=1" : ""));
       render();
-      if (state.mode === "ending" && currentScene.ending) showEndingScreen();
+      if (endingFlow.isComplete(state, currentSceneId)) showEndingScreen();
       showToast("已读取剧情存档。");
     } else {
       window.location.href = "../index.html?fromSave=1";
@@ -876,7 +860,7 @@
   document.getElementById("novel-bag-button").addEventListener("click",function(){stage.bag();});
   document.getElementById("novel-achievements-button").addEventListener("click",function(){window.MuseumAchievements.open();});
   document.getElementById("novel-review-close").addEventListener("click", function () { els.review.hidden = true; schedulePlayback(); });
-  els.review.addEventListener("click", function (event) { if (event.target === els.review) els.review.hidden = true; });
+  els.review.addEventListener("click", function (event) { if (event.target === els.review) { els.review.hidden = true; schedulePlayback(); } });
   document.getElementById("novel-save-button").addEventListener("click",function(){openSaves("save");});
   document.getElementById("novel-load-button").addEventListener("click",function(){openSaves("load");});
   document.getElementById("novel-menu-button").addEventListener("click", toMenu);
@@ -904,6 +888,28 @@
   });
   document.addEventListener("visibilitychange",function(){if(document.hidden)pausePlayback();else schedulePlayback();});
 
+  if (previewResume && state.mode === "battle") {
+    var previewBefore = JSON.parse(JSON.stringify(state));
+    var previewRaw = sessionStorage.getItem("museum_pending_battle_v1");
+    var previewResult = null;
+    try { previewResult = JSON.parse(previewRaw); } catch (error) { /* invalid result retries safely */ }
+    settlingPreview = true;
+    var previewDestination = window.MuseumPreviewBattle.settle(state, previewResult);
+    settlingPreview = false;
+    pendingDeath = false;
+    if (!persist()) {
+      Object.assign(state, previewBefore);
+      showToast("预览战斗结果未能保存，请刷新页面重试。");
+      return;
+    }
+    if (sessionStorage.getItem("museum_pending_battle_v1") === previewRaw) sessionStorage.removeItem("museum_pending_battle_v1");
+    currentSceneId = previewDestination;
+    currentScene = getScene(currentSceneId);
+    currentPages = buildPages(currentScene);
+    lineIndex = Number(state.narrativeIndex) || 0;
+    endingChoice = currentScene.endingId || null;
+    window.history.replaceState({}, "", "?scene=" + encodeURIComponent(currentSceneId) + "&preview=1&resume=1");
+  }
   if (state.narrativeNode === currentSceneId && (state.mode === "novel" || state.mode === "ending")) {
     lineIndex = Math.min(Math.max(lineIndex, 0), Math.max(0, currentPages.length - 1));
   } else {
@@ -922,5 +928,14 @@
     });
     state.narrativeLogKeys = [];
   }
+  var restoredEnding = endingFlow.isComplete(state, currentSceneId);
+  if (!restoredEnding) {
+    state.mode = "novel";
+    state.endingComplete = false;
+    state.ending = currentScene.endingId || null;
+  } else {
+    lineIndex = Math.max(0, currentPages.length - 1);
+  }
   render();
+  if (restoredEnding) showEndingScreen();
 }());

@@ -2458,8 +2458,8 @@ startDungeon();
  *   胜负：  写 localStorage["museum_pending_battle_v1"] = { status, remainingHp,
  *           rewards, flags, userId }，然后回到 index.html?fromBattle=1
  *   主游戏：js/game.js 的 consumeBattleResult() 读走它并 applyBattleResult()：
- *             win  -> hp 采用 remainingHp，进入 returnScene，奖励发到线索与旗标
- *             lose -> hp 归零，走 ending-d（死亡）
+ *             win  -> 按 hitsTaken 扣人性值，存活后进入 returnScene 并发奖
+ *             lose -> 扣生存点后返回开战选项重试
  *
  * 这里**不重复实现一套判定**，只把地牢自己的 hud.status（'win' / 'lose'）翻译成那个约定。
  * =========================================================================== */
@@ -2503,10 +2503,13 @@ startDungeon();
       rewards: status === 'win' ? ['boss_defeated'] : [],
       flags: status === 'win' ? ['boss_defeated'] : [],
       userId: userId,
+      battleAttempt: query.get('battleAttempt') || null,
       source: 'pixel-dungeon'
     };
     try { storage.setItem(RESULT_KEY, JSON.stringify(result)); } catch (error) { /* 存储不可用也不能卡住玩家 */ }
-    window.location.href = '../../index.html?fromBattle=1';
+    window.location.href = preview
+      ? '../../pages/novel.html?scene=' + encodeURIComponent(returnScene) + '&preview=1&resume=1'
+      : '../../index.html?fromBattle=1';
   }
 
   var title = document.getElementById('result-title');

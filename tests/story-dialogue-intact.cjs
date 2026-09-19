@@ -12,6 +12,13 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/25102/.c
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg' };
 const server = http.createServer((req, res) => {
   const url = decodeURIComponent(req.url.split('?')[0]);
+  // Seed without saves.js: the real saves page redirects unauthenticated users,
+  // racing this fixture and sometimes removing MuseumState before evaluate runs.
+  if (url === '/__seed.html') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end('<!doctype html><script src="/js/auth.js"></script><script src="/js/state.js"></script>');
+    return;
+  }
   const file = path.join(ROOT, url === '/' ? 'index.html' : url.replace(/^\/+/, ''));
   if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
   const body = fs.readFileSync(file);
@@ -52,7 +59,7 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
   const b = await chromium.launch({ headless: true, executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe' });
   const ctx = await b.newContext({ viewport: { width: 1366, height: 768 } });
   const shelter = await ctx.newPage();
-  await shelter.goto('http://127.0.0.1:8842/pages/saves.html');
+  await shelter.goto('http://127.0.0.1:8842/__seed.html');
   await shelter.evaluate(() => {
     localStorage.clear();
     const u = MuseumAuth.register('对话', 'x').user;
@@ -76,7 +83,8 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
         : null;
       out[id] = {
         lineCount: (sc.lines || []).length,
-        lines: (sc.lines || []).map(l => ({ speaker: l.speaker, text: l.text })),
+        lines: (sc.lines || []).map(l => ({ speaker: l.speaker, text: l.text, cue: l.cue })),
+        events: (sc.events || []).map(e => ({ type: e.type, text: e.text, item: e.item })),
         pages: pages ? pages.map(p => ({ speaker: p.speaker, text: p.text })) : null
       };
     }
@@ -112,6 +120,17 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     const hit = lines.find(l => l.speaker === want);
     check(id + ' 的说话人是 ' + want, Boolean(hit), { speakers: [...new Set(lines.map(l => l.speaker))].slice(0, 8) });
   }
+  // User-confirmed C revisions: return to the original world, remove the old
+  // exit explanation, and present the contract only after the reveal line.
+  const cEnding = inPage['ending-c'];
+  const cEvents = cEnding.events;
+  const contractCue = cEnding.lines.find(line => line.cue === 'contract-reveal');
+  const revealIndex = cEvents.findIndex(event => contractCue && event.text === contractCue.text);
+  const contractEvents = cEvents.map((event,index) => ({event,index})).filter(({event}) => event.type === 'document' && event.item === '张明诚契约.webp');
+  check('C 结局只展示一次张明诚契约，紧接揭示台词之后', contractEvents.length === 1 && revealIndex >= 0 && contractEvents[0].index === revealIndex + 1, {revealIndex,contractIndices:contractEvents.map(x=>x.index)});
+  const cText = cEnding.lines.concat(cEvents).map(line => line.text || '').join('\n');
+  check('C 结局明确回到原来的世界，不去下一个副本', /你打开病房的门，就可以回到原来的世界/.test(cText) && !/下一个副本|下一个试炼/.test(cText));
+  check('C 结局不再出现已要求删除的出口推理', !/梦魇不想让我进|梦魇不希望我进入|它不想让我进去，就是不想让我看见这个/.test(cText));
   await page.close();
   await b.close(); server.close();
   console.log(fails ? '\n' + fails + ' FAILED' : '\nOK');

@@ -87,16 +87,16 @@
   perfect.events=[];
   var inRealHospital=false;
   perfect.lines.forEach(function(l){
-    if(l.text === "赵灵？")inRealHospital=true;
+    if(l.cue === "real-hospital")inRealHospital=true;
     var event=dialogue(l);
     if(inRealHospital)event.portraitVariants={hero:"portraits/hero-casual.png",zhaoling:"portraits/zhaoling-patient.png"};
     // This CG already contains the revived Zhang Mingcheng: show it only at the farewell.
-    if(/^有缘再见/.test(l.text)){
+    if(l.cue === "hospital-farewell"){
       perfect.events.push({type:"cg",background:"hospital-farewell.png",backgroundFit:"contain",action:"继续"});
       event.background="hospital-farewell.png";event.backgroundFit="contain";event.hidePortraits=true;
     }
     perfect.events.push(event);
-    if(/梦魇不希望我进入/.test(l.text))perfect.events.push(itemEvent("张明诚契约.webp"));
+    if(l.cue === "contract-reveal")perfect.events.push(itemEvent("张明诚契约.webp"));
   });
   scenes["ending-a"].endArt="ending-a-card.png";
   scenes["ending-b"].endArt="ending-b-card.png";

@@ -145,20 +145,8 @@
   cloneScene("scene-24-hide", "scene-24", { title: "巡逻路线 · 面具", lines: patrol.lines.slice(0, revealAt), flag: "scene24Seen", choices: null });
   patrol.lines = patrol.lines.slice(0, revealAt);
 
-  // Scene 31 must stop before the ending text and expose the final choice.
-  var finale = scenes["scene-29"];
-  var endingTextAt = findLineIndex("scene-29", function (line) { return line.text.indexOf("结局 A") === 0; });
-  finale.lines = finale.lines.slice(0, endingTextAt);
-  finale.returnToMap = false;
-  // 新剧本第三十场：白光在身后明灭，屏上浮出选项；① 进入出口 ② 回头救赵灵 ③ 超时未选择。
-  // 超时由 novel.js 的 15 秒计时器结算为 ending-d，所以不再需要一个「等待到超时」按钮。
-  // 三个最终选项保持并列；A/C 的最终差异由后续 BOSS 阶段系统决定，
-  // 不再读取旧的 submitted 旗标。
-  finale.choices = [
-    { id: "ending-a", label: "回头救赵灵（拒绝系统建议）", nextScene: "ending-a" },
-    { id: "ending-b", label: "进入出口（执行系统建议）", nextScene: "ending-b" },
-    { id: "ending-c", label: "拒绝系统，追问真相", nextScene: "ending-c" }
-  ];
+  // Final choices and ending dialogue have independent nodes in novel-data.
+  // Do not slice branches by matching display text: copy edits must not change routes.
 
   // NOTE: the alias clones and the authored opening pages live in
   // js/chapter-finalize.js, which loads LAST. Doing them here was the root cause of

@@ -5,8 +5,8 @@
  * 结算：  写 localStorage["museum_pending_battle_v1"] = { status, remainingHp, rewards,
  *         flags, userId }，然后回 ../../index.html?fromBattle=1
  * 主游戏 js/game.js 的 consumeBattleResult() + applyBattleResult() 负责结算：
- *         win  -> hp 采用 remainingHp，进入 returnScene
- *         lose -> hp 归零，走 ending-d（死亡）
+ *         win  -> 按 hitsTaken 扣人性值，正常存活才进入 returnScene
+ *         lose -> 扣生存点后回开战选项重试
  *
  * 写这个测试时踩到的三个坑（照抄约束，别重犯）：
  *   1. 不要在 page.evaluate 里 click 会导航的按钮——导航拆掉执行上下文，返回的 Promise
@@ -88,7 +88,7 @@ async function finishAndCapture(p, status, hp) {
     // ---------- 1. boss mode, win ----------
     say('PHASE 1 start'); flush();
     let ctx = await b.newContext(V);
-    let { p, errors } = await openDungeon(ctx, DUNGEON() + '?from=novel&user=u_test&returnScene=scene-28', true);
+    let { p, errors } = await openDungeon(ctx, DUNGEON() + '?from=novel&user=u_test&returnScene=scene-28&battleAttempt=boss-win-1', true);
     say('PHASE 1 page open'); flush();
     const wired = await p.evaluate(() => ({
       hasContinue: !!document.getElementById('result-continue'),
@@ -118,6 +118,7 @@ async function finishAndCapture(p, status, hp) {
       check('生存点按地牢 7 点血折算到本作 100 点制（013 量纲），且至少 1 点', r.remainingHp === 100, { remainingHp: r.remainingHp });
       check('结果带 hitsTaken（013 §3.2 的战斗损耗靠它，不是 remainingHp）', r.hitsTaken === 0, { hitsTaken: r.hitsTaken });
       check('结果带 userId（主游戏据此校验账号）', r.userId === 'u_test', { userId: r.userId });
+      check('结果带当前战斗 attempt，旧结果不能结算新战斗', r.battleAttempt === 'boss-win-1' && r.source === 'pixel-dungeon', r);
       check('结果带 boss_defeated 旗标', String(r.flags || '').includes('boss_defeated'), { flags: r.flags });
     }
     check('结算后回到主游戏（fromBattle=1）', /fromBattle=1/.test(p.url()), { url: p.url() });
@@ -137,6 +138,21 @@ async function finishAndCapture(p, status, hp) {
     // 013 §3.2 起失败 = 生存点 −300 + 退回存档点重打；结局 D 改由「人性值归零且无【回滚】」触发。
     check('失败结果是 lose 且 remainingHp 为 0（契约字段；但主游戏不再据此判死）', Boolean(lr) && lr.status === 'lose' && lr.remainingHp === 0, lr);
     await ctx.close();
+
+    // Preview results live in sessionStorage and must return to the preview
+    // story, since the account map intentionally consumes only localStorage.
+    for (const status of ['win', 'lose']) {
+      ctx = await b.newContext(V);
+      const requests = [];
+      ctx.on('request', request => { if (request.isNavigationRequest()) requests.push(request.url()); });
+      ({ p } = await openDungeon(ctx, DUNGEON() + '?from=novel&user=class-preview&returnScene=scene-28&preview=1&battleAttempt=preview-' + status, true));
+      const previewCapture = await finishAndCapture(p, status, status === 'win' ? 7 : 0);
+      await p.waitForTimeout(500);
+      const result = previewCapture && JSON.parse(previewCapture);
+      check('preview ' + status + ' preserves its attempt in the result', result && result.battleAttempt === 'preview-' + status, result);
+      check('preview ' + status + ' returns directly to preview story', requests.some(url => /pages\/novel\.html\?scene=scene-28&preview=1&resume=1/.test(url)) && !requests.some(url => /index\.html\?fromBattle=1/.test(url)), requests);
+      await ctx.close();
+    }
 
     // ---------- 3. standalone: no returnScene, unchanged ----------
     say('PHASE 3 start'); flush();

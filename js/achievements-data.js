@@ -37,7 +37,7 @@ window.MuseumAchievementDefinitions = [
   { id: "director-talk", name: "馆长的试探", description: "完成第一次馆长办公室谈话。" },
   { id: "diary-reader", name: "翻开馆长的日记", description: "读完馆长日记。" },
   { id: "first-ending", name: "故事落幕", description: "第一次抵达一个结局。", hidden: true },
-  { id: "ending-collector", name: "馆内全貌", description: "收集全部 5 种结局。", target: 5, hidden: true },
+  { id: "ending-collector", name: "馆内全貌", description: "收集当前开放的全部 " + window.MuseumState.COLLECTIBLE_ENDINGS.length + " 种结局。", target: window.MuseumState.COLLECTIBLE_ENDINGS.length, hidden: true },
 
   // ---- 以下 2 条是重合项：远端的 id + 文案，我们的 reward + check ----
   {

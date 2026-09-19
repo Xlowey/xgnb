@@ -4,6 +4,8 @@
   var currentUser = MuseumAuth.getCurrentUser();
   var state = currentUser ? (MuseumState.load(currentUser.id) || MuseumState.create(currentUser)) : null;
   var BATTLE_RESULT_KEY = "museum_pending_battle_v1";
+  var BATTLE_RECEIPTS_PREFIX = "museum_battle_receipts_v1_";
+  var battleSettlement = null;
   var canvas = document.getElementById("explore-canvas");
   var ctx = canvas ? canvas.getContext("2d") : null;
   var miniCanvas = document.getElementById("mini-map");
@@ -99,6 +101,9 @@
   }
   function save(message) {
     if (!currentUser || !state) return false;
+    // Points, humanity and inventory share this callback. Commit a battle once,
+    // after all of them have finished, instead of saving half a result.
+    if (battleSettlement) return true;
     var result = window.MuseumState.saveGuarded ? MuseumState.saveGuarded(state, currentUser.id) : MuseumState.save(state, currentUser.id);
     // "stale" 表示另一个窗口写了更新的进度，本页故意不覆盖它——这是设计行为，不是错误。
     // 以前这里统一按失败处理，于是每 6 秒弹一次"检查浏览器存储空间"，把玩家吓一跳，
@@ -265,7 +270,7 @@
     var beforeStory = JSON.parse(JSON.stringify(state));
     window.MuseumTransition.enterStory(state,sceneId);
     if (!MuseumState.save(state, currentUser.id)) {
-      state = beforeStory;
+      Object.assign(state, beforeStory);
       showToast("进度保存失败，请检查浏览器存储空间后重试。");
       return;
     }
@@ -620,7 +625,9 @@
       load:function(loaded){
         if(!loaded || !MuseumState.save(loaded,currentUser.id))return false;
         state=loaded; el.pause.hidden=true; keys={}; heldTouch=null;
-        if((state.mode==="novel" || state.mode==="ending") && state.narrativeNode) {
+        if(state.mode === "battle") {
+          applyBattleResult({status:"retry"});
+        } else if((state.mode==="novel" || state.mode==="ending") && state.narrativeNode) {
           window.location.href="pages/novel.html?scene="+encodeURIComponent(state.narrativeNode);
         } else {state.mode="explore";showGame();renderAll();showToast("已读取存档。");}
         return true;
@@ -640,13 +647,17 @@
   // 由 js/humanity.js 的 settleZero() 通过 bind 的 onZero 回调触发。
   //
   // ⚠️ 战斗失败**不**走这里了——它改成扣生存点 300 + 退回存档点重打，见 applyBattleResult。
-  //    所以结局 D 现在唯一的触发口是「人性值归零且买不起回滚」。
+  //    地图页处理人性归零且没有回滚；剧情页还处理最终选择超时。
   function goEndingD() {
     if (!state || !currentUser) return;
     state.mode = "novel";
     state.narrativeNode = "ending-d";
     state.narrativeIndex = 0;
     state.narrativeChoice = "ending-d";
+    state.ending = "ending-d";
+    state.endingComplete = false;
+    state.flags.endingCause = "humanity";
+    if (battleSettlement) { battleSettlement.destination = "ending-d"; return; }
     // 013 §8.2：结局 D 必须是「正确的失败」，不是惩罚——所以这里先存盘再跳，
     // 存不下就不能假装已经进了结局（沿用 startNovel / finishToMap 的写法）。
     if (MuseumState.save(state, currentUser.id)) { window.location.href = "pages/novel.html?scene=ending-d"; return; }
@@ -668,8 +679,73 @@
 
   function applyBattleResult(result) {
     if (!result || !state) return;
+    var before = JSON.parse(JSON.stringify(state));
+    var attempt = state.battleAttempt;
     var finalBoss = state.battleContext === "final-boss";
-    if (result.status === "win") {
+    battleSettlement = { destination: null };
+    try {
+      if (result.duplicate || result.status === "retry") {
+        prepareBattleRetry(attempt, finalBoss);
+      } else if (result.status === "win") {
+        settleBattleWin(result, finalBoss);
+      } else {
+        // Rewind only the scene, not the wallet/flags/inventory. An old checkpoint
+        // must not refund earlier losses or erase the player's decision to fight.
+        prepareBattleRetry(attempt, finalBoss);
+        if (window.MuseumPoints) window.MuseumPoints.penalize(battleFailPenalty(), "战斗失败");
+        if (window.MuseumHumanity) window.MuseumHumanity.settleZero(state);
+      }
+      if (!battleSettlement.destination) battleSettlement.destination = state.narrativeNode;
+      var destination = battleSettlement.destination;
+      state.mode = "novel";
+      state.narrativeNode = destination;
+      state.narrativeChoice = destination === "ending-d" ? "ending-d" : null;
+      state.returnScene = null;
+      state.battleContext = null;
+      state.battleAttempt = null;
+      if (result.receipt) state.lastBattleResultId = result.receipt;
+      battleSettlement = null;
+      if (!save()) {
+        Object.assign(state, before);
+        showCover("战斗结果无法写入存档，结果已保留。请刷新页面后重试。");
+        return;
+      }
+      if (result.receipt) rememberBattleReceipt(result.receipt);
+      // Another tab may already have posted its own result. Remove only ours.
+      if (result.raw && localStorage.getItem(BATTLE_RESULT_KEY) === result.raw) localStorage.removeItem(BATTLE_RESULT_KEY);
+      window.location.href = "pages/novel.html?scene=" + encodeURIComponent(destination);
+    } catch (error) {
+      battleSettlement = null;
+      Object.assign(state, before);
+      showCover("战斗结果暂未保存，结果已保留。请刷新页面后重试。");
+      console.warn("战斗结算未完成：", error);
+    }
+  }
+
+  function battlePosition(finalBoss) {
+    var roomId = finalBoss ? "museum" : (rooms[state.returnRoom] ? state.returnRoom : "hall");
+    var room = rooms[roomId];
+    function coordinate(value, fallback) { return value !== null && value !== undefined && Number.isFinite(Number(value)) ? Number(value) : fallback; }
+    state.roomId = roomId; state.currentNode = roomId; state.chapter = room.chapter;
+    state.playerX = finalBoss ? 610 : coordinate(state.returnX, room.spawn.x);
+    state.playerY = finalBoss ? 620 : coordinate(state.returnY, room.spawn.y);
+    state.returnRoom = roomId; state.returnX = state.playerX; state.returnY = state.playerY;
+    state.task = tasks[roomId];
+  }
+
+  function prepareBattleRetry(attempt, finalBoss) {
+    var checkpoint = currentUser ? MuseumState.loadCheckpoint(currentUser.id) : null;
+    var retryScene = attempt && attempt.retryScene || (finalBoss ? "scene-27-boss" : "scene-11");
+    var retryIndex = attempt && Number(attempt.retryIndex);
+    if ((!attempt || !attempt.retryScene) && checkpoint && checkpoint.narrativeNode === retryScene) retryIndex = Number(checkpoint.narrativeIndex);
+    state.narrativeNode = retryScene;
+    state.narrativeIndex = Number.isFinite(retryIndex) && retryIndex >= 0 ? retryIndex : 0;
+    state.narrativeChoice = null;
+    battlePosition(finalBoss);
+    battleSettlement.destination = retryScene;
+  }
+
+  function settleBattleWin(result, finalBoss) {
       // 013 §3.2：**不按剩余血量折算**。地牢的护甲会先把伤害整块吃掉（见
       // demos/pixel-dungeon-html/game.js 的 applyDamage），所以「掉了多少血」反推不出
       // 「挨了几下」——地牢那边单独记了 hitsTaken 一起回传。
@@ -694,6 +770,8 @@
         // `if (!finalBoss)` 把整块旗标跳过了——**那个旗标从来没被消费过**。
         // 012 §4.1 的「暗影地牢」要认它，所以最终战也写下来。
         state.flags.boss_defeated = true;
+        state.flags.nightmareMinigameChoice = "enter";
+        state.flags.nightmareMinigameWon = true;
       }
       // 012 §4.2：小游戏的复玩按次数发钱（首通 +10，复玩累计封顶再 +30）。
       // 011 把馆长战与 BOSS 战都算作「暗影地牢」，所以每打赢一场就记一次。
@@ -708,48 +786,40 @@
         window.MuseumHumanity.settle(state);
         if (window.MuseumHumanity.value() <= 0) return;
       }
-      var returnRoom = rooms[state.returnRoom] ? state.returnRoom : "hall";
-      state.roomId = returnRoom; state.currentNode = returnRoom; state.chapter = rooms[returnRoom].chapter; state.playerX = Number(state.returnX) || rooms[returnRoom].spawn.x; state.playerY = Number(state.returnY) || rooms[returnRoom].spawn.y; state.task = tasks[returnRoom];
-      state.mode = "novel"; state.narrativeNode = state.returnScene || "guard-after-battle"; state.narrativeIndex = 0; state.narrativeChoice = null; var nextScene = state.narrativeNode; state.returnScene = null; state.battleContext = null;
-      if (MuseumState.save(state, currentUser.id)) { window.location.href = "pages/novel.html?scene=" + encodeURIComponent(nextScene); }
-      else { state.mode = "explore"; showToast("战斗结果无法写入存档，请检查浏览器存储空间后重试。"); save(); renderAll(); }
-      return;
-    }
-    // ---- 战斗失败（013 §3.2 修正后的口径）----
-    // 扣生存点 300，然后退回上一个存档点重打。013 §5.4：「死亡永远是可逆的，只要你有生存点。」
-    // 注意这里**不再动 state.hp**——人性值只被战斗损耗和时间流逝消耗，
-    // 失败是「花钱重来」，不是「掉血」。结局 D 现在唯一的触发口是人性值归零且无【回滚】。
-    var checkpoint = currentUser ? MuseumState.loadCheckpoint(currentUser.id) : null;
-    if (!checkpoint) {
-      // 罕见：玩家在没有任何检查点时就打了仗（检查点是在每次出现选项时写的）。
-      // 退化成回地图，不让流程卡死——checkpoint 缺失是记账缺口，不是剧情失败，不该一击致死。
-      var missed = window.MuseumPoints ? window.MuseumPoints.penalize(battleFailPenalty(), "战斗失败") : 0;
-      state.mode = "explore";
-      showToast(missed > 0 ? "交涉失败，生存点 −" + missed + "。" : "交涉失败。");
-      save();
-      renderAll();
-      return;
-    }
-    // ⚠️ 顺序是**先换 state、再扣钱**，不能反过来。checkpoint 是开战前的快照，
-    // 它的 points 是旧值；先扣的话会被下面这行整份覆盖掉——账面上那 300 点根本没扣。
-    state = checkpoint;
-    var paid = window.MuseumPoints ? window.MuseumPoints.penalize(battleFailPenalty(), "战斗失败") : 0;
-    // 退回「选项出现时」的现场重打。**不**复用 loadSelected(..., {checkpoint:true})：
-    // 那条会把玩家送进 ending-e「循环」结局演出，而这里要的是重打（013 §3.2 的「可重试」）。
-    // checkpoint 的 localStorage 那份全程没被碰过，所以可以无限次重试。
-    state.mode = "novel";
-    if (!state.narrativeNode) state.narrativeNode = "scene-10";
-    // penalize 内部的 persist 可能被多标签页守卫挡掉（返回 "stale"），所以这里显式再存一次——
-    // 否则「退回存档点」这件事本身没落盘，刷新之后玩家还站在战场上。
-    if (MuseumState.save(state, currentUser.id)) {
-      window.location.href = "pages/novel.html?scene=" + encodeURIComponent(state.narrativeNode);
-      return;
-    }
-    state.mode = "explore";
-    showToast(paid > 0 ? "交涉失败，生存点 −" + paid + "，但存档写入失败。" : "交涉失败，但存档写入失败。");
-    renderAll();
+      battlePosition(finalBoss);
+      state.narrativeNode = finalBoss ? "scene-28" : state.returnScene || "guard-after-battle";
+      state.narrativeIndex = 0;
+      battleSettlement.destination = state.narrativeNode;
   }
-  function consumeBattleResult() { var raw = localStorage.getItem(BATTLE_RESULT_KEY); if (!raw) return null; var result; try { result = JSON.parse(raw); } catch (error) { localStorage.removeItem(BATTLE_RESULT_KEY); return null; } if (result && result.userId && currentUser && result.userId !== currentUser.id) return null; localStorage.removeItem(BATTLE_RESULT_KEY); return result; }
+  function battleReceipts() {
+    try { var value = JSON.parse(localStorage.getItem(BATTLE_RECEIPTS_PREFIX + currentUser.id) || "[]"); return Array.isArray(value) ? value : []; }
+    catch (error) { return []; }
+  }
+  function rememberBattleReceipt(id) {
+    var receipts = battleReceipts();
+    if (receipts.indexOf(id) !== -1) return;
+    receipts.push(id);
+    try { localStorage.setItem(BATTLE_RECEIPTS_PREFIX + currentUser.id, JSON.stringify(receipts)); }
+    catch (error) { console.warn("战斗记录暂未写入，当前存档已完成结算。", error); }
+  }
+  function consumeBattleResult() {
+    // A stale game tab must never award a battle while loading a slot/new game.
+    if (query.get("fromBattle") !== "1" || query.get("fromSave") === "1" || query.get("newGame") === "1") return null;
+    var raw = localStorage.getItem(BATTLE_RESULT_KEY);
+    if (!raw) return null;
+    var result;
+    try { result = JSON.parse(raw); } catch (error) { localStorage.removeItem(BATTLE_RESULT_KEY); return null; }
+    if (!result || result.userId !== currentUser.id) return null;
+    var attempt = state.battleAttempt;
+    var source = state.battleContext === "final-boss" ? "pixel-dungeon" : "battle";
+    var active = state.mode === "battle" && state.returnScene && state.narrativeNode === state.returnScene;
+    var valid = active && (result.status === "win" || result.status === "lose") && (!result.source || result.source === source);
+    if (attempt && attempt.id) valid = valid && result.battleAttempt === attempt.id && (!attempt.source || attempt.source === source);
+    else valid = valid && !result.battleAttempt;
+    if (!valid) { localStorage.removeItem(BATTLE_RESULT_KEY); return null; }
+    var receipt = attempt && attempt.id || "legacy:" + state.savedAt + ":" + state.returnScene;
+    return Object.assign({}, result, { raw: raw, receipt: receipt, duplicate: state.lastBattleResultId === receipt || battleReceipts().indexOf(receipt) !== -1 });
+  }
 
   function frame(timestamp) {
     if (!lastFrame) lastFrame = timestamp;
@@ -787,6 +857,7 @@
     if (!loaded) return;
     state = loaded;
     el.pause.hidden=true;keys={};heldTouch=null;avatarMoving=false;
+    if (state.mode === "battle") { applyBattleResult({ status: "retry" }); return; }
     if ((state.mode === "novel" || state.mode === "ending") && state.narrativeNode) { window.location.href = "pages/novel.html?scene=" + encodeURIComponent(state.narrativeNode); return; }
     showGame();
     renderAll();
@@ -875,16 +946,20 @@
   window.MuseumPanel.bind({getState:function(){return state;},save:save,canOpen:function(){return el.game && !el.game.hidden && !overlaysOpen();},onOpen:function(){keys={};heldTouch=null;avatarMoving=false;drawRoom(currentRoom());},onClose:function(){keys={};heldTouch=null;renderAll();}});
   window.MuseumShop.bind({getState:function(){return state;},save:save});
   document.getElementById("map-panel-button").addEventListener("click",function(){window.MuseumPanel.open();});
-  var pendingResult = currentUser ? consumeBattleResult() : null;
   var query = new URLSearchParams(window.location.search);
+  var pendingResult = currentUser ? consumeBattleResult() : null;
   var openSavedGame = query.get("fromSave") === "1";
   var openNewGame = query.get("newGame") === "1";
   var openStoryReturn = query.get("fromStory") === "1";
   var openMenuReturn = query.get("fromMenu") === "1";
   var openEndingReturn = query.get("fromEnding") === "1";
+  var recoveredBattle = false;
   if (currentUser && pendingResult) {
     showGame();
     applyBattleResult(pendingResult);
+  } else if (currentUser && state && state.mode === "battle" && (openSavedGame || query.get("fromBattle") === "1") && !openNewGame) {
+    recoveredBattle = true;
+    applyBattleResult({ status: "retry" });
   } else if (currentUser && openSavedGame && state && (state.mode === "novel" || state.mode === "ending") && state.narrativeNode) {
     window.location.href = "pages/novel.html?scene=" + encodeURIComponent(state.narrativeNode);
   } else if (currentUser && openSavedGame && state) {
@@ -910,8 +985,10 @@
   }
   // 回到地图时结算一次里程碑。玩家的成就条件可能在别处刚被满足——最典型的是券机：
   // 它是另一个页面，累计购券数和单张最高净收益都在那边增长，回到这里才扫得到。
-  if (currentUser && state && window.MuseumMilestones) window.MuseumMilestones.settle(state);
+  var canSettleProgress = !pendingResult && !recoveredBattle && currentUser && state &&
+    state.mode !== "battle" && state.mode !== "ending" && !/^ending-[a-e]$/.test(state.narrativeNode || "");
+  if (canSettleProgress && window.MuseumMilestones) window.MuseumMilestones.settle(state);
   // 人性值那边同理：时间流逝（scene12/23/25Seen）与线索回血都在这张表上。
-  if (currentUser && state && window.MuseumHumanity) window.MuseumHumanity.settle(state);
+  if (canSettleProgress && window.MuseumHumanity) window.MuseumHumanity.settle(state);
   window.requestAnimationFrame(frame);
 }());

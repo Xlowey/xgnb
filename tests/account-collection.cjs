@@ -43,10 +43,22 @@ api = runtime();
 const complete = api.loadSlot(user.id, 0);
 assert.equal(complete.endingHistory.length, 5);
 assert(complete.achievements.includes('ending-collector'));
-assert.equal(complete.achievementRecords['ending-collector'].progress, 5);
+assert.equal(complete.achievementRecords['ending-collector'].progress, 4);
 assert.equal(api.create({ id: 'other' }).endingHistory.length, 0);
 assert.equal(api.create({ id: 'class-preview' }).endingHistory.length, 0);
-console.log('PASS five endings accumulate across reloads; accounts and preview stay separate');
+console.log('PASS legacy endings remain recorded; four playable endings count across reloads');
+const legacyE = api.create({ id: 'legacy-e' });
+legacyE.endingHistory = ['ending-a', 'ending-b', 'ending-c', 'ending-e'];
+legacyE.achievementRecords['ending-collector'] = { progress: 4 };
+api.save(legacyE, 'legacy-e');
+assert.equal(api.collectedEndingCount(legacyE), 3);
+assert.equal(legacyE.achievementRecords['ending-collector'].progress, 3);
+assert(!legacyE.achievements.includes('ending-collector'));
+assert(legacyE.endingHistory.includes('ending-e'));
+legacyE.endingHistory.push('ending-d');
+api.save(legacyE, 'legacy-e');
+assert(legacyE.achievements.includes('ending-collector'));
+console.log('PASS old E does not substitute for missing D or block the collectible achievement');
 // Pre-feature saves: recover from slots even when auto-save is an earlier branch.
 storage.set('museum_save_v5_slots_legacy', JSON.stringify([{ state: {
   achievements: ['rules-reader'], endingHistory: ['ending-c'],
@@ -63,6 +75,9 @@ console.log('PASS legacy slot migration repairs missed achievements without re-a
 const failure = api.create({ id: 'failure' });
 failure.achievements.push('first-step');
 rejectCollection = true;
-assert.equal(api.save(failure, 'failure'), false);
-assert(!storage.has('museum_save_v5_auto_failure'));
-console.log('PASS failed collection write does not report successful save');
+assert(api.save(failure, 'failure'));
+assert(storage.has('museum_save_v5_auto_failure'));
+rejectCollection = false;
+api = runtime();
+assert(api.load('failure').achievements.includes('first-step'));
+console.log('PASS successful primary save recovers collection after an auxiliary write failure');

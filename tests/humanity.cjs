@@ -21,6 +21,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/25102/.c
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.ttf': 'font/ttf' };
 const server = http.createServer((req, res) => {
   const url = decodeURIComponent(req.url.split('?')[0]);
+  if (url === '/__seed.html') { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end('<script src="/js/auth.js"></script><script src="/js/state.js"></script>'); return; }
   const file = path.join(ROOT, url === '/' ? 'index.html' : url.replace(/^\/+/, ''));
   if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
   const body = fs.readFileSync(file);
@@ -42,7 +43,7 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
   // mutate 是一段直接对 state 对象执行的源码，用来摆出「已经达成某件事」的存档。
   const seed = async (mutate) => {
     const sh = await ctx.newPage();
-    await sh.goto(BASE() + '/pages/saves.html');
+    await sh.goto(BASE() + '/__seed.html');
     const info = await sh.evaluate((mutateSource) => {
       localStorage.clear();
       const u = MuseumAuth.register('人性值', 'x').user;
@@ -194,13 +195,16 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
   // ---------- 7. 战斗失败：−300 生存点 + 退回存档点 ----------
   const retry = await seed('s.points = 500; s.narrativeNode = "scene-10"; s.flags.scene10Seen = true;');
   const sh = await ctx.newPage();
-  await sh.goto(BASE() + '/pages/saves.html');
+  await sh.goto(BASE() + '/__seed.html');
   await sh.evaluate((userId) => {
     const s = MuseumState.load(userId);
     s.narrativeNode = 'scene-10';
     MuseumState.save(s, userId);
     MuseumState.saveCheckpoint(s, userId, { label: '测试检查点', sceneId: 'scene-10' });
-    localStorage.setItem('museum_pending_battle_v1', JSON.stringify({ status: 'lose', remainingHp: 0, userId: userId }));
+    s.mode = 'battle'; s.returnScene = s.narrativeNode = 'guard-after-battle';
+    s.battleAttempt = { id: 'humanity-retry', source: 'battle', retryScene: 'scene-10', retryIndex: 0, returnScene: s.returnScene };
+    MuseumState.save(s, userId);
+    localStorage.setItem('museum_pending_battle_v1', JSON.stringify({ status: 'lose', remainingHp: 0, userId: userId, source: 'battle', battleAttempt: 'humanity-retry' }));
   }, retry.userId);
   await sh.close();
 

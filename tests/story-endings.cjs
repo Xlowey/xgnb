@@ -76,6 +76,15 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     check('after a legacy submitted flag the perfect ending remains', opts.some(o => o.includes('追问真相')), opts);
     check('after a legacy submitted flag all three options remain', opts.length === 3, opts);
 
+    // The early B route belongs to the script's sixteenth scene (stable id scene-14).
+    await seed({});
+    await page.goto('http://127.0.0.1:8806/pages/novel.html?scene=scene-14');
+    for (let i = 0; i < 80 && !(await choices()).length; i++) await page.keyboard.press('e');
+    await page.getByRole('button', { name: /^C\s*使用系统帮助/ }).click();
+    check('第十六场 C 选项直接进入 B 结局', new URL(page.url()).searchParams.get('scene') === 'ending-b', page.url());
+    const earlyB = await page.evaluate(() => MuseumState.load(MuseumAuth.getCurrentUser().id));
+    check('提前进入 B 不虚构后续办公室或最终战完成', !earlyB.flags.scene15Seen && !earlyB.flags.nightmareMinigameWon, earlyB.flags);
+
     // ---- 3. each offered ending actually plays ---------------------------
     for (const [label, expect] of [['回头救赵灵', /ending-a/], ['进入出口', /ending-b/]]) {
       await seed({});
@@ -97,7 +106,7 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     // A/C follows the saved minigame decision, regardless of the finale wording.
     for (const decision of ['skip', 'enter']) {
       for (const label of ['回头救赵灵', '追问真相']) {
-        await seed({ nightmareMinigameChoice: decision });
+        await seed({ nightmareMinigameChoice: decision, nightmareMinigameWon: decision === 'enter' });
         await page.goto('http://127.0.0.1:8806/pages/novel.html?scene=ending-choice');
         for (let i = 0; i < 8 && !(await choices()).length; i++) {
           await page.keyboard.press('e');
@@ -107,6 +116,17 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
         check(`${decision}: ${label} follows minigame decision`, page.url().includes(decision === 'enter' ? 'ending-c' : 'ending-a'), page.url());
       }
     }
+    // Entering alone is not victory: an interrupted/legacy save must return to the fight decision.
+    await seed({ nightmareMinigameChoice: 'enter', nightmareMinigameWon: false });
+    await page.goto('http://127.0.0.1:8806/pages/novel.html?scene=ending-choice');
+    for (let i = 0; i < 8 && !(await choices()).length; i++) {
+      await page.keyboard.press('e');
+      await page.waitForTimeout(150);
+    }
+    await page.getByRole('button', { name: /回头救赵灵/ }).click();
+    check('enter without victory returns to the battle decision', new URL(page.url()).searchParams.get('scene') === 'scene-27-boss', page.url());
+    const unearned = await page.evaluate(() => MuseumState.load(MuseumAuth.getCurrentUser().id));
+    check('interrupted minigame does not collect C', !unearned.endingHistory.includes('ending-c') && unearned.endingComplete !== true, unearned.endingHistory);
     for (const enter of [false, true]) {
       await seed({});
       await page.goto('http://127.0.0.1:8806/pages/novel.html?scene=scene-27-boss');

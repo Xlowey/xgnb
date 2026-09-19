@@ -20,6 +20,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/25102/.c
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.ttf': 'font/ttf' };
 const server = http.createServer((req, res) => {
   const url = decodeURIComponent(req.url.split('?')[0]);
+  if (url === '/__seed.html') { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end('<script src="/js/auth.js"></script><script src="/js/state.js"></script>'); return; }
   const file = path.join(ROOT, url === '/' ? 'index.html' : url.replace(/^\/+/, ''));
   if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
   const body = fs.readFileSync(file);
@@ -44,7 +45,7 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
   // 用一个不加载 game.js 的页面写种子，否则地图页会把旧 state 写回去覆盖掉。
   const seedRaw = async (mutate) => {
     const sh = await ctx.newPage();
-    await sh.goto(BASE() + '/pages/saves.html');
+    await sh.goto(BASE() + '/__seed.html');
     const info = await sh.evaluate((mutateSource) => {
       localStorage.clear();
       const u = MuseumAuth.register('生存点', 'x').user;
@@ -82,7 +83,7 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
   // 从一个干净页面读存档，避开地图页内存里那份快照。
   const readSave = async () => {
     const sh = await ctx.newPage();
-    await sh.goto(BASE() + '/pages/saves.html');
+    await sh.goto(BASE() + '/__seed.html');
     const data = await sh.evaluate(() => MuseumState.load(MuseumAuth.getCurrentUser().id));
     await sh.close();
     return data;
@@ -223,11 +224,16 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
     const battleWin = async (context, expected, bonus, label, expectedHp, extra) => {
       const { userId } = await seedRaw('s.battleContext = ' + (context ? JSON.stringify(context) : 'null') + ';');
       const sh = await ctx.newPage();
-      await sh.goto(BASE() + '/pages/saves.html');
+      await sh.goto(BASE() + '/__seed.html');
       await sh.evaluate(({ userId }) => {
         // 013 §3.2 起主游戏按 hitsTaken 算人性值损耗，不再看 remainingHp（那栏留着只是给结算看）。
         // 这里固定挨打 2 次：损耗 = 基础 14 + 2 × 6 = 26。
-        localStorage.setItem('museum_pending_battle_v1', JSON.stringify({ status: 'win', remainingHp: 25, hitsTaken: 2, rewards: [], flags: [], userId: userId }));
+        const state = MuseumState.load(userId), finalBoss = state.battleContext === 'final-boss';
+        const source = finalBoss ? 'pixel-dungeon' : 'battle';
+        state.mode = 'battle'; state.returnScene = state.narrativeNode = finalBoss ? 'scene-28' : 'guard-after-battle';
+        state.battleAttempt = { id: 'economy-' + source, source, retryScene: finalBoss ? 'scene-27-boss' : 'scene-11', retryIndex: 0, returnScene: state.returnScene };
+        MuseumState.save(state, userId);
+        localStorage.setItem('museum_pending_battle_v1', JSON.stringify({ status: 'win', remainingHp: 25, hitsTaken: 2, rewards: [], flags: [], userId: userId, source, battleAttempt: state.battleAttempt.id }));
       }, { userId });
       await sh.close();
       const bp = await ctx.newPage();
