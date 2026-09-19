@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#191b24">
+  <meta name="description" content="怪谈博物馆 · 馆内追逐小游戏，沿着 MOSS 引导的路线穿过夜间展厅。">
+  <title>森林极速跑 · 怪谈博物馆</title>
+  <link rel="icon" type="image/svg+xml" href="assets/museum/sigil.svg">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="museum.css">
+</head>
+<body>
+  <main id="gameShell" aria-label="森林极速跑游戏">
+    <canvas id="gameCanvas" aria-label="三轨森林跑酷画面"></canvas>
+
+    <section id="hud" class="hud hidden" aria-live="polite">
+      <div class="route-system" aria-label="路线引导"><span class="system-light"></span><span>MOSS · 馆内追逐</span><small>沿金币路线前进，避开阻挡</small></div>
+      <div class="hud-stats">
+        <div><span>距离</span><strong id="distanceValue">0 m</strong></div>
+        <div><span>分数</span><strong id="scoreValue">0</strong></div>
+        <div><span>金币</span><strong id="coinValue">0</strong></div>
+        <div><span>时间</span><strong id="timeValue">0 s/180s</strong></div>
+      </div>
+      <div id="powerStatus" class="power-status" aria-label="当前道具"></div>
+      <button id="pauseButton" class="icon-button" type="button" aria-label="暂停游戏">Ⅱ</button>
+    </section>
+
+    <section id="menuScreen" class="overlay menu-screen">
+      <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 100 120"><path d="M20 106V43a30 30 0 0 1 60 0v63M12 106h76M31 106V45a19 19 0 0 1 38 0v61M50 26v80M28 51h44M57 78h5"/><circle cx="50" cy="12" r="3"/></svg></div>
+      <div class="menu-card">
+      <h1>森林极速跑</h1>
+      <div class="best-card">
+        <div><span>最高分</span><strong id="menuBestScore">0</strong></div>
+        <div><span>最远距离</span><strong id="menuBestDistance">0 m</strong></div>
+      </div>
+      <div class="menu-actions">
+        <button id="startButton" class="game-button primary" type="button">开始游戏</button>
+        <button id="helpButton" class="game-button secondary" type="button">游戏说明</button>
+        <button id="exitMenuButton" class="game-button ghost story-exit hidden" type="button">返回剧情</button>
+      </div>
+      <p class="key-hint">方向键 / WASD · 空格跳跃 · P 暂停</p>
+      </div>
+    </section>
+
+    <section id="helpScreen" class="overlay panel-screen hidden" aria-labelledby="helpTitle">
+      <div class="panel">
+        <p class="eyebrow">怪谈博物馆 · 追逐记录</p>
+        <h2 id="helpTitle">穿过夜间展厅</h2>
+        <p class="story-note">这是馆内追逐的街机化演绎：路线由 MOSS 引导，展柜、隔离栏与积水挡住去路。不要停留，持续奔跑 180 秒。</p>
+        <div class="help-grid">
+          <div><kbd>←</kbd><kbd>→</kbd><span>换道间隔 0.1 秒，耗时 0.25 秒，与跳、滑独立计时</span></div>
+          <div><kbd>↑</kbd><kbd>Space</kbd><span>跳过低栅栏、大石头与横向小河</span></div>
+          <div><kbd>↓</kbd><kbd>S</kbd><span>滑过高栅栏</span></div>
+          <div><kbd>W</kbd><kbd>S</kbd><span>跳跃、滑铲持续 0.7 秒；两者切换最短间隔 0.25 秒</span></div>
+          <div><b>🐿</b><span>小动物会造成持续 5 秒的踉跄</span></div>
+          <div><b>👆</b><span>手机横屏四向滑动；也可用屏幕按钮</span></div>
+        </div>
+        <div class="power-guide">
+          <span><img src="assets/magnet.png" alt="">磁铁</span><span><img src="assets/helmet.png" alt="">安全帽</span><span><img src="assets/double-score.png" alt="">分数翻倍</span><span>⚡ 冲刺</span>
+        </div>
+        <p>坚持 180 秒即可成功。速度每 30 秒变为 1.25 倍；推土机不能跳过。越界移动视为撞墙，前两次眩晕 5 秒，本局累计第三次失败。</p>
+        <button id="helpBackButton" class="game-button primary" type="button">知道了</button>
+      </div>
+    </section>
+
+    <section id="pauseScreen" class="overlay panel-screen hidden" aria-labelledby="pauseTitle">
+      <div class="panel compact">
+        <p class="eyebrow">稍作休息</p>
+        <h2 id="pauseTitle">游戏已暂停</h2>
+        <button id="resumeButton" class="game-button primary" type="button">继续</button>
+        <button id="restartPauseButton" class="game-button secondary" type="button">重新开始</button>
+        <button id="homePauseButton" class="game-button ghost" type="button">返回首页</button>
+        <button id="exitPauseButton" class="game-button ghost story-exit hidden" type="button">返回剧情</button>
+      </div>
+    </section>
+
+    <section id="gameOverScreen" class="overlay panel-screen hidden" aria-labelledby="gameOverTitle">
+      <div class="panel score-panel">
+        <p class="eyebrow">MOSS · 追逐记录中断</p>
+        <h2 id="gameOverTitle">路线已失守</h2>
+        <div class="result-score"><span>最终分数</span><strong id="finalScore">0</strong></div>
+        <div class="result-grid">
+          <div><span>本局距离</span><strong id="finalDistance">0 m</strong></div>
+          <div><span>本局金币</span><strong id="finalCoins">0</strong></div>
+          <div><span>历史最高</span><strong id="finalBest">0</strong></div>
+        </div>
+        <button id="againButton" class="game-button primary" type="button">再来一次</button>
+        <button id="homeOverButton" class="game-button ghost" type="button">返回首页</button>
+        <button id="exitOverButton" class="game-button ghost story-exit hidden" type="button">返回剧情</button>
+      </div>
+    </section>
+
+    <section id="successScreen" class="overlay panel-screen hidden" aria-labelledby="successTitle">
+      <div class="panel score-panel">
+        <p class="eyebrow">MOSS · 180 秒记录完成</p>
+        <h2 id="successTitle">已脱离追逐</h2>
+        <div class="result-score"><span>最终分数</span><strong id="successScore">0</strong></div>
+        <div class="result-grid">
+          <div><span>本局距离</span><strong id="successDistance">0 m</strong></div>
+          <div><span>本局金币</span><strong id="successCoins">0</strong></div>
+          <div><span>坚持时间</span><strong>180 s</strong></div>
+        </div>
+        <button id="againSuccessButton" class="game-button primary" type="button">再次挑战</button>
+        <button id="homeSuccessButton" class="game-button ghost" type="button">返回首页</button>
+        <button id="exitSuccessButton" class="game-button ghost story-exit hidden" type="button">返回剧情</button>
+      </div>
+    </section>
+
+    <nav id="touchControls" class="touch-controls hidden" aria-label="触屏操作">
+      <button type="button" data-action="left" aria-label="向左换道">◀</button>
+      <div>
+        <button type="button" data-action="jump" aria-label="跳跃">▲</button>
+        <button type="button" data-action="slide" aria-label="滑铲">▼</button>
+      </div>
+      <button type="button" data-action="right" aria-label="向右换道">▶</button>
+    </nav>
+
+    <aside class="rotate-notice" aria-label="横屏提示">
+      <span aria-hidden="true">↻</span>
+      <strong>请旋转设备</strong>
+      <p>馆内追逐采用横屏视野</p>
+    </aside>
+    <p id="bridgeStatus" class="bridge-status" role="status" aria-live="polite"></p>
+  </main>
+  <script src="museum-bridge.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

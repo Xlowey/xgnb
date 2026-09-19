@@ -1,0 +1,52 @@
+diff --git a/index.html b/index.html
+index dc9790f..ba5f513 100644
+--- a/index.html
++++ b/index.html
+@@ -101,8 +101,8 @@
+   <script src="js/player-avatar.js?v=38"></script>
+   <script src="js/map-npc.js?v=1"></script>
+   <script src="js/map-guide.js?v=56"></script>
++  <script src="js/museum-runner.js?v=1"></script>
+   <script src="js/game.js?v=58"></script>
+ </body>
+ </html>
+ 
+-
+diff --git a/js/novel.js b/js/novel.js
+index c37b881..55595af 100644
+--- a/js/novel.js
++++ b/js/novel.js
+@@ -622,6 +622,15 @@
+ 
+   function choose(choice) {
+     if (!window.MuseumTutorial.isDone("branch")) window.MuseumTutorial.complete("branch");
++    if (choice.action === "runner") {
++      pausePlayback();
++      var entered = window.MuseumRunner && window.MuseumRunner.launch({
++        state: state, sourceScene: currentSceneId,
++        returnScene: choice.afterRunner || "scene-29", completionFlag: choice.completionFlag
++      });
++      if (!entered) showToast("保存失败，暂未进入追逐，请检查存储空间后重试。");
++      return;
++    }
+     // A battle choice must NOT complete the scene yet: doing so awarded scene11Seen and
+     // completed:scene-11 the moment 战斗 was clicked, so losing the fight still unlocked
+     // scene-12. The outcome is decided by the battle itself, and the after-battle scene
+diff --git a/pages/novel.html b/pages/novel.html
+index a0d4829..8e4d1c9 100644
+--- a/pages/novel.html
++++ b/pages/novel.html
+@@ -104,9 +104,10 @@
+   <script src="../js/novel-stage.js?v=56"></script>
+   <script src="../js/novel-portraits.js?v=51"></script>
+   <script src="../js/story-save-dialog.js?v=38"></script>
+-  <script src="../js/novel.js?v=58"></script>
++  <script src="../js/museum-runner.js?v=1"></script>
++  <script src="../js/museum-runner-entry.js?v=1"></script>
++  <script src="../js/novel.js?v=59"></script>
+ </body>
+ </html>
+ 
+ 
+-
+

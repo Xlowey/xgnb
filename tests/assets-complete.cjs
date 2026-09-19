@@ -5,9 +5,10 @@
  */
 process.chdir(require('path').resolve(__dirname, '..'));
 const fs = require('fs'), vm = require('vm'), path = require('path');
-const c = { window: { MuseumItems: {} }, Image: function () {}, console };
+const c = { window: { MuseumItems: {} }, Image: function () {}, console, URL,
+  document: { currentScript: { src: require('url').pathToFileURL(path.resolve('js/asset-paths.js')).href } } };
 vm.createContext(c);
-for (const n of ['state', 'map-data', 'map-art', 'chapter-maps', 'novel-data', 'novel-overrides',
+for (const n of ['asset-paths', 'lazy-image', 'state', 'map-data', 'map-art', 'chapter-maps', 'novel-data', 'novel-overrides',
   'novel-presentation', 'novel-prologue', 'chapter-story', 'chapter-finalize', 'chapter-progress']) {
   vm.runInContext(fs.readFileSync('js/' + n + '.js', 'utf8'), c);
 }
@@ -53,7 +54,13 @@ check('事件/调查点引用的图片与录像都存在', missingMedia.length =
 
 // 3. every map room art exists
 const rooms = W.MuseumMapData.create(); W.MuseumMapArt(rooms); W.MuseumChapterMaps(rooms);
-const missingRoomArt = Object.values(rooms).filter(r => r.art && r.art.name && !have.has(r.art.name)).map(r => ({ room: r.id, file: r.art.name }));
+const missingRoomArt = Object.values(rooms).flatMap(r => {
+  if (!r.art) return [{room: r.id, file: '(没有地图)'}];
+  if (r.art.load) r.art.load();
+  const source = r.art.src;
+  const exists = source && fs.existsSync(require('url').fileURLToPath(source));
+  return exists ? [] : [{room: r.id, file: source || '(没有路径)'}];
+});
 check('每个房间的地图素材都存在', missingRoomArt.length === 0, missingRoomArt);
 
 // 4. every scene the story can open exists in the graph (no dangling ids)
@@ -86,7 +93,7 @@ check('没有既无内容又无选项的场次', blank.length === 0, blank);
 // 7. every room's objects are reachable (walkable-audit covers geometry; here check the count)
 console.log('\n=== 各房间的物件数 / 地图素材 ===');
 Object.values(rooms).forEach(r => {
-  console.log('  ' + r.id.padEnd(16) + String(r.objects.length).padStart(3) + ' 物件   ' + (r.art && r.art.name ? r.art.name : '(无素材)'));
+  console.log('  ' + r.id.padEnd(16) + String(r.objects.length).padStart(3) + ' 物件   ' + (r.art && (r.art.lazyName || r.art.src) || '(无素材)'));
 });
 
 console.log('\n=== 统计 ===');

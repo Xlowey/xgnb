@@ -188,10 +188,10 @@ function listen(port) {
     // localStorage so it survives the navigation back to the map.
     await page.evaluate(() => {
       window.__trace = [];
-      const original = MuseumState.save;
-      MuseumState.save = function (st, id) {
+      const original = MuseumState.saveGuarded;
+      MuseumState.saveGuarded = function (st, id) {
         const result = original.apply(this, arguments);
-        if (result) window.__trace.push(st.returnRoom + '|' + st.unlockedRooms.join('+') + '|' + st.roomId);
+        if (result && result !== 'stale') window.__trace.push(st.returnRoom + '|' + st.unlockedRooms.join('+') + '|' + st.roomId);
         try { localStorage.setItem('__trace', JSON.stringify(window.__trace)); } catch (error) { /* ignore */ }
         return result;
       };
