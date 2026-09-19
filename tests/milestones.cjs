@@ -4,7 +4,9 @@
  * 这两笔钱此前**一分都没有落点**——`js/achievements-data.js` 里的定义表是空的，
  * 天数节点也没接。这个脚本锁住：
  *
- *   1. 成就有 6 条、每条 20（012 §4.2 的「6 个 × 20 = 120」），解锁即发钱；
+ *   1. 成就表取并集共 17 条（远端「完成了成就系统」带来的 13 条 + 我们独有的 4 条），
+ *      其中恰好 6 条发钱、各 20（012 §4.2 的「6 个 × 20 = 120」）；远端那 13 条
+ *      只追踪不发钱，reward 缺省为 0。发钱发生在 unlock() 那一刻；
  *   2. **老存档要能补发**：玩家今天之前就答对过守则、打赢过馆长，旗标已经在存档里了，
  *      扫描一跑就该把成就补上——只在事件点调用的话老存档永远拿不到；
  *   3. 一切只发一次（幂等），重复扫描、重复进地图都不许再发；
@@ -80,8 +82,12 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
       achievements: window.MuseumAchievementDefinitions.map(d => ({ id: d.id, name: d.name, reward: d.reward })),
       milestones: window.MuseumMilestoneDefinitions.map(m => ({ id: m.id, flag: m.flag, points: m.points, source: m.source }))
     }));
-    check('成就有 6 条（012 §4.2）', table.achievements.length === 6, { count: table.achievements.length });
-    check('每条成就奖励 20 点，合计 120', table.achievements.every(a => a.reward === 20) && table.achievements.reduce((n, a) => n + a.reward, 0) === 120, { achievements: table.achievements });
+    // 并集口径（2026-09-19 合并 origin/main 时定的）：远端 13 条只追踪不发钱，
+    // 我们 6 条各 20。总条数变了，但发钱的口子还是 6 个、合计还是 120。
+    const paying = table.achievements.filter(a => a.reward);
+    check('成就取并集：远端 13 条 + 我们独有的 4 条 = 17 条', table.achievements.length === 17, { count: table.achievements.length });
+    check('其中恰好 6 条发钱、各 20 点，合计 120（012 §4.2）', paying.length === 6 && paying.every(a => a.reward === 20) && paying.reduce((n, a) => n + a.reward, 0) === 120, { paying: paying.map(a => a.id) });
+    check('其余 11 条纯追踪，不发钱', table.achievements.length - paying.length === 11 && table.achievements.filter(a => !a.reward).every(a => !a.reward), { free: table.achievements.filter(a => !a.reward).map(a => a.id) });
     check('每日存活有两条，各 20 点', table.milestones.length === 2 && table.milestones.every(m => m.points === 20), { milestones: table.milestones });
     check('每日存活挂在 009 的场次旗标上（scene12Seen / scene23Seen）', JSON.stringify(table.milestones.map(m => m.flag).sort()) === JSON.stringify(['scene12Seen', 'scene23Seen']), { flags: table.milestones.map(m => m.flag) });
     const before = await snapshot(p, (await p.evaluate(() => MuseumAuth.getCurrentUser().id)));
@@ -92,10 +98,12 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
     const seeded = await seed('s.flags.rulesGameCompleted = true; s.flags.battleDemoCompleted = true;');
     p = await openMap();
     let after = await snapshot(p, seeded.userId);
-    check('老存档进地图就补发了【守则】与【口供】', after.achievements.indexOf('rule-keeper') !== -1 && after.achievements.indexOf('director-account') !== -1, { achievements: after.achievements });
+    // 这两个 id 在合并时改成了远端的命名（rule-keeper → rules-reader、
+    // director-account → first-battle），因为远端的代码就是按后者调的。
+    check('老存档进地图就补发了【规则记录员】与【夜班交涉】', after.achievements.indexOf('rules-reader') !== -1 && after.achievements.indexOf('first-battle') !== -1, { achievements: after.achievements });
     check('补发是真的发钱（240 + 20 + 20 = 280）', after.points === 280, { points: after.points });
     const srcs = after.log.filter(e => /成就/.test(e.source)).map(e => e.source).sort();
-    check('飘字/明细的来源写作「成就 · 名字」', srcs.length === 2 && srcs[0] === '成就 · 口供' && srcs[1] === '成就 · 守则', { log: srcs });
+    check('飘字/明细的来源写作「成就 · 名字」', srcs.length === 2 && srcs[0] === '成就 · 夜班交涉' && srcs[1] === '成就 · 规则记录员', { log: srcs });
 
     // ---------- C. 幂等：再进一次不许重复发 ----------
     await p.reload();
@@ -162,7 +170,7 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
     p = await openMap();
     const mixed = await snapshot(p, mix.userId);
     check('成就 + 每日存活可以同时结算（20×2 + 20 = 60 → 300）', mixed.points === 300, { points: mixed.points });
-    check('该解的都解了，没多解', JSON.stringify(mixed.achievements) === JSON.stringify(['regular', 'rule-keeper']), { achievements: mixed.achievements });
+    check('该解的都解了，没多解', JSON.stringify(mixed.achievements) === JSON.stringify(['regular', 'rules-reader']), { achievements: mixed.achievements });
     await p.close();
 
     check('全程没有页面报错', errors.length === 0, errors.slice(0, 3));

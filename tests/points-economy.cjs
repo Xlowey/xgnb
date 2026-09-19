@@ -205,7 +205,7 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
     await p.close();
 
     // ---------- 10. 战斗胜利发钱（012 §4.1）----------
-    // bonus 是这一场顺带解锁的成就奖励：馆长战会置 battleDemoCompleted，于是【口供】+20；
+    // bonus 是这一场顺带解锁的成就奖励：馆长战会置 battleDemoCompleted，于是【夜班交涉】+20；
     // 最终 BOSS 战**不置任何旗标**（applyBattleResult 里 `if (!finalBoss)` 把旗标那一整块跳过了），
     // 所以它没有成就奖励——这也是为什么两个 case 的和刚好都是 310，必须分开写清楚。
     const battleWin = async (context, expected, bonus, label) => {
@@ -226,7 +226,7 @@ const check = (label, ok, detail) => { console.log((ok ? 'PASS ' : 'FAIL ') + la
       check(label + '：hp 仍按剩余血量覆盖', after.hp === 25, { hp: after.hp });
       await bp.close().catch(() => null);
     };
-    await battleWin(null, 50, 20, '第十一场（馆长）胜利 +50，并解锁【口供】+20');
+    await battleWin(null, 50, 20, '第十一场（馆长）胜利 +50，并解锁【夜班交涉】+20');
     await battleWin('final-boss', 70, 0, '第二十八场（BOSS）胜利 +70（最终 BOSS 不置旗标，所以没有成就奖励）');
 
     check('全程没有页面报错', errors.length === 0, errors.slice(0, 3));

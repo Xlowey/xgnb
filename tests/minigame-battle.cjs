@@ -110,10 +110,10 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     const right = await st(p);
     check('选对发通关旗标', right.flags.rulesGameCompleted === true, { flag: right.flags.rulesGameCompleted });
     check('选对给线索', right.clues.some(c => /rule-red/.test(String(c))), { clues: right.clues });
-    // 答对会顺带解锁成就【守则】并 +20（012 §4.2 的成就收入），所以不能再断言"分文不动"。
+    // 答对会顺带解锁成就【规则记录员】并 +20（012 §4.2 的成就收入），所以不能再断言"分文不动"。
     // 这里要守的是「答对不会被扣罚」——答错的 −60 才是惩罚，见上一节。
     check('选对不会被扣罚', right.points >= beforeRight.points, { points: beforeRight.points + ' -> ' + right.points });
-    check('选对顺带解锁【守则】并 +20', right.points === beforeRight.points + 20, { points: beforeRight.points + ' -> ' + right.points });
+    check('选对顺带解锁【规则记录员】并 +20', right.points === beforeRight.points + 20, { points: beforeRight.points + ' -> ' + right.points });
     check('选对也不动 hp', right.hp === beforeRight.hp, { hp: beforeRight.hp + ' -> ' + right.hp });
     // Clicking again must not double-count.
     const cluesAfter = (await st(p)).clues.length;
