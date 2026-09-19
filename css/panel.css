@@ -1,0 +1,97 @@
+/* 系统面板（012 §3.2）。配色与排版沿用 achievements.css 那一套深青 + 鎏金。 */
+.panel-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(760px, calc(100dvh - 40px));
+  max-width: none;
+  padding: 0;
+  margin: auto;
+  border: 1px solid #a58e626e;
+  border-radius: 10px;
+  background: #101a20;
+  color: #e9e0d1;
+  box-shadow: 0 26px 100px #000b;
+  font-family: system-ui, sans-serif;
+  overflow: auto;
+}
+.panel-dialog[open] { display: block; }
+.panel-dialog:not([open]) { display: none; }
+.panel-dialog::backdrop { background: #03090bd9; backdrop-filter: blur(5px); }
+
+.panel-header { display: flex; align-items: center; gap: 18px; padding: 20px 24px 16px; border-bottom: 1px solid #b89e692b; }
+.panel-eyebrow { margin: 0; color: #ac9875; font-size: 11px; letter-spacing: .15em; }
+.panel-title-box h2 { margin: 5px 0 0; font-size: 25px; font-weight: 500; letter-spacing: .14em; color: #e6c892; }
+.panel-close { margin-left: auto; }
+
+.panel-button { border: 1px solid #a58e6260; border-radius: 5px; background: #1b2a31; color: #dacbab; padding: 9px 14px; font: 13px system-ui, sans-serif; cursor: pointer; }
+.panel-button:hover { background: #30424a; }
+.panel-button:focus-visible { outline: 2px solid #e0c088; outline-offset: 3px; }
+
+.panel-body { padding: 20px 24px 22px; }
+
+/* 生存点 / 生命 在左，券机与商城入口在右 —— 对齐 012 §3.2 那张草图。 */
+.panel-vitals { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 20px; align-items: start; }
+.panel-stats { display: grid; gap: 8px; }
+.panel-label { color: #909da0; font-size: 13px; letter-spacing: .06em; }
+.panel-value { font-size: 22px; font-weight: 500; color: #e6c892; font-variant-numeric: tabular-nums; }
+
+/* 点生存点展开收支明细，所以要是个按钮，但不能长得像按钮。 */
+/* 箭头必须紧跟数字，所以第三列留给"撑开剩余宽度"的空白，不能让箭头自己去吃 1fr。 */
+.panel-points { display: grid; grid-template-columns: auto auto 1fr; align-items: baseline; gap: 14px; padding: 6px 8px; margin: -6px -8px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.panel-points:hover { border-color: #a58e6245; background: #16232b; }
+.panel-points:focus-visible { outline: 2px solid #e0c088; outline-offset: 2px; }
+/* 这个 ▾ 是"点数字能展开明细"的唯一提示，太小会被当成一个标点，所以给它字号和金色。 */
+.panel-caret { color: #c2a05d; font-size: 15px; line-height: 1; }
+.panel-points[aria-expanded="true"] .panel-caret { transform: rotate(180deg); }
+.panel-stat { display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 14px; padding: 6px 8px; }
+
+.panel-entries { display: grid; gap: 6px; justify-items: stretch; min-width: 150px; }
+.panel-entry { border: 1px solid #d1b27266; border-radius: 6px; background: #102028; color: #e5d6b7; padding: 9px 16px; font: 14px system-ui, sans-serif; cursor: pointer; }
+.panel-entry:hover:enabled { background: #1b2c33; }
+.panel-entry:disabled { color: #6f7c7f; border-color: #b89e6930; background: #141f25; cursor: not-allowed; }
+/* 012 §3.2 规则三：这行券机的账要一直摆在这里，而且它应该一直是负的。 */
+.panel-machine { margin: 0; color: #8b989c; font-size: 11px; text-align: center; font-variant-numeric: tabular-nums; }
+
+.panel-ledger { margin-top: 18px; padding: 14px 16px; border: 1px solid #b89e692b; border-radius: 7px; background: #142027; }
+.panel-ledger[hidden] { display: none; }
+.panel-ledger-heading { display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+.panel-ledger-heading h3 { margin: 4px 0 0; font-size: 15px; font-weight: 500; color: #d4c4a5; }
+.panel-ledger-note { color: #78858a; font-size: 11px; }
+.panel-ledger-list { display: grid; gap: 6px; margin-top: 12px; }
+.panel-ledger-empty { margin: 0; padding: 12px; color: #78858a; font-size: 12px; text-align: center; border: 1px dashed #b89e6930; border-radius: 5px; }
+/* 与券机「最近记录」的条目同构：左边来源，右边金额（等宽数字）。 */
+.panel-ledger-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 7px 10px; border: 1px solid #b89e6924; border-radius: 5px; background: #101a20; }
+.panel-ledger-copy { min-width: 0; display: grid; }
+.panel-ledger-copy strong { font-size: 13px; font-weight: 500; color: #d5c4a7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.panel-ledger-copy span { color: #78858a; font-size: 10px; }
+.panel-ledger-amount { font-family: ui-monospace, monospace; font-size: 13px; font-variant-numeric: tabular-nums; }
+.panel-ledger-amount.is-gain { color: #d9b989; }
+.panel-ledger-amount.is-cost { color: #e19b9b; }
+
+.panel-trust { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 18px; padding-top: 16px; border-top: 1px solid #b89e6924; }
+.panel-trust .panel-value { font-size: 20px; }
+
+.panel-tasks { margin-top: 18px; padding-top: 16px; border-top: 1px solid #b89e6924; }
+.panel-tasks h3 { margin: 0 0 10px; font-size: 13px; font-weight: 500; color: #ac9875; letter-spacing: .15em; }
+.panel-task-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; }
+.panel-task { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 14px; color: #c9bc9f; }
+.panel-task-index { color: #8b784e; }
+.panel-task-mark { color: #8b784e; font-size: 15px; }
+.panel-task.is-done { color: #d9c9a4; }
+.panel-task.is-done .panel-task-mark { color: #8fe3a8; }
+/* 隐藏任务：009 的原文就是「？？？？？」，点亮之前一直保持这种"看不清"的样式。 */
+.panel-task.is-hidden { color: #6f7c7f; letter-spacing: .18em; }
+.panel-task.is-hidden .panel-task-mark { color: #6f7c7f; }
+
+.panel-footer { padding: 12px 24px; color: #78858a; font-size: 11px; border-top: 1px solid #b89e6920; }
+
+/* 地图 HUD 上的入口按钮，和「成就 · J」并排。 */
+.map-panel-button { color: #e5d6b7; background: #102028df; border: 1px solid #d1b27266; border-radius: 6px; padding: 10px 16px; font: 14px system-ui, sans-serif; cursor: pointer; }
+.map-panel-button:hover { background: #1b2c33; }
+
+@media (max-width: 620px) {
+  .panel-dialog { width: calc(100vw - 20px); }
+  .panel-header, .panel-body { padding-left: 16px; padding-right: 16px; }
+  .panel-vitals { grid-template-columns: minmax(0, 1fr); }
+  .panel-entries { min-width: 0; }
+  .map-panel-button { padding: 9px 11px; font-size: 12px; }
+}
