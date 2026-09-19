@@ -1,0 +1,46 @@
+/* 商城（012 §5），渲染在系统面板的商城区里。配色沿用 panel.css 的深青 + 鎏金。 */
+
+/* 面板里的视图切换：概览 / 商城，同一块面板里切。 */
+.panel-view[hidden] { display: none; }
+.panel-subbar { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.panel-subbar-title { color: #ac9875; font-size: 12px; letter-spacing: .18em; }
+.panel-back { padding: 7px 12px; font-size: 12px; }
+
+.shop-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.shop-tab { border: 1px solid transparent; border-radius: 5px; background: transparent; color: #8f9c9f; padding: 7px 11px; font: 12px system-ui, sans-serif; cursor: pointer; }
+.shop-tab:hover { color: #d5c4a7; background: #1b2a31; }
+.shop-tab[aria-pressed="true"] { color: #e6c892; background: #263137; border-color: #a58e624f; }
+.shop-tab:focus-visible { outline: 2px solid #e0c088; outline-offset: 2px; }
+
+.shop-hint { margin: 0 0 12px; color: #8b989c; font-size: 12px; line-height: 1.7; }
+
+.shop-list { display: grid; gap: 10px; }
+.shop-item { padding: 14px 16px; border: 1px solid #b89e692b; border-radius: 7px; background: #142027; }
+.shop-item.is-sold-out { opacity: .58; }
+.shop-item-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.shop-item-head h3 { margin: 0; font-size: 15px; font-weight: 500; color: #d4c4a5; }
+/* 价格前面挂一个点数符号，和 012 表里"单价"那一列对应。 */
+.shop-price { color: #e6c892; font-size: 15px; font-variant-numeric: tabular-nums; }
+.shop-price::before { content: "◆ "; color: #8b784e; font-size: 11px; }
+.shop-note { margin: 7px 0 0; color: #909da0; font-size: 12px; line-height: 1.7; }
+.shop-item-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+.shop-stock { color: #78858a; font-size: 11px; font-variant-numeric: tabular-nums; }
+/* ready=false 的商品必须让人一眼看见"效果还没接"——玩家花的是真点数。 */
+.shop-tag { padding: 3px 8px; border: 1px solid #a58e6245; border-radius: 4px; color: #ac9875; font-size: 11px; }
+.shop-buy { margin-left: auto; border: 1px solid #d1b27266; border-radius: 5px; background: #1b2a31; color: #e5d6b7; padding: 7px 16px; font: 13px system-ui, sans-serif; cursor: pointer; }
+.shop-buy:hover:enabled { background: #30424a; }
+.shop-buy:focus-visible { outline: 2px solid #e0c088; outline-offset: 2px; }
+.shop-buy:disabled { color: #6f7c7f; border-color: #b89e6930; background: #141f25; cursor: not-allowed; }
+
+.shop-balance { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 16px 0 0; padding-top: 14px; border-top: 1px solid #b89e6924; color: #909da0; font-size: 12px; }
+.shop-balance strong { color: #e6c892; font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+/* 守则小游戏里的【规则豁免】选择（012 §5.3）。 */
+.rules-waiver { margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(155, 214, 212, .3); }
+.rules-waiver[hidden] { display: none; }
+
+@media (max-width: 620px) {
+  .shop-item { padding: 12px; }
+  .shop-item-foot { gap: 8px; }
+  .shop-buy { margin-left: 0; }
+}
