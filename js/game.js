@@ -41,7 +41,7 @@
     currentUser: document.getElementById("current-user-name"), continueButton: document.getElementById("continue-button"),
     canvas: canvas, roomTitle: document.getElementById("room-title"), roomChapter: document.getElementById("room-chapter"), prompt: document.getElementById("interaction-prompt"), toast: document.getElementById("map-toast"), gameMessage: document.getElementById("game-message"),
     hp: document.getElementById("hp-value"), trust: document.getElementById("trust-value"), clues: document.getElementById("clue-value"), task: document.getElementById("task-value"), rooms: document.getElementById("room-list"),
-    rules: document.getElementById("rules-overlay"), rulesOptions: document.getElementById("rules-options"), rulesFeedback: document.getElementById("rules-feedback"),
+    rules: document.getElementById("rules-overlay"), rulesOptions: document.getElementById("rules-options"), rulesFeedback: document.getElementById("rules-feedback"), rulesWaiver: document.getElementById("rules-waiver"),
     pause: document.getElementById("pause-overlay"), resumeButton: document.getElementById("resume-button"),
     logPanel: document.getElementById("log-panel"), logUserName: document.getElementById("log-user-name"), logList: document.getElementById("dialogue-log-list"),
     savePanel: document.getElementById("save-panel"), savePanelTitle: document.getElementById("save-panel-title"), savePanelMessage: document.getElementById("save-panel-message"), saveUserName: document.getElementById("save-user-name"), saveModeButton: document.getElementById("save-mode-button"), loadModeButton: document.getElementById("load-mode-button"), saveSlotList: document.getElementById("save-slot-list")
@@ -169,7 +169,7 @@
     showMapTutorial();
   }
   function overlaysOpen() {
-    return window.MuseumInventory.isOpen() || window.MuseumAchievements.isOpen() || (el.savePanel && !el.savePanel.hidden) || (el.logPanel && !el.logPanel.hidden) || (el.rules && !el.rules.hidden) || (el.pause && !el.pause.hidden);
+    return window.MuseumInventory.isOpen() || window.MuseumAchievements.isOpen() || window.MuseumPanel.isOpen() || (el.savePanel && !el.savePanel.hidden) || (el.logPanel && !el.logPanel.hidden) || (el.rules && !el.rules.hidden) || (el.pause && !el.pause.hidden);
   }
   function roomName(id) { return rooms[id] ? rooms[id].title : "未知地点"; }
 
@@ -278,10 +278,80 @@
     if (!MuseumState.sceneCompleted(state, "terminal")) state.systemTrust += 2; startNovel("terminal");
   }
   function openMirror() { markDiscovered("dorm-mirror"); startNovel("mirror"); }
+  // 012 §5.3：违规扣罚 60 生存点，走的是生存点而不是 hp。
+  function settleRulePenalty() {
+    var paid = window.MuseumPoints.penalize(60, "违规扣罚");
+    el.rulesFeedback.textContent = paid > 0
+      ? "这条信息无法解释纸条中的矛盾。生存点 −" + paid + "。"
+      : "这条信息无法解释纸条中的矛盾。生存点已经归零，这次扣罚落空了。";
+    save();
+  }
+  function closeRuleWaiver() {
+    el.rulesWaiver.hidden = true;
+    el.rulesWaiver.textContent = "";
+    Array.prototype.forEach.call(el.rulesOptions.children, function (child) { child.disabled = false; });
+  }
+  // 012 §5.3 的【规则豁免】是"免一次违规扣罚"，但**用不用由玩家自己定**，
+  // 所以不自动抵扣：持有豁免时先把选择摆出来。
+  function offerRuleWaiver() {
+    var held = window.MuseumShop.count("waiver");
+    if (held <= 0) { settleRulePenalty(); return; }
+    // 选择没落定之前锁住那三个选项，否则玩家可以连点、弹出第二个选择。
+    Array.prototype.forEach.call(el.rulesOptions.children, function (child) { child.disabled = true; });
+    el.rulesWaiver.textContent = "";
+    el.rulesFeedback.textContent = "这条信息无法解释纸条中的矛盾。你还有 " + held + " 张【规则豁免】，要用掉一张吗？";
+    var useButton = document.createElement("button");
+    useButton.type = "button";
+    useButton.className = "modal-option";
+    useButton.textContent = "用掉一张【规则豁免】（剩 " + held + " 张）";
+    useButton.addEventListener("click", function () {
+      window.MuseumShop.consume("waiver");
+      closeRuleWaiver();
+      el.rulesFeedback.textContent = "【规则豁免】已抵消本次扣罚。";
+      save();
+    });
+    var payButton = document.createElement("button");
+    payButton.type = "button";
+    payButton.className = "modal-option";
+    payButton.textContent = "照扣 60 生存点";
+    payButton.addEventListener("click", function () { closeRuleWaiver(); settleRulePenalty(); });
+    el.rulesWaiver.appendChild(useButton);
+    el.rulesWaiver.appendChild(payButton);
+    el.rulesWaiver.hidden = false;
+    useButton.focus();
+  }
   function openRules() {
     if (state.flags.rulesGameCompleted) { showToast("告示上的规则你已经记住了。"); return; }
-    state.mode = "mini"; el.rules.hidden = false; el.rulesFeedback.textContent = ""; el.rulesOptions.textContent = "";
-    [{ id: "red", text: "远离红色制服的工作人员" }, { id: "smile", text: "面对游客时保持微笑" }, { id: "exit", text: "直接询问工作人员出口" }].forEach(function (option) { var button = document.createElement("button"); button.type = "button"; button.className = "modal-option"; button.textContent = option.text; button.addEventListener("click", function () { if (state.flags.rulesGameCompleted) return; if (option.id === "red") { state.flags.rulesGameCompleted = true; addClue("rule-red"); state.systemTrust += 4; el.rulesFeedback.textContent = "判断正确。红制服员工的规则暂时可信，去观察他吧。"; state.task = "观察大厅里的红制服员工。"; save(); } else { state.hp = Math.max(0, state.hp - 3); el.rulesFeedback.textContent = "这条信息无法解释纸条中的矛盾。生存点 -3。"; save(); } }); el.rulesOptions.appendChild(button); });
+    state.mode = "mini";
+    el.rules.hidden = false;
+    el.rulesFeedback.textContent = "";
+    el.rulesOptions.textContent = "";
+    if (el.rulesWaiver) { el.rulesWaiver.hidden = true; el.rulesWaiver.textContent = ""; }
+    [
+      { id: "red", text: "远离红色制服的工作人员" },
+      { id: "smile", text: "面对游客时保持微笑" },
+      { id: "exit", text: "直接询问工作人员出口" }
+    ].forEach(function (option) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "modal-option";
+      button.textContent = option.text;
+      button.addEventListener("click", function () {
+        if (state.flags.rulesGameCompleted) return;
+        if (option.id === "red") {
+          state.flags.rulesGameCompleted = true;
+          addClue("rule-red");
+          state.systemTrust += 4;
+          el.rulesFeedback.textContent = "判断正确。红制服员工的规则暂时可信，去观察他吧。";
+          state.task = "观察大厅里的红制服员工。";
+          if (window.MuseumMilestones) window.MuseumMilestones.settle(state);
+          save();
+        } else {
+          offerRuleWaiver();
+        }
+      });
+      el.rulesOptions.appendChild(button);
+    });
   }
   function openContract() {
     markDiscovered("wax-contract");
@@ -518,7 +588,7 @@
   }
 
   function renderRooms() { el.rooms.textContent = ""; Object.keys(rooms).forEach(function (id) { if (!rooms[id]) return; var button = document.createElement("button"); button.type = "button"; var unlocked = has(state.unlockedRooms, id); button.className = "room-button" + (state.roomId === id ? " current" : ""); button.disabled = true; button.innerHTML = "<strong>" + roomName(id) + "</strong><small>" + (unlocked ? (state.roomId === id ? "当前位置" : "已探索") : "尚未开放") + "</small>";  el.rooms.appendChild(button); }); }
-  function renderStats() { var objective=window.MuseumChapterProgress.objective(state); state.task=objective.text; var hint=document.getElementById("chapter-objective"); if(hint)hint.textContent=objective.text;  el.hp.textContent = String(state.hp); el.trust.textContent = String(state.systemTrust); el.clues.textContent = String(state.clues.length); el.task.textContent = objective.text || tasks[state.roomId] || "继续探索。"; window.MuseumAchievements.refresh(); }
+  function renderStats() { var objective=window.MuseumChapterProgress.objective(state); state.task=objective.text; var hint=document.getElementById("chapter-objective"); if(hint)hint.textContent=objective.text;  el.hp.textContent = String(state.hp); el.trust.textContent = String(state.systemTrust); el.clues.textContent = String(state.clues.length); el.task.textContent = objective.text || tasks[state.roomId] || "继续探索。"; window.MuseumAchievements.refresh(); window.MuseumPoints.refresh(); window.MuseumPanel.refresh(); }
   function renderAll() {
     if (!state) return; var room = currentRoom();
     if (!Number.isFinite(state.playerX) || !Number.isFinite(state.playerY) || blocked(room,state.playerX,state.playerY,room.id === "museum" ? 10 : 22)) {
@@ -578,9 +648,14 @@
       var remainingHp = Number(result.remainingHp);
       if (Number.isFinite(remainingHp)) state.hp = Math.max(0, remainingHp);
       var finalBoss = state.battleContext === "final-boss";
+      // 012 §4.1 / §4.2：战斗胜利是收入来源之一，第十一场（馆长）+50、第二十八场（BOSS）+70。
+      // 生存点已经从 hp 拆出来，所以这里只发钱；上面那行 state.hp 仍然按剩余血量覆盖。
+      window.MuseumPoints.add(finalBoss ? 70 : 50, finalBoss ? "首领战胜利" : "馆长战胜利");
       if (!finalBoss) {
         state.flags.battleDemoCompleted = true; state.flags.waxDoorUnlocked = true; addClue("director-account"); addUnique(state.unlockedRooms, "wax");
       }
+      // 战斗旗标刚写完就结算：下面马上要跳去剧情页，晚一步这次就扫不到了。
+      if (window.MuseumMilestones) window.MuseumMilestones.settle(state);
       var returnRoom = rooms[state.returnRoom] ? state.returnRoom : "hall";
       state.roomId = returnRoom; state.currentNode = returnRoom; state.chapter = rooms[returnRoom].chapter; state.playerX = Number(state.returnX) || rooms[returnRoom].spawn.x; state.playerY = Number(state.returnY) || rooms[returnRoom].spawn.y; state.task = tasks[returnRoom];
       state.mode = "novel"; state.narrativeNode = state.returnScene || "guard-after-battle"; state.narrativeIndex = 0; state.narrativeChoice = null; var nextScene = state.narrativeNode; state.returnScene = null; state.battleContext = null;
@@ -726,6 +801,10 @@
   document.getElementById("map-bag-button").addEventListener("click",function(){window.MuseumInventory.open();});
   window.MuseumAchievements.bind({getState:function(){return state;},save:save,canOpen:function(){return el.game && !el.game.hidden && !overlaysOpen();},onOpen:function(){keys={};heldTouch=null;avatarMoving=false;drawRoom(currentRoom());},onClose:function(){keys={};heldTouch=null;renderAll();}});
   document.getElementById("map-achievements-button").addEventListener("click",function(){window.MuseumAchievements.open();});
+  window.MuseumPoints.bind({getState:function(){return state;},save:save});
+  window.MuseumPanel.bind({getState:function(){return state;},save:save,canOpen:function(){return el.game && !el.game.hidden && !overlaysOpen();},onOpen:function(){keys={};heldTouch=null;avatarMoving=false;drawRoom(currentRoom());},onClose:function(){keys={};heldTouch=null;renderAll();}});
+  window.MuseumShop.bind({getState:function(){return state;},save:save});
+  document.getElementById("map-panel-button").addEventListener("click",function(){window.MuseumPanel.open();});
   var pendingResult = currentUser ? consumeBattleResult() : null;
   var query = new URLSearchParams(window.location.search);
   var openSavedGame = query.get("fromSave") === "1";
@@ -759,5 +838,8 @@
   } else {
     showCover();
   }
+  // 回到地图时结算一次里程碑。玩家的成就条件可能在别处刚被满足——最典型的是券机：
+  // 它是另一个页面，累计购券数和单张最高净收益都在那边增长，回到这里才扫得到。
+  if (currentUser && state && window.MuseumMilestones) window.MuseumMilestones.settle(state);
   window.requestAnimationFrame(frame);
 }());

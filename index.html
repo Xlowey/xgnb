@@ -8,6 +8,9 @@
   <link rel="stylesheet" href="css/style.css?v=40">
   <link rel="stylesheet" href="css/inventory.css?v=38">
   <link rel="stylesheet" href="css/achievements.css?v=38">
+  <link rel="stylesheet" href="css/points.css?v=1">
+  <link rel="stylesheet" href="css/panel.css?v=1">
+  <link rel="stylesheet" href="css/shop.css?v=1">
   <link rel="stylesheet" href="css/tutorial.css?v=38">
   <link rel="stylesheet" href="css/game-art-ui.css?v=2">
 </head>
@@ -42,6 +45,7 @@
           <div class="map-quick-actions">
             <button id="map-bag-button" class="map-bag-button" data-inventory-open type="button">背包 · B</button>
             <button id="map-achievements-button" class="map-achievements-button" data-achievements-open type="button">成就 · J</button>
+            <button id="map-panel-button" class="map-panel-button" data-panel-open type="button">系统 · M</button>
           </div>
           <div id="interaction-prompt" class="interaction-prompt" role="status" aria-live="polite" aria-atomic="true" hidden></div>
           <p id="chapter-objective" class="chapter-objective" aria-live="polite"></p>
@@ -63,7 +67,9 @@
           <details class="pause-help"><summary>操作说明</summary><p>WASD / 方向键移动；按住 Shift 以 1.5 倍速疾跑；按 Tab 显示或隐藏小地图；靠近物品后按 E 调查；Esc 暂停或继续。</p></details>
           <section class="pause-status" aria-label="当前状态">
             <div class="card-heading"><span>当前状态</span><span class="system-dot" aria-label="系统在线"></span></div>
-            <dl class="stat-list"><div><dt>生存点</dt><dd id="hp-value">25</dd></div><div><dt>系统信任</dt><dd id="trust-value">50</dd></div><div><dt>线索</dt><dd id="clue-value">0</dd></div></dl>
+            <!-- 生存点是货币（012 §3.1），由 js/points.js 负责写入；下面的「生命」是原来的 state.hp，
+                 现在只剩战斗血量和结局 D 判定两件事，013 落地后改叫「人性值」。 -->
+            <dl class="stat-list"><div><dt>生存点</dt><dd data-points-value>240</dd></div><div><dt>生命</dt><dd id="hp-value">25</dd></div><div><dt>系统信任</dt><dd id="trust-value">50</dd></div><div><dt>线索</dt><dd id="clue-value">0</dd></div></dl>
             <p id="task-value" class="task-text">调查宿舍，寻找离开的办法。</p>
             <div class="card-heading pause-section-heading"><span>馆内区域</span></div><div id="room-list" class="room-list"></div>
           </section>
@@ -74,7 +80,7 @@
         </div>
       </section>
 
-      <section id="rules-overlay" class="modal-overlay" hidden aria-label="规则小游戏"><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="rules-title"><div class="modal-heading"><span>现场记录 · 小游戏</span><button id="rules-close" class="text-button" type="button">返回地图</button></div><h2 id="rules-title">哪一条规则值得相信？</h2><p id="rules-question">血字纸条写着：远离红色制服的工作人员。你在大厅看见了红制服员工，应该怎么做？</p><div id="rules-options" class="modal-options"></div><p id="rules-feedback" class="feedback" role="status" aria-live="polite"></p></div></section>
+      <section id="rules-overlay" class="modal-overlay" hidden aria-label="规则小游戏"><div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="rules-title"><div class="modal-heading"><span>现场记录 · 小游戏</span><button id="rules-close" class="text-button" type="button">返回地图</button></div><h2 id="rules-title">哪一条规则值得相信？</h2><p id="rules-question">血字纸条写着：远离红色制服的工作人员。你在大厅看见了红制服员工，应该怎么做？</p><div id="rules-options" class="modal-options"></div><div id="rules-waiver" class="modal-options rules-waiver" hidden></div><p id="rules-feedback" class="feedback" role="status" aria-live="polite"></p></div></section>
       <p id="game-message" class="game-message" role="status" aria-live="polite"></p>
     </section>
 
@@ -89,6 +95,12 @@
   <script src="js/inventory.js?v=38"></script>
   <script src="js/achievements-data.js?v=38"></script>
   <script src="js/achievements.js?v=38"></script>
+  <script src="js/points.js?v=1"></script>
+  <script src="js/milestones-data.js?v=1"></script>
+  <script src="js/milestones.js?v=1"></script>
+  <script src="js/panel.js?v=1"></script>
+  <script src="js/shop-data.js?v=1"></script>
+  <script src="js/shop.js?v=1"></script>
   <script src="js/tutorial.js?v=38"></script>
   <script src="js/focus-trap.js?v=1"></script>
   <script src="js/asset-paths.js?v=56"></script>

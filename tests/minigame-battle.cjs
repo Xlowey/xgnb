@@ -80,12 +80,15 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     check('按 E 打开小游戏', rulesOpen.open === true, rulesOpen);
     check('小游戏提供 3 个选项', rulesOpen.options === 3, rulesOpen);
 
-    // Wrong answer: costs hp, does not award the flag.
+    // Wrong answer: costs 生存点, does NOT touch hp, does not award the flag.
+    // 012 §5.3：违规扣罚属于生存点支出。改之前这里扣的是 hp，文案却写「生存点」——
+    // 这条断言就是那个 bug 的护栏，别改回 hp。
     const before = await st(p);
     await p.evaluate(() => document.getElementById('rules-options').children[2].click());
     await p.waitForTimeout(400);
     const wrong = await st(p);
-    check('选错会扣生存点', wrong.hp < before.hp, { hp: before.hp + ' -> ' + wrong.hp });
+    check('选错扣 60 生存点', wrong.points === before.points - 60, { points: before.points + ' -> ' + wrong.points });
+    check('选错不再扣 hp（违规扣罚走生存点）', wrong.hp === before.hp, { hp: before.hp + ' -> ' + wrong.hp });
     check('选错不发通关旗标', wrong.flags.rulesGameCompleted !== true, { flag: wrong.flags.rulesGameCompleted });
     const feedback = await p.evaluate(() => document.getElementById('rules-feedback').textContent);
     check('选错有文字反馈', /生存点|无法解释/.test(feedback), feedback);
@@ -101,13 +104,17 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     });
     await p.reload(); await p.waitForTimeout(1400);
     await p.keyboard.press('e'); await p.waitForTimeout(600);
-    const hpBefore = (await st(p)).hp;
+    const beforeRight = await st(p);
     await p.evaluate(() => document.getElementById('rules-options').children[0].click());
     await p.waitForTimeout(400);
     const right = await st(p);
     check('选对发通关旗标', right.flags.rulesGameCompleted === true, { flag: right.flags.rulesGameCompleted });
     check('选对给线索', right.clues.some(c => /rule-red/.test(String(c))), { clues: right.clues });
-    check('选对不扣生存点', right.hp === hpBefore, { hp: hpBefore + ' -> ' + right.hp });
+    // 答对会顺带解锁成就【守则】并 +20（012 §4.2 的成就收入），所以不能再断言"分文不动"。
+    // 这里要守的是「答对不会被扣罚」——答错的 −60 才是惩罚，见上一节。
+    check('选对不会被扣罚', right.points >= beforeRight.points, { points: beforeRight.points + ' -> ' + right.points });
+    check('选对顺带解锁【守则】并 +20', right.points === beforeRight.points + 20, { points: beforeRight.points + ' -> ' + right.points });
+    check('选对也不动 hp', right.hp === beforeRight.hp, { hp: beforeRight.hp + ' -> ' + right.hp });
     // Clicking again must not double-count.
     const cluesAfter = (await st(p)).clues.length;
     await p.evaluate(() => document.getElementById('rules-options').children[0].click());

@@ -50,6 +50,21 @@
     chapter: "序章",
     day: 1,
     hp: 25,
+    // 012 §3.1：生存点从 hp 拆出来，成为纯货币（商城 / 券机 / 终局兑换都花它）。
+    // hp 保持原样，仍然是战斗血量与结局 D 的判定；013 落地后再把它接成人性值。
+    // 老存档没有这两个键，hydrate 会用这里的默认值补齐，不需要迁移脚本。
+    points: 240,
+    pointsLog: [],
+    // 012 §3.2：系统面板上这三格必须是活变量，不能写死——009 第四场面板印的是
+    // 「玩家等级 Lv.03、生存点 240、NPC 信任度 31%」，009 第十二场 MOSS 那句
+    // 「角色信任松动」就是 npcTrust 在起作用。
+    level: 3,
+    npcTrust: 31,
+    // 012 §3.2 规则三：券机入口旁常驻的那行券机自己的账。接入券机（第 4 步）后由它写入。
+    machine: { tickets: 0, spent: 0, bestNet: 0 },
+    // 商城的持有物：{ 商品 id: 件数 }。012 §5.6 的战斗向是叠加式（买几份叠几层），
+    // 所以记的是件数而不是"有没有"。【规则豁免】消耗一次就减一件。
+    shopOwned: {},
     systemTrust: 50,
     clues: [],
     inventory: [],
@@ -91,6 +106,21 @@
     state.tutorial = Object.assign({}, DEFAULT_TUTORIAL, loaded.tutorial || {});
     state.tutorialDismissed = loaded.tutorialDismissed && typeof loaded.tutorialDismissed === "object" ? loaded.tutorialDismissed : {};
     state.flags = Object.assign({}, DEFAULT_FLAGS, loaded.flags || {});
+    // 生存点是货币，坏值一律退回默认值，不能让 NaN 顺着加减法污染整个存档。
+    if (!Number.isFinite(state.points)) state.points = DEFAULT_STATE.points;
+    state.pointsLog = Array.isArray(state.pointsLog) ? state.pointsLog.filter(function (entry) { return entry && Number.isFinite(Number(entry.delta)); }) : [];
+    // 系统面板的三格同理：老存档没有这几个键，或者存档被写坏，都退回 012 的初值。
+    if (!Number.isFinite(state.level)) state.level = DEFAULT_STATE.level;
+    if (!Number.isFinite(state.npcTrust)) state.npcTrust = DEFAULT_STATE.npcTrust;
+    state.machine = Object.assign({}, DEFAULT_STATE.machine, (state.machine && typeof state.machine === "object") ? state.machine : {});
+    ["tickets", "spent", "bestNet"].forEach(function (key) { if (!Number.isFinite(state.machine[key])) state.machine[key] = DEFAULT_STATE.machine[key]; });
+    // 持有物只认"商品 id -> 正整数件数"，坏值直接丢掉，免得商城渲染时拿到 NaN。
+    var owned = (state.shopOwned && typeof state.shopOwned === "object") ? state.shopOwned : {};
+    state.shopOwned = {};
+    Object.keys(owned).forEach(function (key) {
+      var value = Math.round(Number(owned[key]));
+      if (Number.isFinite(value) && value > 0) state.shopOwned[key] = value;
+    });
     state.clues = Array.isArray(state.clues) ? state.clues : [];
     state.inventory = Array.isArray(state.inventory) ? state.inventory : [];
     if(window.MuseumInventory)window.MuseumInventory.normalize(state);

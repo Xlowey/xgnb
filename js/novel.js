@@ -133,6 +133,11 @@
   window.MuseumTutorial.bind({getState:function(){return state;},save:persist});
   window.MuseumInventory.bind({getState:function(){return state;},save:persist,canOpen:function(){return els.review.hidden && els.end.hidden && els.pause.hidden && !stage.isOpen();},onOpen:function(){pausePlayback();window.MuseumTutorial.complete("inventory");},onClose:function(){schedulePlayback();}});
   window.MuseumAchievements.bind({getState:function(){return state;},save:persist,canOpen:function(){return els.review.hidden && els.end.hidden && els.pause.hidden && !stage.isOpen();},onOpen:pausePlayback,onClose:function(){schedulePlayback();}});
+  window.MuseumPoints.bind({getState:function(){return state;},save:persist});
+  window.MuseumPanel.bind({getState:function(){return state;},save:persist,canOpen:function(){return els.review.hidden && els.end.hidden && els.pause.hidden && !stage.isOpen();},onOpen:pausePlayback,onClose:function(){schedulePlayback();}});
+  window.MuseumShop.bind({getState:function(){return state;},save:persist});
+  var panelButton = document.getElementById("novel-panel-button");
+  if (panelButton) panelButton.addEventListener("click", function () { window.MuseumPanel.open(); });
 
   // 浮层焦点管理：剧情暂停与文本回顾原先打开后焦点留在工具栏，Tab 会跑到浮层背后。
   if (window.MuseumFocus) {
@@ -313,6 +318,9 @@
       state.task = window.MuseumChapterProgress.objective(state).text;
       state.returnRoom = state.returnRoom || "dorm";
     }
+    // 012 §4.2：一场结束就结算里程碑（每日存活、以及挂在场次旗标上的成就条件）。
+    // 放在函数最后——上面各分支写的旗标这一轮扫描就都看得到。settle 是幂等的。
+    if (window.MuseumMilestones) window.MuseumMilestones.settle(state);
   }
 
   function saveEnding() {
