@@ -8,7 +8,7 @@
   "scene-01": {
     "id": "scene-01",
     "title": "员工宿舍 · 起点",
-    "subtitle": "第二周剧本 · 第1场",
+    "subtitle": "第一幕 · 入馆与规则（金手指阶段）",
     "location": "第一场　外景 · 红雾旷野（梦中） → 内景 · 员工宿舍（起点）　夜",
     "returnToMap": true,
     "namePrompt": true,
@@ -44,7 +44,7 @@
   "scene-02": {
     "id": "scene-02",
     "title": "第二场　内景 · 员工宿舍 · 更衣柜　夜",
-    "subtitle": "第二周剧本 · 第2场",
+    "subtitle": "第一幕 · 入馆与规则（金手指阶段）",
     "location": "第二场　内景 · 员工宿舍 · 更衣柜　夜",
     "returnToMap": true,
     "flag": "scene02Seen",
@@ -70,7 +70,7 @@
   "scene-03": {
     "id": "scene-03",
     "title": "第三场　内景 · 员工宿舍　夜",
-    "subtitle": "第二周剧本 · 第3场",
+    "subtitle": "第一幕 · 入馆与规则（金手指阶段）",
     "location": "第三场　内景 · 员工宿舍　夜",
     "returnToMap": true,
     "flag": "scene03Seen",
@@ -112,7 +112,7 @@
   "scene-04": {
     "id": "scene-04",
     "title": "第四场　内景 · 走廊　午夜",
-    "subtitle": "第二周剧本 · 第4场",
+    "subtitle": "第一幕 · 入馆与规则（金手指阶段）",
     "location": "第四场　内景 · 走廊　午夜",
     "returnToMap": true,
     "flag": "scene04Seen",
@@ -170,7 +170,7 @@
   "scene-05": {
     "id": "scene-05",
     "title": "第五场　内景 · 病房展厅　午夜",
-    "subtitle": "第二周剧本 · 第5场",
+    "subtitle": "第一幕 · 入馆与规则（金手指阶段）",
     "location": "第五场　内景 · 病房展厅　午夜",
     "returnToMap": true,
     "flag": "scene05Seen",
@@ -264,7 +264,7 @@
   "scene-06": {
     "id": "scene-06",
     "title": "第六场　内景 · 博物馆大厅　午夜",
-    "subtitle": "第二周剧本 · 第6场",
+    "subtitle": "第二幕 · 馆长与规则矛盾",
     "location": "第六场　内景 · 博物馆大厅　午夜",
     "returnToMap": true,
     "flag": "scene06Seen",
@@ -298,7 +298,7 @@
   "scene-07": {
     "id": "scene-07",
     "title": "第七场　内景 · 馆长办公室门口　午夜",
-    "subtitle": "第二周剧本 · 第7场",
+    "subtitle": "第二幕 · 馆长与规则矛盾",
     "location": "第七场　内景 · 馆长办公室门口　午夜",
     "returnToMap": true,
     "flag": "scene07Seen",
@@ -360,7 +360,7 @@
   "scene-08": {
     "id": "scene-08",
     "title": "第八场　内景 · 馆长办公室　午夜",
-    "subtitle": "第二周剧本 · 第8场",
+    "subtitle": "第二幕 · 馆长与规则矛盾",
     "location": "第八场　内景 · 馆长办公室　午夜",
     "returnToMap": true,
     "flag": "scene08Seen",
@@ -486,7 +486,7 @@
   "scene-09": {
     "id": "scene-09",
     "title": "第九场　内景 · 馆长办公室门口　午夜",
-    "subtitle": "第二周剧本 · 第9场",
+    "subtitle": "第二幕 · 馆长与规则矛盾",
     "location": "第九场　内景 · 馆长办公室门口　午夜",
     "returnToMap": true,
     "flag": "scene09Seen",
@@ -580,7 +580,7 @@
   "scene-10": {
     "id": "scene-10",
     "title": "第十场　内景 · 员工宿舍　夜",
-    "subtitle": "第二周剧本 · 第10场",
+    "subtitle": "第三幕 · 禁忌与梦境",
     "location": "第十场　内景 · 员工宿舍　夜",
     "returnToMap": true,
     "flag": "scene10Seen",
@@ -594,7 +594,7 @@
   "scene-11": {
     "id": "scene-11",
     "title": "第十一场　内景 · 宿舍 → 各处　夜",
-    "subtitle": "第二周剧本 · 第11场",
+    "subtitle": "第三幕 · 禁忌与梦境",
     "location": "第十一场　内景 · 宿舍 → 各处　夜",
     "returnToMap": true,
     "flag": "scene11Seen",
@@ -724,7 +724,7 @@
   "scene-12": {
     "id": "scene-12",
     "title": "第十二场　内景 · 宿舍门口走廊　夜",
-    "subtitle": "第二周剧本 · 第12场",
+    "subtitle": "第四幕 · 蜡像馆",
     "location": "第十二场　内景 · 宿舍门口走廊　夜",
     "returnToMap": true,
     "flag": "scene12Seen",
@@ -770,7 +770,7 @@
   "scene-13": {
     "id": "scene-13",
     "title": "第十三场　内景 · 蜡像馆　夜",
-    "subtitle": "第二周剧本 · 第13场",
+    "subtitle": "第四幕 · 蜡像馆",
     "location": "第十三场　内景 · 蜡像馆　夜",
     "returnToMap": true,
     "flag": "scene13Seen",
@@ -800,7 +800,7 @@
   "scene-14": {
     "id": "scene-14",
     "title": "第十四场　内景 · 蜡像馆　夜",
-    "subtitle": "第二周剧本 · 第14场",
+    "subtitle": "第四幕 · 蜡像馆",
     "location": "第十四场　内景 · 蜡像馆　夜",
     "returnToMap": true,
     "flag": "scene14Seen",
@@ -838,7 +838,7 @@
   "scene-15": {
     "id": "scene-15",
     "title": "第十五场　内景 · 馆长办公室　夜",
-    "subtitle": "第二周剧本 · 第15场",
+    "subtitle": "第五幕 · 录像与红制服",
     "location": "第十五场　内景 · 馆长办公室　夜",
     "returnToMap": true,
     "flag": "scene15Seen",
@@ -924,7 +924,7 @@
   "scene-16": {
     "id": "scene-16",
     "title": "第十六场　内景 · 博物馆走廊　夜",
-    "subtitle": "第二周剧本 · 第16场",
+    "subtitle": "第六幕 · 银色的恋人与小女孩",
     "location": "第十六场　内景 · 博物馆走廊　夜",
     "returnToMap": true,
     "flag": "scene16Seen",
@@ -998,7 +998,7 @@
   "scene-17": {
     "id": "scene-17",
     "title": "第十七场　内景 · 展厅外　夜",
-    "subtitle": "第二周剧本 · 第17场",
+    "subtitle": "第六幕 · 银色的恋人与小女孩",
     "location": "第十七场　内景 · 展厅外　夜",
     "returnToMap": true,
     "flag": "scene17Seen",
@@ -1052,7 +1052,7 @@
   "scene-18": {
     "id": "scene-18",
     "title": "第十八场　内景 · 展厅 → 食堂铁门前　夜",
-    "subtitle": "第二周剧本 · 第18场",
+    "subtitle": "第六幕 · 银色的恋人与小女孩",
     "location": "第十八场　内景 · 展厅 → 食堂铁门前　夜",
     "returnToMap": true,
     "flag": "scene18Seen",
@@ -1074,7 +1074,7 @@
   "scene-19": {
     "id": "scene-19",
     "title": "第十九场　内景 · 食堂内部（彩带世界）　夜",
-    "subtitle": "第二周剧本 · 第19场",
+    "subtitle": "第七幕 · 梦中的神灵",
     "location": "第十九场　内景 · 食堂内部（彩带世界）　夜",
     "returnToMap": true,
     "flag": "scene19Seen",
@@ -1100,7 +1100,7 @@
   "scene-20": {
     "id": "scene-20",
     "title": "第二十场　内景 · 彩带世界　夜",
-    "subtitle": "第二周剧本 · 第20场",
+    "subtitle": "第七幕 · 梦中的神灵",
     "location": "第二十场　内景 · 彩带世界　夜",
     "returnToMap": true,
     "flag": "scene20Seen",
@@ -1166,7 +1166,7 @@
   "scene-21": {
     "id": "scene-21",
     "title": "第二十一场　内景 · 彩带世界　夜",
-    "subtitle": "第二周剧本 · 第21场",
+    "subtitle": "第七幕 · 梦中的神灵",
     "location": "第二十一场　内景 · 彩带世界　夜",
     "returnToMap": true,
     "flag": "scene21Seen",
@@ -1200,7 +1200,7 @@
   "scene-22": {
     "id": "scene-22",
     "title": "第二十二场　内景 · 馆长办公室　夜",
-    "subtitle": "第二周剧本 · 第22场",
+    "subtitle": "第八幕 · 张明诚与赵灵",
     "location": "第二十二场　内景 · 馆长办公室　夜",
     "returnToMap": true,
     "flag": "scene22Seen",
@@ -1250,7 +1250,7 @@
   "scene-23": {
     "id": "scene-23",
     "title": "第二十三场　内景 · 员工宿舍 · 红色制服　夜",
-    "subtitle": "第二周剧本 · 第23场",
+    "subtitle": "第八幕 · 张明诚与赵灵",
     "location": "第二十三场　内景 · 员工宿舍 · 红色制服　夜",
     "returnToMap": true,
     "flag": "scene23Seen",
@@ -1292,7 +1292,7 @@
   "scene-24": {
     "id": "scene-24",
     "title": "第二十四场　内景 · 博物馆走廊（巡逻）　夜",
-    "subtitle": "第二周剧本 · 第24场",
+    "subtitle": "第八幕 · 张明诚与赵灵",
     "location": "第二十四场　内景 · 博物馆走廊（巡逻）　夜",
     "returnToMap": true,
     "flag": "scene24Seen",
@@ -1382,7 +1382,7 @@
   "scene-25": {
     "id": "scene-25",
     "title": "第二十五场　内景 · 员工宿舍门　午夜前",
-    "subtitle": "第二周剧本 · 第25场",
+    "subtitle": "第九幕 · 博物馆之夜",
     "location": "第二十五场　内景 · 员工宿舍门　午夜前",
     "returnToMap": true,
     "flag": "scene25Seen",
@@ -1404,7 +1404,7 @@
   "scene-26": {
     "id": "scene-26",
     "title": "第二十六场　内景/外景 · 食堂 → 蜡像馆（反复穿越）　夜",
-    "subtitle": "第二周剧本 · 第26场",
+    "subtitle": "第九幕 · 博物馆之夜",
     "location": "第二十六场　内景/外景 · 食堂 → 蜡像馆（反复穿越）　夜",
     "returnToMap": true,
     "flag": "scene26Seen",
@@ -1430,7 +1430,7 @@
   "scene-27": {
     "id": "scene-27",
     "title": "第二十七场　内景 · 食堂前方　夜",
-    "subtitle": "第二周剧本 · 第27场",
+    "subtitle": "第十幕 · 最终选择",
     "location": "第二十七场　内景 · 食堂前方　夜",
     "returnToMap": true,
     "flag": "scene27Seen",
@@ -1464,7 +1464,7 @@
   "scene-28": {
     "id": "scene-28",
     "title": "第二十八场　内景 · 出口前（决战）　夜",
-    "subtitle": "第二周剧本 · 第28场",
+    "subtitle": "第十幕 · 最终选择",
     "location": "第二十八场　内景 · 出口前（决战）　夜",
     "returnToMap": true,
     "flag": "scene28Seen",
@@ -1494,7 +1494,7 @@
   "scene-29": {
     "id": "scene-29",
     "title": "第二十九场　内景 · 出口前（最终抉择）　夜",
-    "subtitle": "第二周剧本 · 第29场",
+    "subtitle": "第十幕 · 最终选择",
     "location": "第二十九场　内景 · 出口前（最终抉择）　夜",
     "returnToMap": true,
     "flag": "scene29Seen",

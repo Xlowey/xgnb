@@ -255,7 +255,9 @@
   }
 
   function displayLocation(value) {
-    return String(value || currentScene.title || "剧情").replace(/第二周剧本\s*[·・]?\s*/g, "").trim();
+    // 原来这里会剥掉「第二周剧本 · 」前缀——那是剧本还按「周」组织时留下的代码标签。
+    // 2026-09-19 起数据里已无这个字符串（副标题改成 009 的幕名），剥离逻辑随之删除。
+    return String(value || currentScene.title || "剧情").trim();
   }
 
   function showToast(message) {
