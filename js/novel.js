@@ -360,8 +360,8 @@
       unlockAchievement("blood-note", false);
     }
     if (currentSceneId === "scene-04") unlockAchievement("corridor-meeting", false);
-    if (/^scene-09-[a-d]$/.test(currentSceneId)) unlockAchievement("director-talk", false);
-    if (currentSceneId === "scene-17") unlockAchievement("diary-reader", false);
+    if (/^scene-08-[a-d]$/.test(currentSceneId)) unlockAchievement("director-talk", false);
+    if (currentSceneId === "scene-15-diary") unlockAchievement("diary-reader", false);
     syncAchievementProgress();
     // 012 §4.2：一场结束就结算里程碑（每日存活、以及挂在场次旗标上的成就条件）。
     // 放在函数最后——上面各分支写的旗标这一轮扫描就都看得到。settle 是幂等的。

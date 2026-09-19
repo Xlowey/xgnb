@@ -6,6 +6,66 @@
   var SLOTS_PREFIX = "museum_save_v5_slots_";
   var CHECKPOINT_PREFIX = "museum_save_v5_checkpoint_";
   var READ_PREFIX = "museum_read_v1_";
+  var COLLECTION_PREFIX = "museum_collection_v1_";
+  var migratedCollections = Object.create(null);
+
+  // Account collection survives loading an earlier slot and starting a new game.
+  // Never merge money, inventory, story flags or the current ending into it.
+  function syncCollection(state, userId) {
+    if (!userId || userId === "class-preview") return true;
+    var collection = { achievements: [], achievementRecords: {}, endingHistory: [] };
+    function merge(source) {
+      if (!source || typeof source !== "object") return;
+      ["achievements", "endingHistory"].forEach(function (key) {
+        (Array.isArray(source[key]) ? source[key] : []).forEach(function (id) {
+          if (typeof id === "string" && id && collection[key].indexOf(id) < 0 &&
+              (key !== "endingHistory" || /^ending-[a-e]$/.test(id))) collection[key].push(id);
+        });
+      });
+      var records = source.achievementRecords || {};
+      Object.keys(records).forEach(function (id) {
+        if (id === "__proto__" || id === "constructor" || id === "prototype") return;
+        var record = records[id]; if (!record || typeof record !== "object") return;
+        var old = collection.achievementRecords[id] || { progress: 0, unlockedAt: null };
+        var progress = Number(record.progress);
+        old.progress = Math.max(old.progress, Number.isFinite(progress) ? Math.max(0, Math.floor(progress)) : 0);
+        if (typeof record.unlockedAt === "string" && Number.isFinite(Date.parse(record.unlockedAt)) &&
+            (!old.unlockedAt || Date.parse(record.unlockedAt) < Date.parse(old.unlockedAt))) old.unlockedAt = record.unlockedAt;
+        collection.achievementRecords[id] = old;
+      });
+      // Repair achievements missed after the script's scene renumbering.
+      var flags = source.flags || {};
+      if (["a", "b", "c", "d"].some(function (branch) { return flags["completed:scene-08-" + branch]; })) merge({ achievements: ["director-talk"] });
+      if (flags["completed:scene-15-diary"]) merge({ achievements: ["diary-reader"] });
+      if (source.endingComplete && /^ending-[a-e]$/.test(source.ending)) merge({ endingHistory: [source.ending] });
+    }
+    try {
+      var previous = localStorage.getItem(userKey(COLLECTION_PREFIX, userId));
+      merge(parse(previous, null));
+      // Also recover records from existing slots before an old save can overwrite them.
+      if (!migratedCollections[userId]) {
+      [AUTO_PREFIX, CHECKPOINT_PREFIX].concat(LEGACY_PREFIXES).forEach(function (prefix) {
+        merge(parse(localStorage.getItem(userKey(prefix, userId)), null));
+      });
+      [SLOTS_PREFIX].concat(LEGACY_SLOT_PREFIXES).forEach(function (prefix) {
+        var slots = parse(localStorage.getItem(userKey(prefix, userId)), []);
+        if (Array.isArray(slots)) slots.forEach(function (entry) { if (entry) merge(entry.state); });
+      });
+      }
+      merge(state);
+      if (collection.endingHistory.length) {
+        merge({ achievements: ["first-ending"], achievementRecords: { "ending-collector": { progress: collection.endingHistory.length } } });
+        if (collection.endingHistory.length === 5) merge({ achievements: ["ending-collector"] });
+      }
+      var raw = JSON.stringify(collection);
+      if (raw !== previous && !write(userKey(COLLECTION_PREFIX, userId), raw)) return false;
+      migratedCollections[userId] = true;
+      state.achievements = collection.achievements;
+      state.achievementRecords = collection.achievementRecords;
+      state.endingHistory = collection.endingHistory;
+      return true;
+    } catch (error) { console.warn("账号收集记录保存失败。", error); return false; }
+  }
   var LEGACY_PREFIXES = ["museum_save_v4_auto_", "museum_save_v3_auto_", "museum_save_v2_auto_", "museum_save_v1_"];
   var LEGACY_SLOT_PREFIXES = ["museum_save_v4_slots_", "museum_save_v3_slots_", "museum_save_v2_slots_", "museum_save_v1_slots_"];
   var DEFAULT_FLAGS = {
@@ -103,6 +163,7 @@
   function createState(user) {
     var state = clone(DEFAULT_STATE);
     if (user) { state.userId = user.id; state.playerName = user.username; }
+    syncCollection(state, state.userId);
     return state;
   }
   function hydrate(loaded, userId) {
@@ -164,6 +225,7 @@
     if (loaded.currentNode && !loaded.roomId) state.roomId = loaded.currentNode;
     if (!Number.isFinite(state.playerX)) state.playerX = state.roomId === "hall" ? 260 : 300;
     if (!Number.isFinite(state.playerY)) state.playerY = state.roomId === "dorm" ? 520 : 460;
+    syncCollection(state, userId);
     return state;
   }
   function parse(raw, fallback) {
@@ -232,6 +294,7 @@
 
   function save(state, userId) {
     var id = userId || state.userId; if (!id) return false;
+    if (!syncCollection(state, id)) return false;
     var data = snapshot(state, id); if (!write(userKey(AUTO_PREFIX, id), JSON.stringify(data))) return false;
     state.savedAt = data.savedAt;
     // 每一次写入都推进修订号，别处才能发现"这个存档变了"；并把本页基线前移。
@@ -285,6 +348,7 @@
   }
   function saveSlot(state, userId, slotIndex) {
     if (!userId || slotIndex < 0 || slotIndex >= SLOT_LIMIT) return null;
+    if (!syncCollection(state, userId)) return null;
     var slots = readSlots(userId); var data = snapshot(state, userId); slots[slotIndex] = { savedAt: data.savedAt, state: data };
     var dataRaw = JSON.stringify(slots); if (!write(userKey(SLOTS_PREFIX, userId), dataRaw)) return null;
     save(state, userId); return clone(slots[slotIndex]);
@@ -292,6 +356,7 @@
   function loadSlot(userId, slotIndex) { var entry = userId && slotIndex >= 0 && slotIndex < SLOT_LIMIT ? readSlots(userId)[slotIndex] : null; return entry ? hydrate(entry.state, userId) : null; }
   function saveCheckpoint(state, userId, meta) {
     var id = userId || state.userId; if (!id) return false;
+    if (!syncCollection(state, id)) return false;
     var data = snapshot(state, id); data.checkpoint = Object.assign({}, meta || {}, { savedAt: data.savedAt });
     if (!write(userKey(CHECKPOINT_PREFIX, id), JSON.stringify(data))) return false;
     state.checkpoint = data.checkpoint; return clone(data);
