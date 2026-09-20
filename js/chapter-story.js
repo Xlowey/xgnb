@@ -5,7 +5,7 @@
   var hospital="病房场景黑夜版.webp";
   scenes["scene-05"].events=[{type:"investigate",background:"病房场景黑夜版（电视机关闭）.webp",title:"调查病房展厅",key:"hospital",intro:"病房里只有一张床和一台老电视。点击画面中的标记调查。",hotspots:[
     {id:"bed",label:"调查病床",afterLabel:"病床已调查",x:26,y:70,text:"床单下空无一物。床架内侧有几道很深的抓痕，像是有人被按在这里挣扎过。"},
-    {id:"tv",label:"打开电视",afterLabel:"查看录像",x:86,y:71,text:"电视自己亮了。屏幕上是一段夜间监控录像。",background:hospital,video:"rabbits-recording.webp",videoLabel:"病房电视录像",videoCaption:"录像 · 巨型兔子在城市中横冲直撞"}
+    {id:"tv",label:"打开电视",afterLabel:"查看录像",x:86,y:71,text:"电视自己亮了。屏幕上是一段夜间监控录像。",background:hospital,video:"hospital-resuscitation.webp",videoLabel:"病房电视录像",videoCaption:"录像 · 老人弥留，医生与儿子"}
   ],action:"继续剧情"},{type:"cg",background:"hospital-resuscitation.webp",action:"继续",label:"录像画面 · 病房急救"}].concat(scenes["scene-05"].lines.map(function(l){return dialogue(l,/（录像）/.test(l.speaker)?"病房电视机.webp":hospital);}));
   // 剧情播放器只引用剧情背景；地图由探索页和地图数据单独加载。
   var backgrounds={"scene-04":null,"scene-06":null,"scene-07":"食堂走廊背景.webp","scene-08":null,"scene-08-a":null,"scene-08-b":null,"scene-08-c":null};
@@ -64,14 +64,20 @@
   }
   // 本轮新到的 CG 按场次接入。视频只是开场演出，正文仍由原对白数据推进。
   prependVideos("scene-01", [{video:"CG1：桃树梦中惊醒.mp4",label:"CG · 桃树梦中惊醒"}]);
-  prependVideos("scene-08", [{video:"CG9.1.mp4",label:"CG · 馆长办公室"}]);
+  // CG9.1.mp4 原本挂在第八场（馆长办公室）开场，2026-09-20 摘除——它不该在这里。
+  // 素材仍在 assets/video/cg/CG9.1.mp4，asset-paths.js 的映射也保留；
+  // 待确认它真正属于哪一场后再改挂，不要凭空挑一个位置塞回去。
   // CG10.1.mp4 原本挂在这场，但画面是「红色食堂 + 梦魇台词『我说过，你走不了』」，
   // 与第九场（办公室门口的阴暗角落 / 赵灵与小女孩）内容不符，2026-09-17 摘除。
   // 素材仍在 assets/video/cg/CG10.1.mp4，若确认属于「食堂前方 · 梦魇拦路」那几场，可改挂到 scene-27 / scene-28。
-  prependVideos("scene-11-after", [
-    {video:"CG11.mp4",label:"CG · 禁忌失控"},
-    {video:"CG11.2.mp4",label:"CG · 蜡像馆异象"}
-  ]);
+  // 旧电视：只有玩家走到宿舍地图的「旧电视」（dorm-terminal）主动打开，才播兔子录像。
+  // 2026-09-20 从 scene-03 末尾移过来——它原本是纸条流程的最后一步，等于"在柜子里"就播了。
+  // scene-03-tv 自带 2 行录像旁白，chapter-finalize.js 会把它克隆成 terminal。
+  prepend("scene-03-tv", [{type:"television", action:"打开电视"}]);
+  // CG11.mp4 / CG11.2.mp4 原本挂在「追逐与逼问」战斗后的 scene-11-after 开场，
+  // 2026-09-20 两段一并摘除——它们不该出现在这段里。
+  // 素材仍在 assets/video/cg/，asset-paths.js 的映射保留；待确认真正归属后再改挂。
+  // 注意：guard-after-battle 由 chapter-finalize.js 从 scene-11-after 克隆，会自动跟着生效。
   prepend("scene-13",[{type:"cg",background:"床头柜.webp",action:"查看展台"},{type:"cg",background:"张明诚展台.webp",action:"继续"}]);
   prepend("scene-14",[{type:"cg",background:"赵灵展厅.webp",action:"继续"},{type:"cg",background:"赵灵展厅（含人物）.webp",action:"继续"}]);
   prepend("scene-22",[itemEvent("入职申请表.webp")]);
