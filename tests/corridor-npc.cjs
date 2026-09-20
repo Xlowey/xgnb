@@ -31,7 +31,7 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
   // state back and undo the seed).
   const seed = async (room, x, y, flags) => {
     const shelter = await ctx.newPage();
-    await shelter.goto('http://127.0.0.1:8839/pages/saves.html');
+    await shelter.goto('http://127.0.0.1:8839/index.html');
     await shelter.evaluate(({ room, x, y, flags }) => {
       localStorage.clear();
       const u = MuseumAuth.register('走廊', 'x').user;

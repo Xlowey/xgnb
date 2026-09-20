@@ -70,7 +70,10 @@
     player.setAttribute("aria-label", opts.label || "剧情动画");
     var footer = node("div", "video-cg-footer");
     var hint = node("span", "video-cg-hint", "动画播放中 · 可用控件打开声音");
-    var skip = button("跳过动画", finish, "video-cg-skip");
+    var skip = button("跳过动画", function () {
+      if (finished) hooks.advance();
+      else finish();
+    }, "video-cg-skip");
     footer.appendChild(hint); footer.appendChild(skip);
     videoEvent.appendChild(title); videoEvent.appendChild(player); videoEvent.appendChild(footer);
     root.appendChild(videoEvent);

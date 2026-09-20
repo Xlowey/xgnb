@@ -1,0 +1,13 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const c={window:{MuseumItems:{}},Image:function(){},console};vm.createContext(c);
+for(const n of ['map-data','map-art','chapter-maps','map-layout']) vm.runInContext(fs.readFileSync('js/'+n+'.js','utf8'),c);
+const w=c.window, rooms=w.MuseumMapData.create();w.MuseumMapArt(rooms);w.MuseumChapterMaps(rooms);
+const api=w.MuseumMapLayout,before=JSON.stringify(rooms),snapshot=api.capture(rooms);
+assert(api.apply(rooms,snapshot));assert.equal(JSON.stringify(rooms),before);
+const objects=JSON.stringify(rooms.dorm.objects),colliders=JSON.stringify(rooms.dorm.colliders);
+assert(api.apply(rooms,{dorm:{spawn:{x:300,y:400}}}));
+assert.equal(JSON.stringify(rooms.dorm.objects),objects);assert.equal(JSON.stringify(rooms.dorm.colliders),colliders);
+assert(api.apply(rooms,{dorm:{walkable:[]}}));assert.equal(rooms.dorm.walkable,undefined);
+for(const bad of [{dorm:{colliders:[null]}},{dorm:{spawn:{x:'bad',y:0}}},{dorm:{objects:null}},JSON.parse('{"__proto__":{}}'),{version:2,rooms:{dorm:{}}}]) assert.equal(api.normalize(bad),null);
+assert.equal(api.apply(rooms,{unknown:{spawn:{x:1,y:2}}}),false);
+console.log('PASS all eight map layouts round-trip without changing geometry; partial patches preserve interactions; empty floor regions remain movable; malformed imports rejected');
