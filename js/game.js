@@ -270,7 +270,7 @@
   }
 
   function switchRoomAt(id, entry) {
-    var point = entry || {};
+    var point = window.MuseumTransition.resolveEntry(state,id,entry,rooms);
     return switchRoom(id, Number.isFinite(point.x) ? point.x : undefined, Number.isFinite(point.y) ? point.y : undefined, point.facing);
   }
 
@@ -421,6 +421,10 @@
       if (object.requiredFlag && !state.flags[object.requiredFlag]) {
         showToast("这条通路还没有开放。先完成前面的调查。");
         return;
+      }
+      if(object.gateFlag){
+        if(!window.MuseumState.sceneCompleted(state,object.scene)){startNovel(object.scene);return;}
+        if(!state.flags[object.gateFlag]){showToast("铁门暂时无法通行，先完成当前调查。");return;}
       }
       switchRoomAt(object.target, object.entry);
       // 走廊那段剧情（scene-04）不再在走出宿舍门时自动播放：剧本里它是赵灵的自我

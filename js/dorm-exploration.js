@@ -1,24 +1,11 @@
 (function () {
   "use strict";
-  var W = 1670, H = 942, STEP = 26, RADIUS = 15;
-  // Coordinates refer to the original artwork. Only the character's feet collide.
-  var walls = [[0,0,1670,290],[0,0,42,942],[1625,0,45,942],
-    [0,850,742,92],[925,850,745,92],[742,913,183,29],
-    [45,330,165,520],[165,290,325,145],[580,285,210,76],
-    [1200,290,265,225],[1190,485,90,80],[1290,475,140,122],[1440,545,185,310]];
-  var objects = [
-    {id:"tv",name:"电视",text:"盖着红布的电视。",x:685,y:395,mark:[680,275],crop:[570,175,240,220]},
-    {id:"dvd",name:"影碟机",text:"一台影碟机。",x:1395,y:625,mark:[1540,600],crop:[1430,530,205,175]},
-    {id:"desk",name:"木桌",text:"木桌上有被啃食的痕迹。",x:380,y:472,mark:[320,320],crop:[165,175,330,275]},
-    {id:"bed",name:"床底",text:"床底好像有异响。",x:1155,y:465,mark:[1220,460],crop:[1180,360,300,220]},
-    {id:"wardrobe",name:"更衣柜",x:252,y:625,mark:[155,605]}
-  ];
-  function blocked(x,y) {
-    return x<RADIUS || y<RADIUS || x>W-RADIUS || y>H-RADIUS || walls.some(function(b){
-      return x+RADIUS>b[0] && x-RADIUS<b[0]+b[2] && y+RADIUS>b[1] && y-RADIUS<b[1]+b[3];
-    });
-  }
   function mount(root, hooks, inspect) {
+    var config=window.MuseumInteractionMaps.resolve("dorm-intro");
+    var W=config.width,H=config.height,STEP=26,RADIUS=config.radius;
+    var objects=config.objects.map(function(o){return Object.assign({},o,{name:o.label || o.name,mark:[o.x,o.y],x:o.approach?o.approach.x:o.x,y:o.approach?o.approach.y:o.y});});
+    function blocked(x,y){return window.MuseumInteractionMaps.blocked(config,x,y);}
+
     var map=document.createElement("div"); map.className="investigation-map";
     map.tabIndex=0; map.setAttribute("role","group"); map.setAttribute("aria-label","员工宿舍。方向键或 WASD 移动，按住 Shift 可 1.5 倍疾跑，走近物品后按 E 调查，也可点击地面移动。");
     var img=document.createElement("img"); img.src=window.MuseumAssets.url("dorm-map.webp","maps"); img.alt="员工宿舍"; img.draggable=false; map.appendChild(img);
@@ -26,7 +13,7 @@
     var ctx=canvas.getContext("2d"), keys={}, route=[], closest=null, destroyed=false, frame, last=0, moving=false, facing="down", travelled=0;
     var saved=hooks.state.flags.dormExplorationPosition;
     if(saved && ["up","down","left","right"].includes(saved.facing))facing=saved.facing;
-    var player=saved && Number.isFinite(saved.x) && Number.isFinite(saved.y) && !blocked(saved.x,saved.y)?{x:saved.x,y:saved.y}:{x:835,y:745};
+    var player=saved && Number.isFinite(saved.x) && Number.isFinite(saved.y) && !blocked(saved.x,saved.y)?{x:saved.x,y:saved.y}:{x:config.spawn.x,y:config.spawn.y};
     var hint=document.createElement("p");hint.className="investigation-hint";hint.id="investigation-hint";hint.setAttribute("aria-live","polite");
     var action=document.createElement("button");action.type="button";action.className="nearby-investigation";action.hidden=true;
     var pins=[];
@@ -40,7 +27,7 @@
     function saveBeforeLeave(){stop();remember();hooks.save();}
     function distance(o){return Math.hypot(player.x-o.x,player.y-o.y);}
     function update(){
-      closest=objects.filter(function(o){return enabled(o)&&distance(o)<115;}).sort(function(a,b){return distance(a)-distance(b);})[0] || null;
+      closest=objects.filter(function(o){return enabled(o)&&distance(o)<(o.r || 115);}).sort(function(a,b){return distance(a)-distance(b);})[0] || null;
       pins.forEach(function(pin,i){var o=objects[i];pin.hidden=!enabled(o);pin.classList.toggle("is-near",o===closest);pin.classList.toggle("is-distant",!!closest&&o!==closest);pin.classList.toggle("is-examined",!!hooks.state.flags["examined-"+o.id]);});
       action.hidden=!closest;
       if(closest){action.textContent="E · "+(closest.id==="wardrobe"?"打开":"调查")+closest.name;action.style.left=(player.x/W*100)+"%";action.style.top=((player.y+25)/H*100)+"%";}
@@ -63,6 +50,7 @@
         var px=gx*STEP+STEP/2,py=gy*STEP+STEP/2;
         if(!blocked(px,py))cells.push({id:gy*cols+gx,x:px,y:py});
       }
+      if(!cells.length)return;
       function nearest(px,py){return cells.reduce(function(a,b){return Math.hypot(b.x-px,b.y-py)<Math.hypot(a.x-px,a.y-py)?b:a;});}
       var start=nearest(player.x,player.y),end=nearest(x,y), allowed=new Map(cells.map(function(c){return [c.id,c];})),prev=new Map([[start.id,null]]),queue=[start.id],found=false;
       for(var qi=0;qi<queue.length;qi++){

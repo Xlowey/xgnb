@@ -4,7 +4,7 @@
 <body>
 <header><h1>地图标注工具</h1><span id="dirty">已保存</span><button id="save">保存到本机</button><button id="export-room">导出当前地图</button><button id="export">导出全部地图 JSON</button><button id="publish">导出项目配置</button><label class="button">导入 JSON<input id="import" type="file" accept=".json" hidden></label><a href="../index.html" target="_blank" rel="noopener">打开游戏 ↗</a></header>
 <main>
-<aside><label>当前地图<select id="room"></select></label><p class="hint">编辑正式探索的 8 张地图。第二场剧情播放器内的宿舍调查是独立场景，不使用这份配置。</p>
+<aside><label>当前地图<select id="room"></select></label><p class="hint">统一编辑正式探索、开场宿舍和病房定点调查。下拉列表注明使用阶段；不同阶段的交互分别保存。</p>
 <fieldset><legend>工具</legend><div id="tools"><button data-tool="select" aria-pressed="true">选择 / 拖动</button><button data-tool="colliders">画碰撞区域</button><button data-tool="walkable">画可走区域</button><button data-tool="spawn">设置出生点</button><button data-tool="travel">添加出口</button><button data-tool="scene">添加剧情点</button><button data-tool="test">试玩碰撞</button></div></fieldset>
 <div class="row"><button id="undo">撤销</button><button id="redo">重做</button><button id="delete">删除选中</button></div>
 <fieldset><legend>显示图层</legend><label><input type="checkbox" id="show-colliders" checked> 红色碰撞区域</label><label><input type="checkbox" id="show-walkable" checked> 绿色可走区域</label><label><input type="checkbox" id="show-objects" checked> 黄色交互点与范围</label></fieldset>
@@ -16,5 +16,5 @@
 <details><summary>怎样保存到项目</summary><p>本机保存只影响当前浏览器和网址。file 与 HTTP 的存储可能不共享，推荐用同一静态服务打开编辑器与游戏。</p><p>导出项目配置后，将下载的 <b>map-layout-data.js</b> 放到项目 <b>js</b> 文件夹，替换同名文件，再刷新游戏。导出的配置优先于原始数据；本机覆盖又优先于项目配置。</p><p>JSON 用于备份和继续编辑。修改出口只改变该出口，反向出口需分别检查。试玩不触发剧情、不写入玩家存档。</p></details>
 </aside>
 </main>
-<script src="../js/asset-paths.js"></script><script src="../js/lazy-image.js"></script><script src="../js/map-data.js"></script><script src="../js/map-art.js"></script><script src="../js/chapter-maps.js"></script><script src="../js/scene-transition.js"></script><script src="../js/novel-data.js"></script><script src="../js/map-layout-data.js"></script><script src="../js/map-layout.js"></script><script src="../js/map-editor.js"></script>
+<script src="../js/asset-paths.js"></script><script src="../js/lazy-image.js"></script><script src="../js/map-data.js"></script><script src="../js/map-art.js"></script><script src="../js/chapter-maps.js"></script><script src="../js/scene-transition.js"></script><script src="../js/novel-data.js"></script><script src="../js/map-layout-data.js"></script><script src="../js/map-layout.js"></script><script src="../js/interaction-maps.js"></script><script src="../js/map-editor.js"></script>
 </body></html>

@@ -9,7 +9,7 @@
     function travel(id,label,x,y,target){return {id:id,label:label,x:x,y:y,r:75,type:"travel",target:target};}
     // 009 删掉了「教室展厅」一场，房间与地图节点一并移除（2026-09-17）。
     rooms.canteenPassage={id:"canteenPassage",title:"食堂门前走廊",chapter:"第一幕",width:1508,height:1043,spawn:{x:755,y:880},cameraZoom:1.15,art:art("食堂走廊地图.webp"),colliders:[],walkable:[{x:635,y:205,w:245,h:715},{x:720,y:880,w:80,h:105}],objects:[
-      {id:"canteen-door-story",type:"scene",scene:"scene-07",requiredFlag:"scene06Seen",label:"食堂铁门",x:755,y:240,r:75},travel("canteen-return","返回馆内",755,950,"museum")
+      {id:"canteen-door-story",type:"travel",target:"canteen",gateFlag:"scene11Seen",scene:"scene-07",requiredFlag:"scene06Seen",label:"食堂铁门",x:755,y:240,r:75},travel("canteen-return","返回馆内",755,950,"museum")
     ]};
     rooms.canteen={id:"canteen",title:"食堂",chapter:"馆内探索",width:1508,height:1043,spawn:{x:750,y:825},cameraZoom:1,art:art("食堂地图.webp"),
       walkable:[{x:180,y:335,w:1130,h:530},{x:660,y:825,w:145,h:150}],
@@ -18,7 +18,6 @@
         {id:"canteen-ribbons",type:"scene",scene:"scene-19",requiredFlag:"scene18Seen",label:"彩带世界",x:750,y:600,r:75}
       ]};
     [390,515,640,765].forEach(function(y){[300,875].forEach(function(x){rooms.canteen.colliders.push({x:x,y:y,w:290,h:95});});});
-    rooms.canteenPassage.objects.push(Object.assign(travel("canteen-enter","进入食堂",755,310,"canteen"),{requiredFlag:"scene11Seen",entry:{x:750,y:825}}));
     function change(id,props){Object.values(rooms).forEach(function(r){r.objects.forEach(function(o){if(o.id===id)Object.assign(o,props);});});}
     change("overview-canteen",{type:"travel",target:"canteenPassage"});
     // 大厅里原本有通往食堂走廊 / 馆长办公室的两个门形节点，2026-09-17 作为「悬空交互点」删除；
@@ -32,7 +31,7 @@
     // the map-art.js rule that the player walks the corridor both ways.  There is
     // deliberately no second gate to the corridor, because two gates with the same
     // target make the minimap highlight whichever one happens to be listed first.
-    change("overview-dorm",{label:"员工宿舍 · 经走廊",target:"corridor",entry:{x:1040,y:400}});
+    change("overview-dorm",{label:"员工宿舍 · 经走廊",target:"corridor",entry:{x:1600,y:420}});
     rooms.museum.objects=rooms.museum.objects.filter(function(o){return o.id!=="overview-corridor";});
     change("corridor-dorm",{entry:{x:835,y:800}});
     change("dorm-scene-11",{x:835,y:795});

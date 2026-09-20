@@ -78,7 +78,7 @@
       return room.objects !== undefined && (!Array.isArray(room.objects) || room.objects.some(function (o) {
         if (!position(o) || typeof o.id !== "string" || !o.id || ids.has(o.id)) return true;
         ids.add(o.id);
-        return (o.r !== undefined && (!finite(o.r) || o.r <= 0)) || (o.entry && !position(o.entry)) || (o.approach && !position(o.approach));
+        return (o.r !== undefined && (!finite(o.r) || o.r <= 0)) || (o.entry && (!position(o.entry) || (o.entry.doorId !== undefined && (typeof o.entry.doorId !== "string" || !finite(o.entry.dx) || !finite(o.entry.dy))))) || (o.approach && !position(o.approach));
       }));
     });
     if (invalid) return null;
@@ -94,6 +94,13 @@
   function apply(rooms, payload) {
     var normalized = normalize(payload);
     if (!normalized) return false;
+    // Investigation IDs are referenced by story completion flags. Do not allow
+    // an import to remove a required step or insert an unhandled interaction.
+    if (Object.keys(normalized.rooms).some(function (id) {
+      var target=rooms && rooms[id], source=normalized.rooms[id];
+      return target && target.kind && source.objects &&
+        (source.objects.length!==target.objects.length || source.objects.some(function(o){return !target.objects.some(function(t){return t.id===o.id;});}));
+    })) return false;
     var applied = false;
     Object.keys(normalized.rooms).forEach(function (id) {
       if (!rooms || !Object.prototype.hasOwnProperty.call(rooms, id)) return;
@@ -106,7 +113,12 @@
         else delete target.walkable;
       }
       if (source.colliders) target.colliders = rects(source.colliders);
-      if (source.objects) target.objects = objects(source.objects);
+      if (source.objects) target.objects = target.kind ? target.objects.map(function(o){
+        var edited=source.objects.find(function(p){return p.id===o.id;});
+        var next=clone(o);
+        ["x","y","r","label","approach"].forEach(function(k){if(edited[k]!==undefined)next[k]=clone(edited[k]);});
+        return next;
+      }) : objects(source.objects);
       if (source.width) target.width = number(source.width, target.width);
       if (source.height) target.height = number(source.height, target.height);
       if (source.title) target.title = source.title;
@@ -132,10 +144,34 @@
     catch (error) { return false; }
   }
 
+  function connectDoors(rooms) {
+    function get(r,id){return rooms[r] && rooms[r].objects.find(function(o){return o.id===id;});}
+    if(rooms.canteenPassage){
+      var gate=get("canteenPassage","canteen-door-story"),old=get("canteenPassage","canteen-enter");
+      if(gate){Object.assign(gate,{type:"travel",target:"canteen",scene:"scene-07",requiredFlag:"scene06Seen",gateFlag:"scene11Seen"});
+        rooms.canteenPassage.objects=rooms.canteenPassage.objects.filter(function(o){return o.id!=="canteen-enter";});}
+      else if(old)Object.assign(old,{id:"canteen-door-story",scene:"scene-07",gateFlag:"scene11Seen",requiredFlag:"scene06Seen"});
+    }
+    function pair(a,ai,b,bi,ax,ay,bx,by){
+      var left=get(a,ai),right=get(b,bi);if(!left||!right)return;
+      function bind(o,door,dx,dy){if(o.entry && (o.entry.doorId || o.entry.detached))return;
+        o.entry={x:door.x+dx,y:door.y+dy,doorId:door.id,dx:dx,dy:dy,facing:dx<0?"left":dx>0?"right":dy<0?"up":"down"};}
+      bind(left,right,bx,by);bind(right,left,ax,ay);
+    }
+    pair("museum","overview-dorm","corridor","corridor-hall",0,22,-90,0);
+    pair("dorm","dorm-door","corridor","corridor-dorm",0,-60,65,0);
+    pair("museum","overview-wax","wax","wax-return",0,0,0,-10);
+    pair("museum","overview-hall","hall","hall-corridor",0,0,0,-65);
+    pair("museum","overview-office","office","office-exit",0,0,0,-65);
+    pair("museum","overview-canteen","canteenPassage","canteen-return",0,0,0,-70);
+    pair("canteenPassage","canteen-door-story","canteen","canteen-exit",0,110,0,-110);
+  }
+
   function applySaved(rooms) {
     var projectApplied = window.MuseumMapLayoutData ? apply(rooms, window.MuseumMapLayoutData) : false;
     var payload = read();
-    return payload ? apply(rooms, payload) : projectApplied;
+    var applied=payload ? apply(rooms,payload) : projectApplied;
+    connectDoors(rooms);return applied;
   }
 
   function download(payload, filename) {
@@ -148,6 +184,7 @@
   }
 
   window.MuseumMapLayout = {
+    connectDoors: connectDoors,
     KEY: KEY,
     capture: capture,
     normalize: normalize,

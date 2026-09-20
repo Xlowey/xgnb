@@ -1,0 +1,18 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const c={window:{MuseumItems:{}},Image:function(){},localStorage:{getItem:()=>null},console};vm.createContext(c);
+for(const n of ['map-data','map-art','chapter-maps','scene-transition','map-layout'])vm.runInContext(fs.readFileSync('js/'+n+'.js','utf8'),c);
+const w=c.window,r=w.MuseumMapData.create();w.MuseumMapArt(r);w.MuseumChapterMaps(r);w.MuseumMapLayout.applySaved(r);
+const get=(room,id)=>r[room].objects.find(o=>o.id===id);
+const resolve=(room,id)=>{const o=get(room,id);return w.MuseumTransition.resolveEntry({roomId:room},o.target,o.entry,r);};
+assert.equal(resolve('museum','overview-dorm').x,1600);
+assert.equal(resolve('dorm','dorm-door').x,1065);
+const before=w.MuseumMapLayout.capture(r),gate=get('museum','overview-canteen');gate.x=752;gate.y=413;
+assert.equal(resolve('canteenPassage','canteen-return').x,752);assert.equal(resolve('canteenPassage','canteen-return').y,413);
+const moved=w.MuseumMapLayout.capture(r);w.MuseumMapLayout.apply(r,before);assert.equal(resolve('canteenPassage','canteen-return').x,769);
+w.MuseumMapLayout.apply(r,JSON.parse(JSON.stringify(moved)));assert.equal(resolve('canteenPassage','canteen-return').x,752);
+const exit=get('canteenPassage','canteen-return');exit.entry={x:700,y:600,detached:true};w.MuseumMapLayout.connectDoors(r);gate.x=760;assert.equal(resolve('canteenPassage','canteen-return').x,700);
+r.canteenPassage.objects.push({id:'canteen-enter',x:755,y:310,type:'travel',target:'canteen'});w.MuseumMapLayout.connectDoors(r);
+assert.equal(r.canteenPassage.objects.filter(o=>o.target==='canteen').length,1);
+assert.equal(get('canteenPassage','canteen-door-story').gateFlag,'scene11Seen');
+assert.equal(w.MuseumMapLayout.normalize({rooms:{museum:{objects:[{id:'bad',x:1,y:1,entry:{x:1,y:1,doorId:'x',dx:'bad',dy:0}}]}}}),null);
+console.log('PASS linked return positions, separate corridor ends, undo/import roundtrip, detached landing, legacy canteen merge and invalid offsets');

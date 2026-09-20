@@ -4,6 +4,8 @@
   const $ = id => document.getElementById(id), api = window.MuseumMapLayout;
   const rooms = window.MuseumMapData.create();
   window.MuseumMapArt(rooms); window.MuseumChapterMaps(rooms);
+  Object.assign(rooms, window.MuseumInteractionMaps.create());
+  api.connectDoors(rooms);
   const original = api.capture(rooms);
   api.applySaved(rooms);
   const canvas = $('canvas'), ctx = canvas.getContext('2d'), viewport = $('viewport');
@@ -25,7 +27,12 @@
   function redo() { if (!future.length) return; history.push(snapshot()); restore(future.pop()); }
   function change(fn) { checkpoint(); fn(); renderUI(); }
   function active() { return selected && (selected.kind === 'spawn' ? room().spawn : (room()[selected.kind] || [])[selected.index]); }
-  function renderUI() { updateDirty(); renderList(); renderInspector(); draw(); }
+  function renderUI() {
+    const fixed=!!room().kind, hotspots=room().kind==='hotspots';
+    ['travel','scene'].forEach(t=>document.querySelector('[data-tool='+t+']').disabled=fixed);
+    ['spawn','colliders','walkable','test'].forEach(t=>document.querySelector('[data-tool='+t+']').disabled=hotspots);
+    $('delete').disabled=fixed&&selected&&selected.kind==='objects';
+    updateDirty(); renderList(); renderInspector(); validate(); draw(); }
   function loadArt() {
     const image=room().art;
     if (image.load) image.load();
@@ -58,19 +65,19 @@
       if(selected&&selected.kind===kind&&selected.index===i){ctx.strokeStyle='white';ctx.lineWidth=3/scale;ctx.strokeRect(a.x,a.y,a.w,a.h);ctx.fillStyle='white';ctx.fillRect(a.x+a.w-5/scale,a.y+a.h-5/scale,10/scale,10/scale);}
     });});
     if(visible('objects'))r.objects.forEach((o,i)=>{
-      ctx.beginPath();ctx.arc(o.x,o.y,o.r||48,0,Math.PI*2);ctx.strokeStyle=colors.objects+'90';ctx.lineWidth=1/scale;ctx.stroke();
+      ctx.beginPath();ctx.arc(o.approach?.x??o.x,o.approach?.y??o.y,o.r||48,0,Math.PI*2);ctx.strokeStyle=colors.objects+'90';ctx.lineWidth=1/scale;ctx.stroke();
       dot(o,selected&&selected.kind==='objects'&&selected.index===i?'white':colors.objects);
       label(o.label||o.id,o.x+9/scale,o.y-9/scale,colors.objects);
       if(o.approach){ctx.beginPath();ctx.moveTo(o.x,o.y);ctx.lineTo(o.approach.x,o.approach.y);ctx.stroke();dot(o.approach,'#caa3ff',4);}
     });
-    dot(r.spawn,colors.spawn,8);label('出生点',r.spawn.x+12/scale,r.spawn.y,colors.spawn);
-    if(testPlayer){ctx.beginPath();ctx.arc(testPlayer.x,testPlayer.y,r.id==='museum'?10:22,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#182530';ctx.lineWidth=2/scale;ctx.stroke();}
+    if(r.kind!=='hotspots'){dot(r.spawn,colors.spawn,8);label('出生点',r.spawn.x+12/scale,r.spawn.y,colors.spawn);}
+    if(testPlayer){ctx.beginPath();ctx.arc(testPlayer.x,testPlayer.y,r.radius || (r.id==='museum'?10:22),0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#182530';ctx.lineWidth=2/scale;ctx.stroke();}
     $('zoom').textContent=Math.round(scale*100)+'%';
   }
   function renderList() {
     const list=$('list');list.replaceChildren();
     function row(kind,index,text){const b=document.createElement('button');b.textContent=text;b.classList.toggle('selected',!!selected&&selected.kind===kind&&selected.index===index);b.onclick=()=>{selected={kind,index};setTool('select');renderUI();};list.append(b);}
-    row('spawn',0,'出生点');room().objects.forEach((o,i)=>row('objects',i,(o.type==='travel'?'出口 · ':'交互 · ')+(o.label||o.id)));
+    if(room().kind!=='hotspots')row('spawn',0,'出生点');room().objects.forEach((o,i)=>row('objects',i,(o.type==='travel'?'出口 · ':o.type==='scene'?'剧情事件 · ':o.type==='npc'?'人物 · ':o.type==='hotspot'?'画面热点 · ':'物件 · ')+(o.label||o.id)));
     ['colliders','walkable'].forEach(k=>(room()[k]||[]).forEach((a,i)=>row(k,i,(k==='colliders'?'碰撞 ':'可走 ')+(i+1))));
   }
   function renderInspector() {
@@ -99,23 +106,39 @@
       const p=document.createElement('p');p.textContent='类型：'+item.type+'。已有剧情条件原样保留。';root.prepend(p);
     }
     field('X','x','number',{min:0});field('Y','y','number',{min:0});
+    if(item.type==='investigation'){const hint=document.createElement('p');hint.textContent='黄点是画面标记，紫点是人物走近的位置。拖动黄点时两者一起移动；右侧可分别微调。交互半径以紫点为中心。';root.append(hint);}
+
     if(selected.kind==='colliders'||selected.kind==='walkable'){field('宽','w','number',{min:1});field('高','h','number',{min:1});}
     if(selected.kind==='objects'){
-      field('交互半径','r','number',{min:1});
+      if(item.type!=='hotspot')field('交互半径','r','number',{min:1});
       if(item.type==='travel'){
-        field('目标地图','target','text',{choices:Object.values(rooms).map(r=>[r.id,r.title]),set:v=>{item.target=v;item.entry={...rooms[v].spawn};}});
-        const entry=()=>item.entry||window.MuseumTransition.resolveEntry({roomId},item.target,null,rooms);
-        ['x','y'].forEach(k=>field('目标落点 '+k.toUpperCase(),'entry-'+k,'number',{min:0,get:()=>entry()[k],set:v=>{item.entry={...entry(),[k]:v};}}));
-        field('进入后朝向','facing','text',{choices:[['down','向下'],['up','向上'],['left','向左'],['right','向右']],get:()=>entry().facing||'down',set:v=>{item.entry={...entry(),facing:v};}});
+        field('目标地图','target','text',{choices:Object.values(rooms).filter(r=>!r.kind).map(r=>[r.id,r.title]),set:v=>{item.target=v;item.entry={...rooms[v].spawn,detached:true};}});
+        const entry=()=>window.MuseumTransition.resolveEntry({roomId},item.target,item.entry,rooms);
+        field('落点跟随目标门','doorId','text',{choices:[['','独立落点（不跟随）'],...(rooms[item.target]?.objects||[]).filter(o=>o.type==='travel').map(o=>[o.id,o.label||o.id])],get:()=>item.entry?.doorId||'',set:v=>{
+          const p=entry(),door=rooms[item.target].objects.find(o=>o.id===v);
+          item.entry=door?{...p,doorId:v,dx:p.x-door.x,dy:p.y-door.y}:{...p,detached:true};
+        }});
+        const hint=document.createElement('p');hint.textContent='下方是进入对面地图后的落点。绑定目标门时，移动那扇门会带动此落点，偏移保持不变。';root.append(hint);
+        Object.values(rooms).forEach(r=>r.objects.filter(o=>o.target===roomId&&o.entry?.doorId===item.id).forEach(o=>{
+          const p=window.MuseumTransition.resolveEntry({roomId:r.id},roomId,o.entry,rooms),b=document.createElement('button');
+          b.textContent='从'+r.title+'返回此门：'+Math.round(p.x)+', '+Math.round(p.y)+'（跟随）';
+          b.onclick=()=>{setRoom(r.id);selected={kind:'objects',index:r.objects.indexOf(o)};renderUI();};root.append(b);
+        }));
+        ['x','y'].forEach(k=>field('目标落点 '+k.toUpperCase(),'entry-'+k,'number',{min:0,get:()=>entry()[k],set:v=>{setLanding(item,{...entry(),[k]:v});}}));
+        field('进入后朝向','facing','text',{choices:[['down','向下'],['up','向上'],['left','向左'],['right','向右']],get:()=>entry().facing||'down',set:v=>{item.entry={...item.entry,...entry(),facing:v};}});
         const b=document.createElement('button');b.textContent='在目标地图上点选落点';b.onclick=()=>{const source=item;setRoom(item.target);setTool('entry');entryOwner=source;say('请点击目标房间内能够站立的位置，设置该出口的落点。');};root.append(b);
       }
       if(item.type==='scene'||item.type==='npc') {
         const ids=new Set(Object.keys(window.MuseumStory.scenes));Object.values(original.rooms).forEach(r=>r.objects.forEach(o=>{if(o.scene)ids.add(o.scene);}));if(item.scene)ids.add(item.scene);
         field('剧情节点 ID','scene','text',{choices:[['','请选择剧情节点'],...Array.from(ids).map(id=>[id,id+' · '+(window.MuseumStory.scenes[id]?.title||'剧情')])]});
       }
-      field('需要的进度标记','requiredFlag','text');
+      if(!room().kind)field('需要的进度标记','requiredFlag','text');
       if(item.approach){['x','y'].forEach(k=>field('靠近位置 '+k,'approach-'+k,'number',{min:0,get:()=>item.approach[k],set:v=>{item.approach[k]=v;}}));}
     }
+  }
+  function setLanding(item,p){
+    const door=rooms[item.target]?.objects.find(o=>o.id===item.entry?.doorId);
+    item.entry=door?{...p,doorId:door.id,dx:p.x-door.x,dy:p.y-door.y}:{...p,detached:true};
   }
   let entryOwner=null;
   function setTool(value){tool=value;keys.clear();testPlayer=null;$('tools').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tool===value)));canvas.style.cursor=value==='select'?'default':'crosshair';
@@ -124,7 +147,7 @@
   }
   function hit(p){
     if(selected&&['colliders','walkable'].includes(selected.kind)&&visible(selected.kind)){const a=active();if(a&&Math.hypot(p.x-a.x-a.w,p.y-a.y-a.h)<12/scale)return {...selected,resize:true};}
-    if(Math.hypot(p.x-room().spawn.x,p.y-room().spawn.y)<12/scale)return {kind:'spawn',index:0};
+    if(room().kind!=='hotspots'&&Math.hypot(p.x-room().spawn.x,p.y-room().spawn.y)<12/scale)return {kind:'spawn',index:0};
     if(visible('objects')){for(let i=room().objects.length-1;i>=0;i--){const o=room().objects[i];if(Math.hypot(p.x-o.x,p.y-o.y)<16/scale)return {kind:'objects',index:i};}}
     for(const kind of ['colliders','walkable']){if(!visible(kind))continue;const a=room()[kind]||[];for(let i=a.length-1;i>=0;i--)if(p.x>=a[i].x&&p.x<=a[i].x+a[i].w&&p.y>=a[i].y&&p.y<=a[i].y+a[i].h)return {kind,index:i};}
     return null;
@@ -134,12 +157,12 @@
     const p=bounded(point(e));
     if(e.button===1||space){drag={pan:true,x:e.clientX,y:e.clientY,ox,oy};return;}
     if(tool==='test'){if(!blocked(room(),p.x,p.y)){testPlayer=p;say('试玩位置已设置。使用 WASD / 方向键移动。');}else say('此位置被墙体或边界阻挡。');draw();return;}
-    if(tool==='entry'){if(blocked(room(),p.x,p.y)){say('落点被阻挡，请选择可站立地面。');return;}change(()=>{entryOwner.entry={...p,facing:entryOwner.entry?.facing||'down'};});entryOwner=null;setTool('select');say('出口落点已设置；反向出口仍需单独确认。');return;}
+    if(tool==='entry'){if(blocked(room(),p.x,p.y)){say('落点被阻挡，请选择可站立地面。');return;}change(()=>{setLanding(entryOwner,{...p,facing:entryOwner.entry?.facing||'down'});});entryOwner=null;setTool('select');say('出口落点已设置；绑定的目标门移动时，落点会保持此偏移跟随。');return;}
     if(tool==='spawn'){change(()=>{room().spawn=p;selected={kind:'spawn',index:0};});return;}
     if(tool==='travel'||tool==='scene'){
       change(()=>{let n=1;while(room().objects.some(o=>o.id===roomId+'-custom-'+n))n++;
         const o={id:roomId+'-custom-'+n,type:tool,label:tool==='travel'?'新出口':'新剧情点',...p,r:75};
-        if(tool==='travel'){o.target=Object.keys(rooms).find(id=>id!==roomId);o.entry={...rooms[o.target].spawn};}else o.scene='';
+        if(tool==='travel'){o.target=Object.keys(rooms).find(id=>id!==roomId&&!rooms[id].kind);o.entry={...rooms[o.target].spawn};}else o.scene='';
         room().objects.push(o);selected={kind:'objects',index:room().objects.length-1};});setTool('select');return;
     }
     if(tool==='colliders'||tool==='walkable'){
@@ -162,16 +185,17 @@
   function endDrag(){if(!drag)return;if(drag.create){const a=active();if(a.w<3||a.h<3){room()[selected.kind].splice(selected.index,1);selected=null;history.pop();}}drag=null;renderUI();}
   canvas.onpointerup=endDrag;canvas.onpointercancel=endDrag;
   canvas.onwheel=e=>{e.preventDefault();const b=canvas.getBoundingClientRect();zoom(e.deltaY<0?1.12:1/1.12,e.clientX-b.left,e.clientY-b.top);};
-  function blocked(r,x,y){
-    const rad=r.id==='museum'?10:22;
-    if(x<rad||y<rad||x>r.width-rad||y>r.height-rad)return true;
-    if(r.walkable?.length&&![[x-rad,y],[x+rad,y],[x,y-rad],[x,y+rad]].every(([px,py])=>r.walkable.some(a=>px>=a.x&&px<=a.x+a.w&&py>=a.y&&py<=a.y+a.h)))return true;
-    return (r.colliders||[]).some(a=>x+rad>a.x&&x-rad<a.x+a.w&&y+rad>a.y&&y-rad<a.y+a.h);
+  function blockReason(r,x,y){
+    const rad=r.radius || (r.id==='museum'?10:22);
+    if(x<rad||y<rad||x>r.width-rad||y>r.height-rad)return "脚底范围超出地图边界";
+    if(r.walkable?.length&&![[x-rad,y],[x+rad,y],[x,y-rad],[x,y+rad]].every(([px,py])=>r.walkable.some(a=>px>=a.x&&px<=a.x+a.w&&py>=a.y&&py<=a.y+a.h)))return "脚底范围超出绿色可走区域";
+    return (r.colliders||[]).some(a=>x+rad>a.x&&x-rad<a.x+a.w&&y+rad>a.y&&y-rad<a.y+a.h)?"碰到红色碰撞区域":"";
   }
+  function blocked(r,x,y){return !!blockReason(r,x,y);}
   function validate(){
-    const errors=[];Object.values(rooms).forEach(r=>{
-      const add=s=>errors.push(r.title+'：'+s);
-      if(blocked(r,r.spawn.x,r.spawn.y))add('出生点被阻挡');
+    const errors=[],links=new Map();Object.values(rooms).forEach(r=>{
+      const add=(s,loc)=>{const text=r.title+'：'+s;errors.push(text);if(loc)links.set(text,loc);};
+      if(r.kind!=='hotspots'&&blocked(r,r.spawn.x,r.spawn.y))add('出生点被阻挡');
       ['colliders','walkable'].forEach(k=>(r[k]||[]).forEach((a,i)=>{if(a.x<0||a.y<0||a.x+a.w>r.width||a.y+a.h>r.height)add((k==='colliders'?'碰撞':'可走')+'区域 '+(i+1)+' 超出地图');}));
       r.objects.forEach(o=>{
         if(o.x<0||o.y<0||o.x>r.width||o.y>r.height)add((o.label||o.id)+' 位于地图外');
@@ -179,14 +203,17 @@
         if(o.type==='travel'){
           const target=rooms[o.target];if(!target){add(o.id+' 目标地图不存在');return;}
           const p=window.MuseumTransition.resolveEntry({roomId:r.id},o.target,o.entry,rooms);
-          if(blocked(target,p.x,p.y))add((o.label||o.id)+' 的目标落点被阻挡');
+          if(o.entry?.doorId&&!target.objects.some(d=>d.id===o.entry.doorId))add((o.label||o.id)+' 绑定的目标门不存在');
+          const reason=blockReason(target,p.x,p.y);
+          if(reason)add((o.label||o.id)+' → '+target.title+'，落点（'+Math.round(p.x)+', '+Math.round(p.y)+'）：'+reason,{roomId:target.id,p});
         }
-        let reachable=false;const radius=o.r||48;
-        for(let dy=-radius;dy<=radius&&!reachable;dy+=6)for(let dx=-radius;dx<=radius&&!reachable;dx+=6)if(Math.hypot(dx,dy)<radius&&!blocked(r,o.x+dx,o.y+dy))reachable=true;
+        if(r.kind==='hotspots')return;
+        let reachable=false;const radius=o.r||48, center=o.approach || o;
+        for(let dy=-radius;dy<=radius&&!reachable;dy+=6)for(let dx=-radius;dx<=radius&&!reachable;dx+=6)if(Math.hypot(dx,dy)<radius&&!blocked(r,center.x+dx,center.y+dy))reachable=true;
         if(!reachable)add((o.label||o.id)+' 的交互范围内没有可站立位置');
       });
     });
-    $('issues').replaceChildren();(errors.length?errors:['未发现出生点、落点或交互范围错误。仍需试玩确认通道连通与剧情条件。']).forEach(s=>{const li=document.createElement('li');li.textContent=s;$('issues').append(li);});return errors;
+    $('issues').replaceChildren();(errors.length?errors:['未发现出生点、落点或交互范围错误。仍需试玩确认通道连通与剧情条件。']).forEach(s=>{const li=document.createElement('li');li.textContent=s;if(links.has(s)){const b=document.createElement('button');b.textContent='定位落点';b.onclick=()=>{const loc=links.get(s);setRoom(loc.roomId);testPlayer={...loc.p};draw();say(s);};li.append(b);}$('issues').append(li);});return errors;
   }
   function readyToSave(){endDrag();const errors=validate();if(errors.length){say('发现 '+errors.length+' 项问题，请先修正右侧检查结果；可导出 JSON 备份草稿。');return false;}return true;}
   $('save').onclick=()=>{if(!readyToSave())return;if(api.write(api.capture(rooms))){savedSnapshot=JSON.stringify(api.capture(rooms).rooms);updateDirty();say('已保存到本浏览器。请刷新同一网址下的游戏页面；玩家存档未修改。');}else say('保存失败：浏览器存储不可用或配置无效。请导出 JSON 备份。');};
@@ -195,14 +222,14 @@
   $('export').onclick=()=>{endDrag();api.download(api.capture(rooms),'全部地图_地图标注_'+exportStamp()+'.json');say('已导出全部地图 JSON，可备份或重新导入。');};
   $('publish').onclick=()=>{if(!readyToSave())return;const text='// Generated by the museum map editor.\nwindow.MuseumMapLayoutData = '+JSON.stringify(api.capture(rooms),null,2)+';\n';download(text,'map-layout-data.js','text/javascript');say('已导出项目配置。将文件放入项目 js 文件夹替换同名文件，刷新游戏。');};
   function download(text,name,type){const url=URL.createObjectURL(new Blob([text],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-  $('import').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const data=api.normalize(JSON.parse(await file.text()));if(!data||Object.keys(data.rooms).some(id=>!rooms[id]))throw new Error('未知地图或无效格式');change(()=>api.apply(rooms,data));loadArt();validate();say('已导入草稿，尚未保存到本机。未包含的地图和字段保持原样。');}catch(err){say('导入失败：'+err.message+'。原配置未改动。');}finally{e.target.value='';}};
+  $('import').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const data=api.normalize(JSON.parse(await file.text()));if(!data||Object.keys(data.rooms).some(id=>!rooms[id]))throw new Error('未知地图或无效格式');const probe=window.MuseumInteractionMaps.create();if(!api.apply(probe,data)&&Object.keys(data.rooms).some(id=>probe[id]))throw new Error('剧情交互点不能缺失或更改 ID');change(()=>{api.apply(rooms,data);api.connectDoors(rooms);});loadArt();validate();say('已导入草稿，尚未保存到本机。未包含的地图和字段保持原样。');}catch(err){say('导入失败：'+err.message+'。原配置未改动。');}finally{e.target.value='';}};
   $('reset').onclick=()=>{if(confirm('恢复当前地图的原始标注？可撤销，保存前不会影响游戏。'))change(()=>api.apply(rooms,{rooms:{[roomId]:{...original.rooms[roomId],walkable:original.rooms[roomId].walkable||[]}}}));};
   $('clear').onclick=()=>{if(!confirm('清除本机地图覆盖并重新载入项目配置？未保存修改将丢失，玩家存档不受影响。'))return;if(api.clear()){dirty=false;location.reload();}else say('清除失败，浏览器存储不可用。');};
-  $('delete').onclick=()=>{if(!selected||selected.kind==='spawn'){say('出生点不能删除；可拖动或重新设置。');return;}change(()=>{room()[selected.kind].splice(selected.index,1);selected=null;});};
+  $('delete').onclick=()=>{if(room().kind&&selected?.kind==='objects'){say('这是剧情必需的交互点，可以移动，不能删除。');return;}if(!selected||selected.kind==='spawn'){say('出生点不能删除；可拖动或重新设置。');return;}change(()=>{room()[selected.kind].splice(selected.index,1);selected=null;});};
   $('undo').onclick=undo;$('redo').onclick=redo;$('fit').onclick=fit;$('zoom-in').onclick=()=>zoom(1.2);$('zoom-out').onclick=()=>zoom(1/1.2);$('validate').onclick=validate;
   $('tools').onclick=e=>{if(e.target.dataset.tool)setTool(e.target.dataset.tool);};
   ['colliders','walkable','objects'].forEach(k=>$('show-'+k).onchange=draw);
-  Object.values(rooms).forEach(r=>{const o=document.createElement('option');o.value=r.id;o.textContent=r.title+' · '+r.id;$('room').append(o);});$('room').onchange=e=>setRoom(e.target.value);
+  Object.values(rooms).forEach(r=>{const o=document.createElement('option');o.value=r.id;o.textContent=r.title+(r.id==='dorm'?' · 后续探索':'')+' · '+r.id;$('room').append(o);});$('room').onchange=e=>setRoom(e.target.value);
   document.addEventListener('keydown',e=>{
     if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();return;}
@@ -215,6 +242,6 @@
   document.addEventListener('keyup',e=>{keys.delete(e.key);if(e.code==='Space')space=false;});
   window.addEventListener('blur',()=>{keys.clear();space=false;endDrag();});canvas.addEventListener('blur',()=>keys.clear());
   window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
-  function frame(time){const dt=Math.min((time-lastTime)/1000||0,.05);lastTime=time;if(tool==='test'&&testPlayer){let dx=Number(keys.has('d')||keys.has('ArrowRight'))-Number(keys.has('a')||keys.has('ArrowLeft')),dy=Number(keys.has('s')||keys.has('ArrowDown'))-Number(keys.has('w')||keys.has('ArrowUp'));const len=Math.hypot(dx,dy)||1,speed=(roomId==='museum'?100:235)*(keys.has('Shift')?1.5:1);dx=dx/len*speed*dt;dy=dy/len*speed*dt;if(!blocked(room(),testPlayer.x+dx,testPlayer.y))testPlayer.x+=dx;if(!blocked(room(),testPlayer.x,testPlayer.y+dy))testPlayer.y+=dy;if(dx||dy)draw();}requestAnimationFrame(frame);}
+  function frame(time){const dt=Math.min((time-lastTime)/1000||0,.05);lastTime=time;if(tool==='test'&&testPlayer){let dx=Number(keys.has('d')||keys.has('ArrowRight'))-Number(keys.has('a')||keys.has('ArrowLeft')),dy=Number(keys.has('s')||keys.has('ArrowDown'))-Number(keys.has('w')||keys.has('ArrowUp'));const len=Math.hypot(dx,dy)||1,speed=(room().speed || (roomId==='museum'?100:235))*(keys.has('Shift')?1.5:1);dx=dx/len*speed*dt;dy=dy/len*speed*dt;if(!blocked(room(),testPlayer.x+dx,testPlayer.y))testPlayer.x+=dx;if(!blocked(room(),testPlayer.x,testPlayer.y+dy))testPlayer.y+=dy;if(dx||dy)draw();}requestAnimationFrame(frame);}
   new ResizeObserver(fit).observe(viewport);setRoom(roomId);validate();say('已载入地图。选择标注可拖动；画区域请在原图上按住拖动。');requestAnimationFrame(frame);
 }());

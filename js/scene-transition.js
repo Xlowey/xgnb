@@ -18,6 +18,10 @@
   }
   function resolveEntry(state, target, entry, rooms) {
     var fallback = defaultEntry(state && state.roomId, target, rooms);
+    if(entry && entry.doorId && rooms && rooms[target]) {
+      var door=rooms[target].objects.find(function(o){return o.id===entry.doorId;});
+      if(door)return {x:door.x+entry.dx,y:door.y+entry.dy,facing:entry.facing||"down"};
+    }
     return point(entry, fallback);
   }
   function enterRoom(state, target, entry, rooms) {

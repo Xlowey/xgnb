@@ -141,6 +141,9 @@ function listen(port) {
     await seed('museum', 345, 352, { scene03Seen: true, scene04Seen: true, hasKey: true });
     await enterGame();
     await press('e'); check('the overview dorm gate walks into the corridor', (await state()).roomId === 'corridor', (await state()).roomId);
+    check('return from overview lands at museum end', (await state()).playerX > 1500, (await state()).playerX);
+    await seed('corridor', 1065, 400, { scene03Seen: true, scene04Seen: true, hasKey: true });
+    await enterGame();
     await press('e'); check('the corridor gate walks into the dorm', (await state()).roomId === 'dorm', (await state()).roomId);
     await press('e'); check('the dorm door walks back out to the corridor', (await state()).roomId === 'corridor', (await state()).roomId);
 

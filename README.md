@@ -155,6 +155,6 @@ novel-data → novel-overrides → novel-presentation → novel-prologue
 
 打开 `pages/map-editor.html`，可在现有正式探索地图上绘制碰撞与可走区域，拖动交互点和出生点，配置双向出口各自的目标落点。提供撤销重做、缩放平移、碰撞试玩、配置检查和 JSON 导入导出。
 
-本机保存需要编辑器与游戏处于同一浏览器和同源网址；项目交付使用“导出项目配置”，将下载的 `map-layout-data.js` 替换 `js/map-layout-data.js`。工具不修改玩家存档。详细步骤见根目录 `地图标注工具使用说明.md`。第二场剧情播放器宿舍调查仍是独立配置，不属于本工具编辑范围。
+本机保存需要编辑器与游戏处于同一浏览器和同源网址；项目交付使用“导出项目配置”，将下载的 `map-layout-data.js` 替换 `js/map-layout-data.js`。工具不修改玩家存档。详细步骤见根目录 `地图标注工具使用说明.md`。编辑器也管理开场宿舍和病房定点调查；这些场景由 `interaction-maps.js` 提供数据，并与正式地图使用同一套配置保存、导入和导出机制。
 
 回归检查：`node tests/map-editor.cjs` 与 `node tests/map-layout.cjs`。

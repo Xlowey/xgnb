@@ -12,6 +12,11 @@
    * 已查看过的热点会标注"（本次已查看）"；带 video 的热点会播放录像。
    */
   window.MuseumInvestigation={mount:function(root,event,hooks){
+    var layout=window.MuseumInteractionMaps.resolve("investigation-"+event.key);
+    if(layout) event=Object.assign({},event,{hotspots:event.hotspots.map(function(o){
+      var point=layout.objects.find(function(p){return p.id===o.id;});
+      return point?Object.assign({},o,{x:point.x/layout.width*100,y:point.y/layout.height*100,label:point.label || o.label}):o;
+    })});
     var panel=document.createElement("section");panel.className="hotspot-investigation";panel.setAttribute("aria-label",event.title);
     var image=document.createElement("img");image.src=window.MuseumAssets.url(event.background,"storyBackgrounds");image.alt=event.title;panel.appendChild(image);
 
