@@ -24,9 +24,11 @@
     { type: "document", item: "note", side: "front", action: "继续" },
     dialogue("我的前身，到底经历了什么？", "note-front.webp"),
     { type: "document", item: "note", side: "back", action: "收好纸条" },
-    dialogue("两张纸条除了不让去蜡像馆这一条，几乎全部矛盾"),
-    { type: "television", action: "打开电视" }
+    dialogue("两张纸条除了不让去蜡像馆这一条，几乎全部矛盾")
   ];
+  // 录像不再跟着纸条流程自动播（2026-09-20）。原来末尾挂着 { type:"television" }，
+  // 玩家看完纸条就被推着开电视，等于「在柜子里」就把录像播完了。现在改成必须走到
+  // 宿舍地图的「旧电视」主动打开才播，装配在 chapter-story.js（scene-03-tv）。
   ["scene-01", "scene-02", "scene-03"].forEach(function (id, index) {
     Object.assign(scenes[id], { choices: null, namePrompt: false, briefing: null, inspection: null, theme: "dorm", nextScene: index < 2 ? "scene-0" + (index + 2) : null });
   });

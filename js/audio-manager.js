@@ -2,12 +2,18 @@
   "use strict";
 
   var STORAGE_KEY = "museum_audio_settings_v1";
-  var DEFAULT_VOLUME = 0.42;
+  var DEFAULT_VOLUME = 0.042;   // 0.42 的 10%（2026-09-20 调低）
+  // 音量跟着设置一起落盘，但项目里从来没有调音量的 UI——存下来的只可能是写入当时的
+  // DEFAULT_VOLUME，不是玩家的选择。所以默认值一改就必须生效：用 VOLUME_REV 标记，
+  // 读到的旧版本音量一律作废、退回新默认值。以后真加了音量滑杆，就不要再加这个版本号。
+  var VOLUME_REV = 2;
   var PERSIST_INTERVAL = 1500;
   var script = document.currentScript;
-  var source = new URL("../assets/audio/music/整体bgm暂定.mp3", script && script.src || document.baseURI).href;
+  // 主线 BGM：进入战斗之前的主线流程播它（战斗暂无独立曲目）。
+  // 原「整体bgm暂定.mp3」2026-09-20 已从磁盘删除、由本文件替换，旧路径会 404。
+  var source = new URL("../assets/audio/music/主线音乐.mp3", script && script.src || document.baseURI).href;
   var audio = new Audio(source);
-  var settings = { enabled: true, volume: DEFAULT_VOLUME, position: 0 };
+  var settings = { enabled: true, volume: DEFAULT_VOLUME, volumeRev: VOLUME_REV, position: 0 };
   var startedOnce = false;
   var lastSavedAt = 0;
   var positionRestored = false;
@@ -22,7 +28,12 @@
     var saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
     if (saved && typeof saved === "object") {
       settings.enabled = saved.enabled !== false;
-      settings.volume = Number.isFinite(Number(saved.volume)) ? Math.min(1, Math.max(0, Number(saved.volume))) : DEFAULT_VOLUME;
+      // 只有同一版本存下来的音量才认；旧版本存的是旧默认值，直接换成新默认值。
+      var savedVolume = Number(saved.volume);
+      settings.volume = (saved.volumeRev === VOLUME_REV && Number.isFinite(savedVolume))
+        ? Math.min(1, Math.max(0, savedVolume))
+        : DEFAULT_VOLUME;
+      settings.volumeRev = VOLUME_REV;
       settings.position = Number.isFinite(Number(saved.position)) ? Math.max(0, Number(saved.position)) : 0;
     }
   } catch (error) {
