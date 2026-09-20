@@ -19,6 +19,7 @@
     state.returnRoom = state.roomId;
     state.returnX = state.playerX;
     state.returnY = state.playerY;
+    state.returnFacing = finalBoss ? "up" : (state.returnFacing || "down");
   }
   function alive(state) {
     var value = window.MuseumHumanity ? window.MuseumHumanity.value() : Number(state.hp);

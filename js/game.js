@@ -244,18 +244,25 @@
     }
     el.prompt.textContent = "E　" + action + "「" + object.label + "」"; el.prompt.hidden = false;
   }
-  function switchRoom(id, x, y) {
-    if (!rooms[id]) return;
-    state.roomId = id; state.currentNode = id; state.chapter = rooms[id].chapter; state.playerX = x === undefined ? rooms[id].spawn.x : x; state.playerY = y === undefined ? rooms[id].spawn.y : y; state.mode = "explore"; if (el.pause) el.pause.hidden = true; state.task = window.MuseumChapterProgress.objective(state).text;
+  function switchRoom(id, x, y, facing) {
+    if (!rooms[id]) return false;
+    var before = JSON.parse(JSON.stringify(state));
+    var entry = window.MuseumTransition.resolveEntry(state, id, {x:x,y:y,facing:facing}, rooms);
+    if (!window.MuseumTransition.enterRoom(state, id, entry, rooms)) return false;
     addUnique(state.unlockedRooms, id); syncAchievementProgress();
-    if (id === "corridor") unlockAchievement("dorm-escape", true);
-    renderAll(); save("已进入" + rooms[id].title + "。");
+    if (id === "corridor") unlockAchievement("dorm-escape", false);
+    state.task = window.MuseumChapterProgress.objective(state).text;
+    if (!save()) { Object.assign(state, before); showToast("场景切换未保存，仍停留在原位置。"); return false; }
+    if (el.pause) el.pause.hidden = true;
+    renderAll();
+    if (el.gameMessage) el.gameMessage.textContent = "已进入" + rooms[id].title + "。";
     if(window.MuseumSfx)window.MuseumSfx.play("transition");
+    return true;
   }
 
   function switchRoomAt(id, entry) {
     var point = entry || {};
-    switchRoom(id, Number.isFinite(point.x) ? point.x : undefined, Number.isFinite(point.y) ? point.y : undefined);
+    return switchRoom(id, Number.isFinite(point.x) ? point.x : undefined, Number.isFinite(point.y) ? point.y : undefined, point.facing);
   }
 
   function startNovel(sceneId) {
@@ -270,7 +277,7 @@
     }
     var beforeStory = JSON.parse(JSON.stringify(state));
     window.MuseumTransition.enterStory(state,sceneId);
-    if (!MuseumState.save(state, currentUser.id)) {
+    if (!save()) {
       Object.assign(state, beforeStory);
       showToast("进度保存失败，请检查浏览器存储空间后重试。");
       return;
@@ -406,18 +413,9 @@
         showToast("这条通路还没有开放。先完成前面的调查。");
         return;
       }
-      if (state.roomId === "museum" && object.target !== "museum") {
-        state.mapReturnPoint = { x: state.playerX, y: state.playerY, facing: state.facing };
-      }
-      if (object.target === "museum" && state.mapReturnPoint) {
-        var point = state.mapReturnPoint;
-        state.facing = point.facing || "down";
-        switchRoomAt("museum", point);
-      } else {
-        switchRoomAt(object.target, object.entry);
-        // 走廊那段剧情（scene-04）不再在走出宿舍门时自动播放：剧本里它是赵灵的自我
-        // 介绍，应当由玩家走到她身边按 E 触发（见下面的 npc 分支与 js/map-npc.js）。
-      }
+      switchRoomAt(object.target, object.entry);
+      // 走廊那段剧情（scene-04）不再在走出宿舍门时自动播放：剧本里它是赵灵的自我
+      // 介绍，应当由玩家走到她身边按 E 触发（见下面的 npc 分支与 js/map-npc.js）。
       return;
     }
     if (object.type === "note") openNote();
@@ -426,10 +424,10 @@
     else if (object.type === "terminal") openTerminal();
     else if (object.type === "mirror") openMirror();
     else if (object.type === "scene") startNovel(object.scene);
-    else if (object.type === "door") { if (!state.flags.hasKey) showToast("门锁着。衣柜里也许有能用的东西。"); else { state.flags.openedDormDoor = true; addUnique(state.unlockedRooms, "corridor"); unlockAchievement("dorm-escape", true); switchRoomAt(object.target || "corridor", object.entry || {x:1040,y:400}); if (!state.flags.scene04Seen) startNovel("scene-04"); } }
+    else if (object.type === "door") { if (!state.flags.hasKey) showToast("门锁着。衣柜里也许有能用的东西。"); else { var beforeDoor = JSON.parse(JSON.stringify(state)); state.flags.openedDormDoor = true; addUnique(state.unlockedRooms, "corridor"); unlockAchievement("dorm-escape", false); var entered = switchRoomAt(object.target || "corridor", object.entry || {x:1040,y:400}); if (!entered) Object.assign(state, beforeDoor); else if (!state.flags.scene04Seen) startNovel("scene-04"); } }
     else if (object.type === "returnDorm") switchRoom("dorm", 1330, 460);
     else if (object.type === "rules") openRules();
-    else if (object.type === "waxDoor") { if (!state.flags.scene06Seen) showToast("东侧入口被无形的锁封住了。先去大厅听馆长的训话。"); else { state.flags.waxDoorUnlocked = true; switchRoom("wax"); } }
+    else if (object.type === "waxDoor") { if (!state.flags.scene06Seen) showToast("东侧入口被无形的锁封住了。先去大厅听馆长的训话。"); else { var beforeWax = JSON.parse(JSON.stringify(state)); state.flags.waxDoorUnlocked = true; if (!switchRoom("wax")) Object.assign(state, beforeWax); } }
     else if (object.type === "returnHall") switchRoom("hall", 835, 700);
     else if (object.type === "contract") openContract();
     else if (object.type === "exit") openExit();
@@ -653,6 +651,7 @@
   //    地图页处理人性归零且没有回滚；剧情页还处理最终选择超时。
   function goEndingD() {
     if (!state || !currentUser) return;
+    var before = JSON.parse(JSON.stringify(state));
     state.mode = "novel";
     state.narrativeNode = "ending-d";
     state.narrativeIndex = 0;
@@ -663,8 +662,8 @@
     if (battleSettlement) { battleSettlement.destination = "ending-d"; return; }
     // 013 §8.2：结局 D 必须是「正确的失败」，不是惩罚——所以这里先存盘再跳，
     // 存不下就不能假装已经进了结局（沿用 startNovel / finishToMap 的写法）。
-    if (MuseumState.save(state, currentUser.id)) { window.location.href = "pages/novel.html?scene=ending-d"; return; }
-    state.mode = "explore";
+    if (save()) { window.location.href = "pages/novel.html?scene=ending-d"; return; }
+    Object.assign(state, before);
     showToast("结局无法写入存档，请检查浏览器存储空间后重试。");
     renderAll();
   }
@@ -729,10 +728,9 @@
     var roomId = finalBoss ? "museum" : (rooms[state.returnRoom] ? state.returnRoom : "hall");
     var room = rooms[roomId];
     function coordinate(value, fallback) { return value !== null && value !== undefined && Number.isFinite(Number(value)) ? Number(value) : fallback; }
-    state.roomId = roomId; state.currentNode = roomId; state.chapter = room.chapter;
-    state.playerX = finalBoss ? 610 : coordinate(state.returnX, room.spawn.x);
-    state.playerY = finalBoss ? 620 : coordinate(state.returnY, room.spawn.y);
-    state.returnRoom = roomId; state.returnX = state.playerX; state.returnY = state.playerY;
+    var entry = finalBoss ? {x:610,y:620,facing:"up"} : {x:coordinate(state.returnX, room.spawn.x),y:coordinate(state.returnY, room.spawn.y),facing:state.returnFacing || "down"};
+    window.MuseumTransition.enterRoom(state, roomId, entry, rooms);
+    state.returnRoom = roomId; state.returnX = state.playerX; state.returnY = state.playerY; state.returnFacing = state.facing;
     state.task = tasks[roomId];
   }
 
