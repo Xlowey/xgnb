@@ -107,6 +107,24 @@ const rooms = [
                 h: 160
             }
         ]
+    },
+    {
+        id: 5,
+        wave: 5,
+        label: '撤离试炼',
+        theme: 'escape',
+        x: 4380,
+        y: 1080,
+        w: 620,
+        h: 620,
+        gates: [
+            {
+                x: 4600,
+                y: 1688,
+                w: 180,
+                h: 24
+            }
+        ]
     }
 ];
 const corridors = [
@@ -133,6 +151,12 @@ const corridors = [
         y: 2330,
         w: 1080,
         h: 160
+    },
+    {
+        x: 4600,
+        y: 1700,
+        w: 180,
+        h: 630
     }
 ];
 const walkableAreas = [
@@ -507,7 +531,13 @@ const roomSpawnPoints = {
             x: 5410,
             y: 2370
         }
-    ]
+    ],
+    5: Array.from({
+        length: 28
+    }, (_, i)=>({
+            x: 4450 + i % 7 * 80,
+            y: 1160 + Math.floor(i / 7) * 150
+        }))
 };
 const clamp = (n, min, max)=>Math.max(min, Math.min(max, n));
 function circleRect(x, y, r, rect) {
@@ -604,6 +634,7 @@ const ARMOR_REGEN_DELAY = 5000;
 const MAX_ENERGY = 200;
 const ENERGY_ORB_VALUE = 8;
 const PLAYER_MAX_HP = 7;
+const PLAYER_RADIUS = 15;
 const PLAYER_ATTACK_DAMAGE = 4;
 const PLAYER_CRIT_DAMAGE = 6;
 const PLAYER_CRIT_CHANCE = 0.25;
@@ -611,38 +642,83 @@ const HAND_DAMAGE = 1;
 const HAND_CRIT_DAMAGE = 2;
 const HAND_CRIT_CHANCE = 0.125;
 const GUN_COOLDOWN = 250;
-// The hand knife may attack at most once every 0.15 seconds, even during the rapid-fire ultimate.
-const MELEE_COOLDOWN = 150;
+const MELEE_COOLDOWN = 250;
 const GUNNER_HP = 10;
 const ARCHER_HP = 12;
 const FROG_HP = 5;
 const MELEE_ENEMY_HP = 8;
-const BOSS_HP = 360;
+const BOSS_HP = 600;
 const ULTIMATE_COOLDOWN = 20000;
 const ULTIMATE_DURATION = 5000;
 const STUN_CHANCE = 0.2;
 const GUN_INTERVAL = 4000;
 const BOW_INTERVAL = 5000;
 const BOW_CHARGE = 1000;
+
+/*
+ * 商店的玩法类道具（012 §5.6 的 01 / 02 / 05）。
+ *
+ * 主游戏把已购件数折算成 URL 参数（js/shop-data.js 的 dungeonParams），本页在求值期
+ * 叠加上去。**不带参数时全部为 0，行为与原来完全一致**。
+ *
+ *   01 备用弹匣  每份 能量枪冷却 −15ms（250 起，6 份 → 160）
+ *   02 蜡像的肘  每份 移速 +20（240 起）、受击半径 −1（15 起）
+ *   05 馆长印章  每份 大招冷却 −2s（20s 起，4 份 → 12s）+ 一次可越冷却释放的充能
+ *
+ * ⚠️ **必须另起 SHOP_* 变量名，不能直接改原常量**：
+ *    - MOVE_SPEED 有派生值 ENEMY_SPEED / GUN_SPEED / ARROW_SPEED，改它会连敌人一起加速；
+ *    - PLAYER_RADIUS 还被敌人宽度用着（`enemy.enraged ? PLAYER_RADIUS*2 : PLAYER_RADIUS`）。
+ *    所以三项各走一个 SHOP_* 变量，只在"操作玩家"的那几处生效。
+ *
+ * ⚠️ 这些常量定义在 DungeonCombat 这个 IIFE 里，**必须同时加进它的 return 与底部的
+ *    解构**，否则 IIFE 外面用不到（2026-09-20 踩过：漏了这步会让整个页面加载即报
+ *    ReferenceError）。
+ */
+const SHOP = (function () {
+  var query = new URLSearchParams(location.search);
+  function count(key, cap) {
+    var raw = query.get(key);
+    // 先挡 null / 空串：URLSearchParams.get() 对"参数不在"返回 null，而 Number(null) === 0
+    // 是有限数，直接用 Number() 会让"没传"被当成"传了 0"。
+    if (raw === null || raw === "") return 0;
+    var value = Number(raw);
+    return Number.isFinite(value) ? Math.max(0, Math.min(cap, Math.floor(value))) : 0;
+  }
+  return { mag: count("mag", 6), elbow: count("elbow", 4), stamp: count("stamp", 4) };
+}());
+const SHOP_GUN_COOLDOWN = Math.max(120, GUN_COOLDOWN - 15 * SHOP.mag);
+const SHOP_PLAYER_SPEED = MOVE_SPEED + 20 * SHOP.elbow;
+const SHOP_PLAYER_RADIUS = Math.max(8, PLAYER_RADIUS - SHOP.elbow);
+const SHOP_ULTIMATE_COOLDOWN = Math.max(12000, ULTIMATE_COOLDOWN - 2000 * SHOP.stamp);
+const SHOP_ULTIMATE_CHARGES = SHOP.stamp;
+// HUD 上常驻的「这局带了什么」。这三件是进图时折算进 CONFIG 的**被动**加成，
+// 不写出来玩家花了钱完全看不出来（2026-09-20 补）。
+const SHOP_SUMMARY = [
+  SHOP.mag ? '弹匣×' + SHOP.mag : '',
+  SHOP.elbow ? '护肘×' + SHOP.elbow : '',
+  SHOP.stamp ? '印章×' + SHOP.stamp : ''
+].filter(Boolean).join('  ');
 const GUN_SPEED = MOVE_SPEED * 3;
 const ARROW_SPEED = MOVE_SPEED * 2;
 const ATTACK_WARNING = 1000;
 const ENEMY_VIEW_RANGE = 560;
 const BOSS_SUMMON_INTERVAL = 10000;
 const BOSS_RAGE_SUMMON_INTERVAL = 8000;
-const METEOR_WARNING = 1500;
+const METEOR_WARNING = 750;
 const METEOR_DAMAGE = 6;
 const METEOR_RADIUS = 72;
 const BOSS_SHOCKWAVE_DURATION = 1000;
 const BOSS_SHOCKWAVE_RADIUS = 420;
 const BOSS_SHOCKWAVE_DAMAGE = 3;
+const BOSS_LASER_DAMAGE = 5;
+const BOSS_LASER_DURATION = 220;
 const FROG_LEAP_INTERVAL = 4000;
 const FROG_LEAP_DURATION = 500;
 const FROG_DEATH_FUSE = 1000;
 const FROG_SHOCKWAVE_DAMAGE = 3;
 const FROG_EXPLOSION_DAMAGE = 3;
 const FROG_EFFECT_RADIUS = 80;
-const FROG_PULSE_DURATION = 84;
+const FROG_PULSE_DURATION = 252;
 const FROG_KNOCKBACK_DISTANCE = 80;
 const SPIKE_UP_DURATION = 2000;
 const SPIKE_DOWN_DURATION = 4000;
@@ -851,6 +927,38 @@ function advanceEnemyAttack(enemy, dt, target, canAttack = true, intervalScale =
         };
     });
 }
+function advanceBossLaserAttack(enemy, dt, target, canAttack = true, intervalScale = 1) {
+    if (enemy.dead || enemy.hp <= 0) return [];
+    if (!enemy.attacking) {
+        if (!canAttack) return [];
+        enemy.angle = Math.atan2(target.y - enemy.y, target.x - enemy.x);
+        enemy.shot -= dt;
+        if (enemy.shot <= ATTACK_WARNING) {
+            enemy.attacking = true;
+            enemy.charging = true;
+            enemy.chargeAngle = enemy.angle;
+        }
+    } else enemy.shot -= dt;
+    if (enemy.shot > 0) return [];
+    enemy.shot += GUN_INTERVAL * intervalScale;
+    enemy.angle = enemy.chargeAngle;
+    enemy.attacking = false;
+    enemy.charging = false;
+    const width = enemy.enraged ? PLAYER_RADIUS * 2 : PLAYER_RADIUS;
+    return Array.from({
+        length: 4
+    }, (_, i)=>({
+            x: enemy.x,
+            y: enemy.y,
+            angle: enemy.chargeAngle + i * Math.PI / 2,
+            start: enemy.r + 8,
+            length: 0,
+            width,
+            damage: BOSS_LASER_DAMAGE,
+            life: BOSS_LASER_DURATION,
+            duration: BOSS_LASER_DURATION
+        }));
+}
 function shouldStun(random = Math.random) {
     return random() < STUN_CHANCE;
 }
@@ -962,31 +1070,59 @@ function advanceBullet(bullet, dt, onStep, gates = []) {
     }
 }
 
-return {VIEW_WIDTH, VIEW_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT, MOVE_SPEED, ENEMY_SPEED, MAX_ARMOR, ARMOR_REGEN_DELAY, MAX_ENERGY, ENERGY_ORB_VALUE, PLAYER_MAX_HP, PLAYER_ATTACK_DAMAGE, PLAYER_CRIT_DAMAGE, PLAYER_CRIT_CHANCE, HAND_DAMAGE, HAND_CRIT_DAMAGE, HAND_CRIT_CHANCE, GUN_COOLDOWN, MELEE_COOLDOWN, GUNNER_HP, ARCHER_HP, FROG_HP, MELEE_ENEMY_HP, BOSS_HP, ULTIMATE_COOLDOWN, ULTIMATE_DURATION, STUN_CHANCE, GUN_INTERVAL, BOW_INTERVAL, BOW_CHARGE, GUN_SPEED, ARROW_SPEED, ATTACK_WARNING, ENEMY_VIEW_RANGE, BOSS_SUMMON_INTERVAL, BOSS_RAGE_SUMMON_INTERVAL, METEOR_WARNING, METEOR_DAMAGE, METEOR_RADIUS, BOSS_SHOCKWAVE_DURATION, BOSS_SHOCKWAVE_RADIUS, BOSS_SHOCKWAVE_DAMAGE, FROG_LEAP_INTERVAL, FROG_LEAP_DURATION, FROG_DEATH_FUSE, FROG_SHOCKWAVE_DAMAGE, FROG_EXPLOSION_DAMAGE, FROG_EFFECT_RADIUS, FROG_PULSE_DURATION, FROG_KNOCKBACK_DISTANCE, SPIKE_UP_DURATION, SPIKE_DOWN_DURATION, MELEE_ENEMY_INTERVAL, MELEE_ENEMY_DAMAGE, obstacles, clamp, dist, norm, circleRect, blocked, lineOfSight, makeEnemy, makeWave, bossSummonTypes, rollChestReward, enemyCanSee, advanceEnemyMovement, applyDamage, regenerateArmor, advanceEnemyAttack, shouldStun, dropsEnergy, rollPlayerDamage, rollHandDamage, advanceSpikeCycle, advanceFrogAttack, advanceMeleeAttack, advanceMeleeMovement, advanceBullet};
+return {SHOP_SUMMARY, SHOP_GUN_COOLDOWN, SHOP_PLAYER_SPEED, SHOP_PLAYER_RADIUS, SHOP_ULTIMATE_COOLDOWN, SHOP_ULTIMATE_CHARGES, VIEW_WIDTH, VIEW_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT, MOVE_SPEED, ENEMY_SPEED, MAX_ARMOR, ARMOR_REGEN_DELAY, MAX_ENERGY, ENERGY_ORB_VALUE, PLAYER_MAX_HP, PLAYER_RADIUS, PLAYER_ATTACK_DAMAGE, PLAYER_CRIT_DAMAGE, PLAYER_CRIT_CHANCE, HAND_DAMAGE, HAND_CRIT_DAMAGE, HAND_CRIT_CHANCE, GUN_COOLDOWN, MELEE_COOLDOWN, GUNNER_HP, ARCHER_HP, FROG_HP, MELEE_ENEMY_HP, BOSS_HP, ULTIMATE_COOLDOWN, ULTIMATE_DURATION, STUN_CHANCE, GUN_INTERVAL, BOW_INTERVAL, BOW_CHARGE, GUN_SPEED, ARROW_SPEED, ATTACK_WARNING, ENEMY_VIEW_RANGE, BOSS_SUMMON_INTERVAL, BOSS_RAGE_SUMMON_INTERVAL, METEOR_WARNING, METEOR_DAMAGE, METEOR_RADIUS, BOSS_SHOCKWAVE_DURATION, BOSS_SHOCKWAVE_RADIUS, BOSS_SHOCKWAVE_DAMAGE, BOSS_LASER_DAMAGE, BOSS_LASER_DURATION, FROG_LEAP_INTERVAL, FROG_LEAP_DURATION, FROG_DEATH_FUSE, FROG_SHOCKWAVE_DAMAGE, FROG_EXPLOSION_DAMAGE, FROG_EFFECT_RADIUS, FROG_PULSE_DURATION, FROG_KNOCKBACK_DISTANCE, SPIKE_UP_DURATION, SPIKE_DOWN_DURATION, MELEE_ENEMY_INTERVAL, MELEE_ENEMY_DAMAGE, obstacles, clamp, dist, norm, circleRect, blocked, lineOfSight, makeEnemy, makeWave, bossSummonTypes, rollChestReward, enemyCanSee, advanceEnemyMovement, applyDamage, regenerateArmor, advanceEnemyAttack, advanceBossLaserAttack, shouldStun, dropsEnergy, rollPlayerDamage, rollHandDamage, advanceSpikeCycle, advanceFrogAttack, advanceMeleeAttack, advanceMeleeMovement, advanceBullet};
 })();
 
-const { VIEW_WIDTH, VIEW_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT, MOVE_SPEED, BOW_CHARGE, MAX_ARMOR,
-  MAX_ENERGY, ENERGY_ORB_VALUE, PLAYER_MAX_HP, ULTIMATE_COOLDOWN, ULTIMATE_DURATION, GUN_COOLDOWN, MELEE_COOLDOWN,
+const { SHOP_SUMMARY, SHOP_GUN_COOLDOWN, SHOP_PLAYER_SPEED, SHOP_PLAYER_RADIUS, SHOP_ULTIMATE_COOLDOWN, SHOP_ULTIMATE_CHARGES, VIEW_WIDTH, VIEW_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT, MOVE_SPEED, BOW_CHARGE, MAX_ARMOR,
+  MAX_ENERGY, ENERGY_ORB_VALUE, PLAYER_MAX_HP, PLAYER_RADIUS, ULTIMATE_COOLDOWN, ULTIMATE_DURATION, GUN_COOLDOWN, MELEE_COOLDOWN,
   BOSS_SUMMON_INTERVAL, BOSS_RAGE_SUMMON_INTERVAL, METEOR_WARNING, METEOR_DAMAGE, METEOR_RADIUS,
   BOSS_SHOCKWAVE_DURATION, BOSS_SHOCKWAVE_RADIUS, BOSS_SHOCKWAVE_DAMAGE,
   FROG_LEAP_DURATION, FROG_DEATH_FUSE, FROG_SHOCKWAVE_DAMAGE, FROG_EXPLOSION_DAMAGE, FROG_EFFECT_RADIUS,
   FROG_PULSE_DURATION, FROG_KNOCKBACK_DISTANCE, SPIKE_UP_DURATION, MELEE_ENEMY_DAMAGE,
   obstacles, clamp, dist, norm, lineOfSight, blocked, makeEnemy, makeWave, applyDamage,
-  regenerateArmor, shouldStun, dropsEnergy, rollPlayerDamage, rollHandDamage, rollChestReward, bossSummonTypes, enemyCanSee, advanceEnemyMovement, advanceEnemyAttack,
+  regenerateArmor, shouldStun, dropsEnergy, rollPlayerDamage, rollHandDamage, rollChestReward, bossSummonTypes, enemyCanSee, advanceEnemyMovement, advanceEnemyAttack, advanceBossLaserAttack,
   advanceSpikeCycle, advanceFrogAttack, advanceMeleeAttack, advanceMeleeMovement, advanceBullet } = DungeonCombat;
 const { rooms, corridors, activeGates, roomInteriorContains, pointInRect, makeSpikes } = DungeonMap;
 const W = WORLD_WIDTH, H = WORLD_HEIGHT;
+const DUNGEON_TILE_SIZE = 40;
+const ULTIMATE_SCATTER_RADIUS = 8 * DUNGEON_TILE_SIZE;
+const ULTIMATE_METEOR_RADIUS = 3 * DUNGEON_TILE_SIZE;
+const ULTIMATE_METEOR_DAMAGE = 5;
+const ULTIMATE_METEOR_COUNT = 5;
+function makeUltimateMeteors(target, gates = [], random = Math.random) {
+    return Array.from({
+        length: ULTIMATE_METEOR_COUNT
+    }, ()=>{
+        let point = target;
+        for(let attempt = 0; attempt < 100; attempt++){
+            const angle = random() * Math.PI * 2, radius = Math.sqrt(random()) * ULTIMATE_SCATTER_RADIUS;
+            const candidate = {
+                x: target.x + Math.cos(angle) * radius,
+                y: target.y + Math.sin(angle) * radius
+            };
+            if (!blocked(candidate.x, candidate.y, 2, gates)) {
+                point = candidate;
+                break;
+            }
+        }
+        return {
+            x: point.x,
+            y: point.y,
+            r: ULTIMATE_METEOR_RADIUS,
+            damage: ULTIMATE_METEOR_DAMAGE,
+            enemy: false,
+            life: METEOR_WARNING,
+            hit: false
+        };
+    });
+}
 function initialState() {
     return {
         player: {
             x: 200,
             y: 900,
-            r: 15,
+            r: SHOP_PLAYER_RADIUS,
             hp: PLAYER_MAX_HP,
-            // 挨打次数：013 §3.2 的战斗损耗是「基础 + 每被击中一次 ×6」，要单独计数。
-            // **不能**拿 `PLAYER_MAX_HP - hp` 反推——applyDamage 是护甲先整块吸收、
-            // 护甲破了才掉血，所以掉了多少血 ≠ 挨了几下。
-            hitsTaken: 0,
             armor: MAX_ARMOR,
             energy: MAX_ENERGY,
             angle: 0,
@@ -994,6 +1130,8 @@ function initialState() {
             invincible: 0,
             slash: 0,
             skill: 0,
+            // 【馆长印章】的额外充能：冷却中也放得出来，放掉一次少一次（见 activateSkill）。
+            skillCharges: SHOP_ULTIMATE_CHARGES,
             rapidFire: 0,
             stunned: 0,
             safeTime: 0,
@@ -1003,9 +1141,11 @@ function initialState() {
         },
         enemies: [],
         bullets: [],
+        lasers: [],
         drops: [],
         particles: [],
         meteors: [],
+        ultimateTargeting: false,
         shockwaves: [],
         pulses: [],
         spikes: makeSpikes(),
@@ -1025,11 +1165,13 @@ function initialState() {
             false,
             false,
             false,
+            false,
             false
         ],
         gateAnim: 0,
         roomBanner: 1700,
         roomStage: 0,
+        victoryRoom: null,
         spikeContact: null,
         spikeTick: 0,
         spikeRaised: false,
@@ -1095,6 +1237,10 @@ function startDungeon() {
         'energy-fill',
         'energy-value',
         'coin-value',
+        // 商店道具的常驻提示（见文件的 SHOP_SUMMARY）。ui 是**显式白名单**，
+        // 不登记在这里的话下面那段会静默跳过、提示永远不显示。
+        'shop-status',
+        'shop-status-value',
         'pause-button',
         'pause-icon',
         'play-icon',
@@ -1115,6 +1261,12 @@ function startDungeon() {
             id,
             document.getElementById(id)
         ]));
+    // 「面板暂停」标记：系统面板（M 键）打开时把游戏冻住，但**不显示自己的暂停卡**。
+    //
+    // 为什么：暂停卡和面板会叠在一起，而那张卡上有「重新开始」按钮（pause-restart，
+    // 绑的就是 reset()）——面板一关，点击/焦点落到它上面就**直接回到游戏开始**。
+    // 2026-09-20 的 bug 就是这个。
+    let panelPaused = false;
     function setHud(hud) {
         for (const [name, value, max] of [
             [
@@ -1141,14 +1293,18 @@ function startDungeon() {
         ui['pause-button'].setAttribute('aria-label', paused ? '继续' : '暂停');
         ui['play-icon'].hidden = !paused;
         ui['pause-icon'].hidden = paused;
-        ui['skill-button'].disabled = hud.skill > 0;
-        ui['skill-label'].textContent = hud.rapidFire > 0 ? '极速' : hud.skill > 0 ? `${Math.ceil(hud.skill / 1000)}s` : '大招';
+        ui['skill-button'].disabled = (hud.skill > 0 && !(hud.skillCharges > 0)) || hud.ultimateTargeting;
+        ui['skill-label'].textContent = hud.ultimateTargeting ? '点击轰炸' : hud.rapidFire > 0 ? 'Q 极速' : hud.skill > 0 ? (hud.skillCharges > 0 ? `Q 大招 ×${hud.skillCharges}` : `Q ${Math.ceil(hud.skill / 1000)}s`) : 'Q 大招';
+        ui['skill-button'].setAttribute('aria-label', hud.ultimateTargeting ? '移动鼠标准星并点击地面，释放五颗流星' : 'Q 大招：双倍枪械攻速与一次流星轰炸');
+        canvasRef.current.style.cursor = hud.ultimateTargeting && hud.status === 'playing' ? 'none' : '';
         ui['result-card'].hidden = !finished;
         if (finished) {
-            ui['result-title'].textContent = hud.status === 'win' ? '地牢肃清！' : '冒险结束';
-            ui['result-message'].textContent = hud.status === 'win' ? `你肃清了全部房间并击败首领，收集 ${hud.coins} 枚金币。` : '调整走位，再试一次。';
+            const escaped = hud.status === 'win' && hud.victoryRoom === 5;
+            ui['result-title'].textContent = hud.status === 'win' ? escaped ? '成功撤离！' : '地牢肃清！' : '冒险结束';
+            ui['result-message'].textContent = hud.status === 'win' ? escaped ? `你通过了三波撤离试炼，收集 ${hud.coins} 枚金币。` : `你击败了首领，收集 ${hud.coins} 枚金币。` : '调整走位，再试一次。';
         }
-        ui['pause-card'].hidden = !paused;
+        // 面板开着时压住暂停卡：它上面有「重新开始」，叠在面板底下会被误点。
+        ui['pause-card'].hidden = !paused || panelPaused;
     }
     function setMeleeUI(value) {
         ui['weapon-button'].className = value ? 'mode melee active' : 'mode';
@@ -1163,7 +1319,10 @@ function startDungeon() {
             armor: p.armor,
             energy: Math.floor(p.energy),
             skill: Math.max(0, p.skill),
+            // 额外充能次数也要传给 HUD：冷却中只要还有充能，大招按钮就该能点。
+            skillCharges: Math.max(0, p.skillCharges),
             rapidFire: Math.max(0, p.rapidFire),
+            ultimateTargeting: g.ultimateTargeting,
             stunned: Math.max(0, p.stunned),
             coins: g.coins,
             wave: g.wave,
@@ -1172,8 +1331,28 @@ function startDungeon() {
             cleared: [
                 ...g.cleared
             ],
+            victoryRoom: g.victoryRoom,
             status: g.status
         });
+        // 接入段（另一个 IIFE）拿不到 game.current，所以把「这一局走的是哪条路线」外露出去：
+        // 4 = 首领房（打完 BOSS → 主线走 C 结局），5 = 撤离试炼（→ 主线走 A 结局）。
+        // 判定点在下面的 chest 逻辑（`chest.roomId === 4 || chest.roomId === 5`）。
+        window.__dungeonRoute = g.victoryRoom === 5 ? 'evacuate' : 'boss';
+    };
+    // 给 js/demo-shell.js 的系统面板用：面板打开时把它停住、关掉时恢复。
+    // 返回 false 表示当时不在对应状态（还没开始 / 已结算），面板那边就不去动它。
+    // 挂到 window 上同样是因为接入段拿不到 game.current。
+    window.__dungeonPause = ()=>{
+        const g = game.current;
+        if (!g || g.status !== 'playing') return false;
+        panelPaused = true;          // 静默：冻住但不出暂停卡
+        g.status = 'paused'; syncHud(); return true;
+    };
+    window.__dungeonResume = ()=>{
+        const g = game.current;
+        if (!g || g.status !== 'paused') return false;
+        panelPaused = false;
+        g.status = 'playing'; syncHud(); return true;
     };
     const burst = (x, y, color, count = 8)=>{
         const g = game.current;
@@ -1244,7 +1423,7 @@ function startDungeon() {
     }
     const shoot = ()=>{
         const g = game.current, p = g.player;
-        if (g.status !== 'playing' || p.cooldown > 0) return;
+        if (g.status !== 'playing' || g.ultimateTargeting || p.cooldown > 0) return;
         const speedScale = p.rapidFire > 0 ? 0.5 : 1;
         if (melee.current) {
             const damage = rollHandDamage();
@@ -1268,7 +1447,7 @@ function startDungeon() {
             if (p.energy < 1) return;
             const damage = rollPlayerDamage();
             p.energy -= 1;
-            p.cooldown = GUN_COOLDOWN * speedScale;
+            p.cooldown = SHOP_GUN_COOLDOWN * speedScale;
             const spread = (Math.random() - .5) * .05, a = p.angle + spread;
             g.bullets.push({
                 x: p.x + Math.cos(a) * 23,
@@ -1287,11 +1466,34 @@ function startDungeon() {
     };
     const activateSkill = ()=>{
         const g = game.current, p = g.player;
-        if (g.status !== 'playing' || p.skill > 0) return;
-        p.skill = ULTIMATE_COOLDOWN;
+        if (g.status !== 'playing' || g.ultimateTargeting) return;
+        if (p.skill > 0) {
+            // 冷却中：只有【馆长印章】存下的额外充能才放得出来，用过一次就少一次。
+            if (!(p.skillCharges > 0)) return;
+            p.skillCharges -= 1;
+        } else {
+            p.skill = SHOP_ULTIMATE_COOLDOWN;
+        }
         p.rapidFire = ULTIMATE_DURATION;
+        g.ultimateTargeting = true;
+        attackHeld.current = false;
+        mouse.current ??= {
+            x: p.x - camera.current.x,
+            y: p.y - camera.current.y
+        };
         burst(p.x, p.y, '#ffd45e', 28);
         g.shake = 7;
+        syncHud();
+    };
+    const confirmUltimateTarget = (target)=>{
+        const g = game.current, gates = activeGates(g.activeRoom);
+        if (g.status !== 'playing' || !g.ultimateTargeting || blocked(target.x, target.y, 2, gates)) return false;
+        g.meteors.push(...makeUltimateMeteors(target, gates));
+        g.ultimateTargeting = false;
+        attackHeld.current = false;
+        burst(target.x, target.y, '#b6ff63', 16);
+        syncHud();
+        return true;
     };
     const moveEntity = (obj, dx, dy)=>{
         const gates = activeGates(game.current.activeRoom), nx = obj.x + dx;
@@ -1379,21 +1581,38 @@ function startDungeon() {
                 x: clamp(target.x + Math.cos(angle) * radius, bossRoom.x + 90, bossRoom.x + bossRoom.w - 90),
                 y: clamp(target.y + Math.sin(angle) * radius, bossRoom.y + 90, bossRoom.y + bossRoom.h - 90),
                 r: METEOR_RADIUS,
+                damage: METEOR_DAMAGE,
+                enemy: true,
                 life: METEOR_WARNING,
                 hit: false
             });
         }
+    };
+    const traceLaser = (laser, gates)=>{
+        const maxLength = 900, step = 6;
+        for(let length = laser.start; length <= maxLength; length += step){
+            const x = laser.x + Math.cos(laser.angle) * length, y = laser.y + Math.sin(laser.angle) * length;
+            if (blocked(x, y, 2, gates)) return Math.max(laser.start, length - step);
+        }
+        return maxLength;
+    };
+    const laserHits = (laser, target)=>{
+        const dx = target.x - laser.x, dy = target.y - laser.y;
+        const along = dx * Math.cos(laser.angle) + dy * Math.sin(laser.angle);
+        if (along < laser.start || along > laser.length) return false;
+        const across = Math.abs(dx * Math.sin(laser.angle) - dy * Math.cos(laser.angle));
+        return across <= laser.width / 2 + target.r;
     };
     function setupKeyboard() {
         const down = (e)=>{
             keys.current.add(e.code);
             if (e.code === 'Space') e.preventDefault();
             if (e.repeat) return;
-            if (e.code === 'KeyQ') {
+            if (e.code === 'Space') {
                 melee.current = !melee.current;
                 setMeleeUI(melee.current);
             }
-            if (e.code === 'Space') activateSkill();
+            if (e.code === 'KeyQ') activateSkill();
             if (e.code === 'Escape') togglePause();
         };
         const up = (e)=>keys.current.delete(e.code);
@@ -1431,11 +1650,20 @@ function startDungeon() {
         };
         const pd = (e)=>{
             if (e.pointerType === 'mouse' && e.button !== 0) return;
+            if (game.current.status !== 'playing') return;
             c.focus({
                 preventScroll: true
             });
             const p = pos(e);
             c.setPointerCapture(e.pointerId);
+            if (game.current.ultimateTargeting && (e.pointerType !== 'touch' || p.x >= VIEW_WIDTH / 2)) {
+                mouse.current = p;
+                confirmUltimateTarget({
+                    x: p.x + camera.current.x,
+                    y: p.y + camera.current.y
+                });
+                return;
+            }
             if (e.pointerType === 'touch') {
                 const s = p.x < VIEW_WIDTH / 2 ? moveStick.current : aimStick.current;
                 if (s.active) return;
@@ -1511,11 +1739,20 @@ function startDungeon() {
                 my = 0;
             }
             const ml = Math.max(1, Math.hypot(mx, my));
-            moveEntity(p, mx / ml * MOVE_SPEED * dt / 1000, my / ml * MOVE_SPEED * dt / 1000);
+            moveEntity(p, mx / ml * SHOP_PLAYER_SPEED * dt / 1000, my / ml * SHOP_PLAYER_SPEED * dt / 1000);
             const located = rooms.find((room)=>pointInRect(p, room, 0));
-            if (located) g.currentRoom = located.id;
-            const firstUncleared = g.cleared.findIndex((done)=>!done);
-            if (g.activeRoom === null && located && located.id === firstUncleared && roomInteriorContains(located, p)) {
+            // 换房间时换 BGM（2026-09-20）：核心王座（4）是首领房用 Boss 曲，
+            // 其余房间（起点 / 冰封前厅 / 深蓝宝库 / 机械铸廊 / 撤离试炼）用波次曲。
+            // 只在**房间真的变了**时调一次；play() 本身对同一首是空操作，这里再挡一层。
+            // 用 && 兜底：audio-manager 没加载（单独拷出去玩）时不该报错。
+            if (located && g.currentRoom !== located.id) {
+                g.currentRoom = located.id;
+                if (window.MuseumAudio && window.MuseumAudio.play) {
+                    window.MuseumAudio.play(located.id === 4 ? 'dungeonBoss' : 'dungeonWaves');
+                }
+            }
+            const roomReady = located && located.id > 0 && !g.cleared[located.id] && (located.id <= 3 ? g.cleared[located.id - 1] : g.cleared[3]);
+            if (g.activeRoom === null && roomReady && roomInteriorContains(located, p)) {
                 g.activeRoom = located.id;
                 g.wave = located.wave;
                 g.roomStage = 1;
@@ -1523,7 +1760,8 @@ function startDungeon() {
                 g.gateAnim = 420;
                 g.roomBanner = 1750;
                 g.bullets = [];
-                g.meteors = [];
+                g.lasers = [];
+                g.meteors = g.meteors.filter((meteor)=>meteor.enemy === false);
                 g.shockwaves = [];
                 g.pulses = [];
                 g.spikeRaised = true;
@@ -1553,11 +1791,11 @@ function startDungeon() {
             const hurtPlayer = (damage)=>{
                 if (p.invincible > 0 || p.hp <= 0) return false;
                 applyDamage(p, damage);
-                // 计「挨了几下」，不是「掉了多少血」——护甲会先整块吸收伤害（见 applyDamage），
-                // 有护甲时 hp 一点不掉，但这一下确实算挨打。主游戏按 013 §3.2 用它算损耗。
-                p.hitsTaken += 1;
-                // 结算时要把这个数回传给主游戏。地牢的 HUD 里没有这个数字（不像血量能读界面），
-                // 所以直接挂在 window 上，与 __dungeonHp / __dungeonStatus 同一条约定。
+                // 013 §3.2：主游戏按「基础 14 + 挨打次数 ×6」算人性值损耗，所以要把这一场
+                // 挨了几下**单独**带回去。**不能**拿 PLAYER_MAX_HP - hp 反推——这个文件的
+                // applyDamage 是护甲先整块吸收、护甲破了才掉血，掉血量 ≠ 挨打次数。
+                // 挂在 window 上是因为底部的接入段（另一个 IIFE）拿不到这里的 game.current。
+                p.hitsTaken = (p.hitsTaken || 0) + 1;
                 window.__dungeonHits = p.hitsTaken;
                 p.hurt = 240;
                 g.shake = 6;
@@ -1600,6 +1838,7 @@ function startDungeon() {
                             radius: FROG_EFFECT_RADIUS,
                             damage: FROG_EXPLOSION_DAMAGE,
                             hit: false,
+                            hitEnemies: new Set(),
                             kind: 'explosion'
                         });
                         finishEnemy(e);
@@ -1654,9 +1893,26 @@ function startDungeon() {
                     }
                     movement = advanceMeleeMovement(e, dt, p, e.seesPlayer);
                 } else {
-                    const shots = advanceEnemyAttack(e, dt, p, e.seesPlayer, e.elite && e.enraged ? 0.58 : 1);
-                    g.bullets.push(...shots);
-                    if (shots.length) burst(shots[0].x, shots[0].y, shots[0].color, 7);
+                    if (e.elite) {
+                        const lasers = advanceBossLaserAttack(e, dt, p, e.seesPlayer, e.enraged ? 0.58 : 1);
+                        if (lasers.length) {
+                            let hit = false;
+                            for (const laser of lasers){
+                                laser.length = traceLaser(laser, gates);
+                                if (!hit && laserHits(laser, p)) {
+                                    hit = true;
+                                    hurtPlayer(laser.damage);
+                                }
+                            }
+                            g.lasers.push(...lasers);
+                            burst(e.x, e.y, '#ff3448', 18);
+                            g.shake = Math.max(g.shake, 7);
+                        }
+                    } else {
+                        const shots = advanceEnemyAttack(e, dt, p, e.seesPlayer);
+                        g.bullets.push(...shots);
+                        if (shots.length) burst(shots[0].x, shots[0].y, shots[0].color, 7);
+                    }
                     movement = advanceEnemyMovement(e, dt, p, e.seesPlayer);
                 }
                 if (movement.dx || movement.dy) {
@@ -1691,6 +1947,8 @@ function startDungeon() {
                 }
             }
             g.shockwaves = g.shockwaves.filter((w)=>w.life > 0);
+            for (const laser of g.lasers)laser.life -= dt;
+            g.lasers = g.lasers.filter((laser)=>laser.life > 0);
             for (const pulse of g.pulses){
                 pulse.life -= dt;
                 const radius = (1 - clamp(pulse.life / pulse.duration, 0, 1)) * pulse.radius;
@@ -1699,6 +1957,15 @@ function startDungeon() {
                     if (hurtPlayer(pulse.damage)) {
                         if (pulse.kind === 'frog') p.stunned = Math.max(p.stunned, 500);
                         knockPlayer(pulse, FROG_KNOCKBACK_DISTANCE);
+                    }
+                }
+                if (pulse.kind === 'explosion') for (const e of g.enemies){
+                    if (e.dead || e.dying || e.hp <= 0 || pulse.hitEnemies.has(e.id)) continue;
+                    if (dist(pulse, e) <= radius + e.r) {
+                        pulse.hitEnemies.add(e.id);
+                        e.hp -= pulse.damage;
+                        e.hurt = 120;
+                        burst(e.x, e.y, '#ff9a62', 8);
                     }
                 }
             }
@@ -1732,7 +1999,15 @@ function startDungeon() {
                     meteor.hit = true;
                     g.shake = 10;
                     burst(meteor.x, meteor.y, '#ff6b3d', 30);
-                    if (dist(meteor, p) <= meteor.r + p.r) hurtPlayer(METEOR_DAMAGE);
+                    if (meteor.enemy !== false) {
+                        if (dist(meteor, p) <= meteor.r + p.r) hurtPlayer(meteor.damage ?? METEOR_DAMAGE);
+                    } else for (const e of g.enemies){
+                        if (!e.dead && !e.dying && e.hp > 0 && dist(meteor, e) <= meteor.r + e.r) {
+                            e.hp -= meteor.damage;
+                            e.hurt = 160;
+                            burst(e.x, e.y, '#ffd35f', 12);
+                        }
+                    }
                 }
             }
             g.meteors = g.meteors.filter((m)=>m.life > -260);
@@ -1772,7 +2047,12 @@ function startDungeon() {
                     d.y += (p.y - d.y) * dt * .008;
                 }
                 if (dd < 20) {
-                    if (d.type === 'coin') g.coins += 3;
+                    if (d.type === 'coin') {
+                        g.coins += 3; window.__dungeonCoins = g.coins;
+                        // 金币**实时**换生存点（js/demo-shell.js 的 earnCoins）。独立游玩时
+                        // shell 不存在，这一句无副作用。
+                        if (window.MuseumDemoShell) window.MuseumDemoShell.earnCoins(3, "地牢金币");
+                    }
                     else p.energy = Math.min(MAX_ENERGY, p.energy + ENERGY_ORB_VALUE);
                     d.x = -999;
                     burst(p.x, p.y, d.type === 'coin' ? '#ffd45e' : '#55c7ff', 6);
@@ -1782,12 +2062,16 @@ function startDungeon() {
             for (const chest of g.chests)if (!chest.opened && dist(chest, p) < 40) {
                 chest.opened = true;
                 g.coins += chest.coins;
+                if (window.MuseumDemoShell) window.MuseumDemoShell.earnCoins(chest.coins, "地牢宝箱");
+                // 金币要带回主线换生存点（js/game.js 的 coinsToPoints）。接入段在另一个
+                // IIFE 里、拿不到 game.current，所以在这里累计到 window 上。
+                window.__dungeonCoins = g.coins;
                 p.energy = Math.min(MAX_ENERGY, p.energy + chest.energy);
                 burst(chest.x, chest.y, '#ffd65e', 24);
                 g.roomBanner = 1500;
-                if (chest.roomId === 4) {
+                if (chest.roomId === 4 || chest.roomId === 5) {
+                    g.victoryRoom = chest.roomId;
                     g.status = 'win';
-                    if(window.MuseumSfx)window.MuseumSfx.play('victory');
                     syncHud();
                 }
             }
@@ -1810,9 +2094,10 @@ function startDungeon() {
                 g.nextWave -= dt;
                 if (g.nextWave <= 0) {
                     const clearedRoom = g.activeRoom;
-                    if (clearedRoom === 3 && g.roomStage === 1) {
-                        g.roomStage = 2;
-                        g.enemies = makeWave(3, g.nextEnemyId, 2);
+                    const roomWaveCount = clearedRoom === 3 ? 2 : clearedRoom === 5 ? 3 : 1;
+                    if (g.roomStage < roomWaveCount) {
+                        g.roomStage += 1;
+                        g.enemies = makeWave(clearedRoom, g.nextEnemyId, g.roomStage);
                         g.nextEnemyId += g.enemies.length;
                         g.nextWave = 0;
                         g.roomBanner = 1500;
@@ -1826,7 +2111,8 @@ function startDungeon() {
                         g.spikeTick = 0;
                         g.enemies = [];
                         g.bullets = [];
-                        g.meteors = [];
+                        g.lasers = [];
+                        g.meteors = g.meteors.filter((meteor)=>meteor.enemy === false);
                         g.shockwaves = [];
                         g.pulses = [];
                         g.roomBanner = 1500;
@@ -1839,6 +2125,21 @@ function startDungeon() {
         const drawPixel = (ctx, x, y, w, h, color)=>{
             ctx.fillStyle = color;
             ctx.fillRect(Math.round(x), Math.round(y), w, h);
+        };
+        const drawUltimateFlames = (ctx, player, time)=>{
+            ctx.save();
+            ctx.globalAlpha = .85;
+            ctx.shadowColor = '#ff6a22';
+            ctx.shadowBlur = 10;
+            for(let i = 0; i < 10; i++){
+                const phase = (time / 650 + i * .137) % 1;
+                const x = player.x + (i % 5 - 2) * 7 + Math.sin(time / 140 + i) * 3;
+                const y = player.y + 16 - phase * 58, size = Math.max(2, 8 - phase * 6);
+                drawPixel(ctx, x - size / 2, y - size, size, size * 1.8, '#f0441c');
+                drawPixel(ctx, x - size / 3, y - size * 1.5, size * .7, size * 1.7, '#ff982c');
+                drawPixel(ctx, x - size / 5, y - size * .6, size * .4, size, '#ffe67b');
+            }
+            ctx.restore();
         };
         const render = ()=>{
             const c = canvasRef.current, m = miniRef.current;
@@ -1883,6 +2184,12 @@ function startDungeon() {
                     '#3e304a',
                     '#846184',
                     '#ff6d55'
+                ],
+                escape: [
+                    '#203f42',
+                    '#294f52',
+                    '#5f9690',
+                    '#55f0c0'
                 ]
             };
             const floorArea = (area, colors)=>{
@@ -2039,6 +2346,25 @@ function startDungeon() {
                 ctx.stroke();
                 ctx.shadowBlur = 0;
             }
+            for (const laser of g.lasers){
+                const alpha = clamp(laser.life / Math.min(90, laser.duration), 0, 1), dx = Math.cos(laser.angle), dy = Math.sin(laser.angle);
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = '#ff263f';
+                ctx.lineWidth = laser.width;
+                ctx.shadowColor = '#ff102f';
+                ctx.shadowBlur = 18;
+                ctx.beginPath();
+                ctx.moveTo(laser.x + dx * laser.start, laser.y + dy * laser.start);
+                ctx.lineTo(laser.x + dx * laser.length, laser.y + dy * laser.length);
+                ctx.stroke();
+                ctx.strokeStyle = '#ffd0c8';
+                ctx.lineWidth = Math.max(2, laser.width * .22);
+                ctx.shadowBlur = 6;
+                ctx.stroke();
+                ctx.restore();
+            }
             for (const pulse of g.pulses){
                 const progress = 1 - clamp(pulse.life / pulse.duration, 0, 1);
                 ctx.strokeStyle = pulse.kind === 'frog' ? '#f7ffffdd' : '#ffcf88dd';
@@ -2051,8 +2377,9 @@ function startDungeon() {
             }
             for (const meteor of g.meteors){
                 const progress = clamp((METEOR_WARNING - meteor.life) / METEOR_WARNING, 0, 1), radius = meteor.r * (.75 + progress * .25);
-                ctx.fillStyle = meteor.hit ? '#ff6a384f' : '#ff4e4030';
-                ctx.strokeStyle = meteor.hit ? '#ffc16e' : '#ff786a';
+                const friendly = meteor.enemy === false;
+                ctx.fillStyle = meteor.hit ? friendly ? '#ffc94d55' : '#ff6a384f' : friendly ? '#beff4b22' : '#ff4e4030';
+                ctx.strokeStyle = meteor.hit ? '#ffc16e' : friendly ? '#d8f875' : '#ff786a';
                 ctx.lineWidth = 3;
                 ctx.beginPath();
                 ctx.arc(meteor.x, meteor.y, radius, 0, Math.PI * 2);
@@ -2061,8 +2388,15 @@ function startDungeon() {
                 ctx.fillStyle = '#ffb55d';
                 ctx.shadowColor = '#ff4b32';
                 ctx.shadowBlur = 14;
+                const fallY = meteor.y - Math.max(0, meteor.life / METEOR_WARNING) * 190;
+                ctx.strokeStyle = '#ff7437aa';
+                ctx.lineWidth = 8;
                 ctx.beginPath();
-                ctx.arc(meteor.x, meteor.y - Math.max(0, meteor.life / METEOR_WARNING) * 190, 9 + progress * 7, 0, Math.PI * 2);
+                ctx.moveTo(meteor.x - 24, fallY - 45);
+                ctx.lineTo(meteor.x, fallY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(meteor.x, fallY, 9 + progress * 7, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.shadowBlur = 0;
             }
@@ -2134,26 +2468,34 @@ function startDungeon() {
                 const fuseFlash = frog && e.dying === 2 ? Math.floor(e.deathTimer / 80) % 2 ? '#ffffff' : '#ff453f' : null;
                 if (e.charging) {
                     ctx.save();
-                    ctx.rotate(e.chargeAngle);
-                    ctx.strokeStyle = `rgba(181,241,140,${.2 + charge * .5})`;
+                    ctx.strokeStyle = e.elite ? `rgba(255,55,72,${.25 + charge * .55})` : `rgba(181,241,140,${.2 + charge * .5})`;
                     ctx.lineWidth = 2;
                     ctx.setLineDash([
                         6,
                         8
                     ]);
-                    ctx.beginPath();
-                    ctx.moveTo(28, 0);
-                    ctx.lineTo(480, 0);
-                    ctx.stroke();
+                    for(let i = 0; i < (e.elite ? 4 : 1); i++){
+                        const angle = e.chargeAngle + i * Math.PI / 2;
+                        const warningLength = e.elite ? traceLaser({
+                            x: e.x,
+                            y: e.y,
+                            angle,
+                            start: 28
+                        }, activeGates(g.activeRoom)) : 480;
+                        ctx.beginPath();
+                        ctx.moveTo(Math.cos(angle) * 28, Math.sin(angle) * 28);
+                        ctx.lineTo(Math.cos(angle) * warningLength, Math.sin(angle) * warningLength);
+                        ctx.stroke();
+                    }
                     ctx.restore();
-                    ctx.strokeStyle = '#b5f18c';
+                    ctx.strokeStyle = e.elite ? '#ff4153' : '#b5f18c';
                     ctx.lineWidth = 3;
                     ctx.beginPath();
                     ctx.arc(0, 0, 30, -Math.PI / 2, -Math.PI / 2 + charge * Math.PI * 2);
                     ctx.stroke();
                     for(let i = 0; i < 6; i++){
                         const a = i * Math.PI / 3 + performance.now() * .002, r = 42 - charge * 15;
-                        drawPixel(ctx, Math.cos(a) * r, Math.sin(a) * r, 3, 3, '#e0ffb4');
+                        drawPixel(ctx, Math.cos(a) * r, Math.sin(a) * r, 3, 3, e.elite ? '#ff9a92' : '#e0ffb4');
                     }
                 }
                 ctx.fillStyle = '#09090a70';
@@ -2179,10 +2521,15 @@ function startDungeon() {
                 ctx.save();
                 ctx.rotate(e.charging ? e.chargeAngle : e.angle);
                 if (gun) {
-                    drawPixel(ctx, 11, -4, 26, 8, '#151923');
-                    drawPixel(ctx, 17, -5, 19, 4, '#abb0ae');
-                    drawPixel(ctx, 18, 3, 6, 10, '#4c5260');
-                    drawPixel(ctx, 33, -3, 5, 6, '#ffbe66');
+                    for(let i = 0; i < (e.elite ? 4 : 1); i++){
+                        ctx.save();
+                        ctx.rotate(i * Math.PI / 2);
+                        drawPixel(ctx, 11, -4, 26, 8, e.elite ? '#2a1018' : '#151923');
+                        drawPixel(ctx, 17, -5, 19, 4, e.elite ? '#ff4354' : '#abb0ae');
+                        drawPixel(ctx, 18, 3, 6, 10, '#4c5260');
+                        drawPixel(ctx, 33, -3, 5, 6, e.elite ? '#ffd0c8' : '#ffbe66');
+                        ctx.restore();
+                    }
                 } else if (archer) {
                     ctx.strokeStyle = '#bb8c53';
                     ctx.lineWidth = 4;
@@ -2237,7 +2584,7 @@ function startDungeon() {
                     ctx.fillStyle = e.enraged ? '#ff584f' : '#ffce7b';
                     ctx.font = '14px sans-serif';
                     ctx.textAlign = 'center';
-                    ctx.fillText(e.enraged ? '首领 · 愤怒' : '枪手首领', 0, -43);
+                    ctx.fillText(e.enraged ? '激光首领 · 愤怒' : '激光首领', 0, -43);
                 }
                 if (e.attacking) {
                     const ix = e.elite ? 34 : 22, iy = e.elite ? -37 : -31;
@@ -2308,6 +2655,7 @@ function startDungeon() {
                 ctx.fillRect(14, 4, 8, 8);
             }
             ctx.restore();
+            if (p.rapidFire > 0) drawUltimateFlames(ctx, p, performance.now());
             if (p.stunned > 0) {
                 ctx.fillStyle = '#ffe05c';
                 ctx.font = '18px "Dungeon Pixel", monospace';
@@ -2330,8 +2678,8 @@ function startDungeon() {
             ctx.globalAlpha = 1;
             ctx.restore();
             if (g.roomBanner > 0) {
-                const active = g.activeRoom !== null, done = g.wave > 0 && g.cleared[g.wave], stage = active && g.activeRoom === 3 ? ` · 第 ${g.roomStage}/2 波` : '';
-                const title = active ? `${rooms[g.activeRoom].label}${stage} · 门槛封锁` : done ? `${rooms[g.wave].label} · 已肃清，寻找宝箱` : '起点 · 沿通道前进';
+                const active = g.activeRoom !== null, done = g.wave > 0 && g.cleared[g.wave], branchOpen = !active && g.wave === 3 && g.chests.some((chest)=>chest.roomId === 3 && chest.opened), totalStages = active ? g.activeRoom === 5 ? 3 : g.activeRoom === 3 ? 2 : 1 : 1, stage = active && totalStages > 1 ? ` · 第 ${g.roomStage}/${totalStages} 波` : '';
+                const title = active ? `${rooms[g.activeRoom].label}${stage} · 门槛封锁` : branchOpen ? '最终岔路 · 向右首领 / 向上撤离' : done ? `${rooms[g.wave].label} · 已肃清，寻找宝箱` : '起点 · 沿通道前进';
                 const by = VIEW_HEIGHT / 2 - 21;
                 ctx.globalAlpha = clamp(g.roomBanner / 350, 0, 1);
                 ctx.fillStyle = '#101722dd';
@@ -2344,6 +2692,53 @@ function startDungeon() {
                 ctx.textAlign = 'center';
                 ctx.fillText(title, VIEW_WIDTH / 2, by + 26);
                 ctx.globalAlpha = 1;
+            }
+            if (g.ultimateTargeting && g.status === 'playing' && mouse.current) {
+                const x = mouse.current.x, y = mouse.current.y;
+                const valid = !blocked(x + camera.current.x, y + camera.current.y, 2, activeGates(g.activeRoom));
+                const color = valid ? '#b6ff51' : '#ff5c61';
+                ctx.save();
+                ctx.strokeStyle = valid ? '#b6ff5138' : '#ff5c6138';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([12, 10]);
+                ctx.beginPath();
+                ctx.arc(x, y, ULTIMATE_SCATTER_RADIUS, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 8;
+                ctx.strokeStyle = '#182a15';
+                ctx.lineWidth = 8;
+                ctx.beginPath();
+                ctx.arc(x, y, 32, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 4;
+                ctx.stroke();
+                ctx.strokeStyle = '#ffe786';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(x, y, 23, 0, Math.PI * 2);
+                ctx.stroke();
+                for(let i = 0; i < 4; i++){
+                    const angle = i * Math.PI / 2;
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 5;
+                    ctx.beginPath();
+                    ctx.moveTo(x + Math.cos(angle) * 18, y + Math.sin(angle) * 18);
+                    ctx.lineTo(x + Math.cos(angle) * 46, y + Math.sin(angle) * 46);
+                    ctx.stroke();
+                }
+                drawPixel(ctx, x - 3, y - 3, 6, 6, '#ffe786');
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#122013dd';
+                const labelX = clamp(x, 80, VIEW_WIDTH - 80), labelY = clamp(y + 65, 24, VIEW_HEIGHT - 16);
+                ctx.fillRect(labelX - 78, labelY - 15, 156, 22);
+                ctx.fillStyle = color;
+                ctx.font = '12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(valid ? '点击轰炸 · 5 颗流星' : '请瞄准地面', labelX, labelY);
+                ctx.restore();
             }
             if (moveStick.current.active || aimStick.current.active) {
                 for (const [s, color] of [
@@ -2390,6 +2785,10 @@ function startDungeon() {
                     [
                         108,
                         68
+                    ],
+                    [
+                        108,
+                        34
                     ]
                 ];
                 mc.clearRect(0, 0, 150, 96);
@@ -2400,9 +2799,10 @@ function startDungeon() {
                 mc.fillRect(54, 39, 14, 6);
                 mc.fillRect(73, 50, 6, 18);
                 mc.fillRect(84, 73, 24, 6);
+                mc.fillRect(113, 50, 6, 18);
                 for (const room of rooms){
                     const [x, y] = spots[room.id];
-                    mc.fillStyle = room.id === g.currentRoom ? '#f6f4ef' : room.id === 0 ? '#48c878' : room.id === 4 ? '#9b62d0' : '#68717b';
+                    mc.fillStyle = room.id === g.currentRoom ? '#f6f4ef' : room.id === 0 ? '#48c878' : room.id === 4 ? '#9b62d0' : room.id === 5 ? '#45c9a5' : '#68717b';
                     mc.fillRect(x, y, size, size);
                     mc.strokeStyle = '#111820';
                     mc.lineWidth = 2;
@@ -2425,6 +2825,11 @@ function startDungeon() {
         melee.current = !melee.current;
         setMeleeUI(melee.current);
     };
+    // 商店道具提示：一次性写进 HUD（它们整局不变）。
+    if (ui['shop-status'] && ui['shop-status-value']) {
+        ui['shop-status-value'].textContent = SHOP_SUMMARY;
+        ui['shop-status'].hidden = !SHOP_SUMMARY;
+    }
     ui['pause-button'].addEventListener('click', togglePause);
     ui['resume-button'].addEventListener('click', togglePause);
     ui['pause-restart'].addEventListener('click', reset);
@@ -2456,13 +2861,16 @@ startDungeon();
  *
  * 与主游戏的约定（和 demos/battle 一致）：
  *   进入：  demos/pixel-dungeon-html/index.html?from=novel&user=<id>&returnScene=<场景 id>
- *   胜负：  写 localStorage["museum_pending_battle_v1"] = { status, remainingHp,
- *           rewards, flags, userId }，然后回到 index.html?fromBattle=1
- *   主游戏：js/game.js 的 consumeBattleResult() 读走它并 applyBattleResult()：
+ *   胜负：  写 localStorage["museum_pending_battle_v1"] = { status, remainingHp, hitsTaken,
+ *           coins, route, rewards, flags, userId }，然后回到 index.html?fromBattle=1
+ *   主游戏：js/game.js 的 consumeBattleResult() 读走它、applyBattleResult() 结算：
  *             win  -> 按 hitsTaken 扣人性值，存活后进入 returnScene 并发奖
  *             lose -> 扣生存点后返回开战选项重试
  *
- * 这里**不重复实现一套判定**，只把地牢自己的 hud.status（'win' / 'lose'）翻译成那个约定。
+ * **两条通关路线**（v4 地图在肃清第三个房间后有岔路）：
+ *   向右打首领（victoryRoom 4）→ route 'boss'     → 主游戏走 **C 完美结局**
+ *   向上走撤离试炼三波（victoryRoom 5）→ route 'evacuate' → 主游戏走 **A 回头结局**
+ *   两条都算 win；但撤离那条**不记 boss_defeated**（没打首领），奖励照发。
  * =========================================================================== */
 (function () {
   'use strict';
@@ -2494,15 +2902,27 @@ startDungeon();
   function report(status, hp) {
     if (reported) return;
     reported = true;
+    // 'boss' = 打完首领（→C）；'evacuate' = 撤离试炼（→A）。由 syncHud 从 victoryRoom 推出来。
+    var route = window.__dungeonRoute === 'evacuate' ? 'evacuate' : 'boss';
+    var win = status === 'win';
+    // 撤离路线不打首领，所以不该记 boss_defeated —— 那个旗标是"打倒梦魇"的凭据。
+    // 但**奖励照发**：撤离也结结实实打了三波敌人（主游戏按 hitsTaken 扣人性值、发战斗收入）。
+    var bossDefeated = win && route === 'boss';
     var result = {
       status: status,
-      remainingHp: status === 'win' ? museumHpFrom(hp) : 0,
+      remainingHp: win ? museumHpFrom(hp) : 0,
       // 013 §3.2：主游戏按「基础 14 + 挨打次数 ×6」算人性值损耗，所以要把这一场挨了几下
-      // 一起带回去。由 hurtPlayer 累计、挂在 window.__dungeonHits 上（地牢的 HUD 里
-      // 没有这个数字，没法像血量那样从界面文本反读）。
-      hitsTaken: status === 'win' ? (Number(window.__dungeonHits) || 0) : 0,
-      rewards: status === 'win' ? ['boss_defeated'] : [],
-      flags: status === 'win' ? ['boss_defeated'] : [],
+      // 一起带回去。由 hurtPlayer 累计、挂在 window.__dungeonHits 上。
+      hitsTaken: win ? (Number(window.__dungeonHits) || 0) : 0,
+      // 金币一起带回去换生存点（主游戏 game.js 的 coinsToPoints）。
+      coins: win ? (Number(window.__dungeonCoins) || 0) : 0,
+      // 金币已经在局内**实时**换成生存点了（见 js/demo-shell.js 的 earnCoins）。
+      // 带上这个标记，主游戏结算时才不会又换一次（双重发钱）。
+      // 独立游玩 / shell 没接上时它是假的 —— 那会儿主游戏会照旧按结算换算，不会漏发。
+      liveCoins: window.__liveCoinsGranted === true,
+      route: route,
+      rewards: bossDefeated ? ['boss_defeated'] : [],
+      flags: bossDefeated ? ['boss_defeated'] : [],
       userId: userId,
       battleAttempt: query.get('battleAttempt') || null,
       source: 'pixel-dungeon'
@@ -2520,7 +2940,6 @@ startDungeon();
 
   // 结算并回剧情。挂到 window 上是为了让自动化测试能直接驱动它：地牢的绘制循环每一帧
   // 都会按它自己的 hud.status 把结算卡收起来，所以测试没法靠改 DOM 假装"已经打完了"。
-  // 触发流程：setItem(RESULT_KEY) -> 回 index.html?fromBattle=1 -> 主游戏结算。
   window.__dungeonFinish = function (status, hpOrRatio) {
     var hp = Number(hpOrRatio);
     if (!Number.isFinite(hp)) hp = status === 'win' ? DUNGEON_MAX_HP : 0;
@@ -2554,8 +2973,11 @@ startDungeon();
     if (handled || card.hidden) return;
     handled = true;
     observer.disconnect();
+    // ⚠️ 必须把「成功撤离！」一起算进来。v4 的两条通关路线文案不同：
+    //    打完首领 = 「地牢肃清！」，撤离试炼 = 「成功撤离！」。
+    //    只写 /肃清|胜利/ 会把撤离通关误判成失败（2026-09-20 换 v4 时踩到）。
     var text = (title && title.textContent) || '';
-    var won = /肃清|胜利/.test(text);
+    var won = /肃清|胜利|撤离/.test(text);
     window.__dungeonStatus = won ? 'win' : 'lose';
     if (message) {
       message.textContent = won

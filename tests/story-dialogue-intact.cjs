@@ -85,6 +85,9 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
         lineCount: (sc.lines || []).length,
         lines: (sc.lines || []).map(l => ({ speaker: l.speaker, text: l.text, cue: l.cue })),
         events: (sc.events || []).map(e => ({ type: e.type, text: e.text, item: e.item })),
+        // 结局 C 的完整对白页（letter）把整场台词收进 entries，事件本身只带一段拼好的 text。
+        // 要断言"契约只出现一次、紧接揭示台词之后"，就得能看见 entries。
+        entries: (sc.events || []).map(e => (e.entries || []).map(x => ({ image: x.image, speaker: x.speaker, text: x.text }))),
         pages: pages ? pages.map(p => ({ speaker: p.speaker, text: p.text })) : null
       };
     }
@@ -124,10 +127,18 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
   // exit explanation, and present the contract only after the reveal line.
   const cEnding = inPage['ending-c'];
   const cEvents = cEnding.events;
+  // 2026-09-20：结局 C 从"逐页对白"改成"一页可上下滑动的完整对白"（letter 事件），
+  // 契约特写不再是独立的 document 事件，而是长页里的一个图片条目。
+  // 用户确认过的那条要求本身没变——**只出现一次，紧接在揭示台词之后**——所以照旧断言，
+  // 只是改在 entries 里看位置。
+  const letterAt = cEnding.events.findIndex(event => event.type === 'letter');
+  const cLetter = letterAt >= 0 ? (cEnding.entries[letterAt] || []) : [];
+  const contractIndex = cLetter.findIndex(entry => entry.image === '张明诚契约.webp');
+  const contractCount = cLetter.filter(entry => entry.image === '张明诚契约.webp').length;
   const contractCue = cEnding.lines.find(line => line.cue === 'contract-reveal');
-  const revealIndex = cEvents.findIndex(event => contractCue && event.text === contractCue.text);
-  const contractEvents = cEvents.map((event,index) => ({event,index})).filter(({event}) => event.type === 'document' && event.item === '张明诚契约.webp');
-  check('C 结局只展示一次张明诚契约，紧接揭示台词之后', contractEvents.length === 1 && revealIndex >= 0 && contractEvents[0].index === revealIndex + 1, {revealIndex,contractIndices:contractEvents.map(x=>x.index)});
+  const revealIndex = contractCue ? cLetter.findIndex(entry => entry.text === contractCue.text) : -1;
+  check('C 结局只展示一次张明诚契约，紧接揭示台词之后', contractCount === 1 && revealIndex >= 0 && contractIndex === revealIndex + 1, {contractCount,revealIndex,contractIndex});
+  check('C 的完整对白页收齐了本场每一行', cLetter.filter(entry => !entry.image).length === cEnding.lines.length, {entries:cLetter.filter(entry => !entry.image).length,lines:cEnding.lines.length});
   const cText = cEnding.lines.concat(cEvents).map(line => line.text || '').join('\n');
   check('C 结局明确回到原来的世界，不去下一个副本', /你打开病房的门，就可以回到原来的世界/.test(cText) && !/下一个副本|下一个试炼/.test(cText));
   check('C 结局不再出现已要求删除的出口推理', !/梦魇不想让我进|梦魇不希望我进入|它不想让我进去，就是不想让我看见这个/.test(cText));

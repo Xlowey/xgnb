@@ -64,12 +64,17 @@
   }
   // 本轮新到的 CG 按场次接入。视频只是开场演出，正文仍由原对白数据推进。
   prependVideos("scene-01", [{video:"CG1：桃树梦中惊醒.mp4",label:"CG · 桃树梦中惊醒"}]);
-  // CG9.1.mp4 原本挂在第八场（馆长办公室）开场，2026-09-20 摘除——它不该在这里。
-  // 素材仍在 assets/video/cg/CG9.1.mp4，asset-paths.js 的映射也保留；
-  // 待确认它真正属于哪一场后再改挂，不要凭空挑一个位置塞回去。
-  // CG10.1.mp4 原本挂在这场，但画面是「红色食堂 + 梦魇台词『我说过，你走不了』」，
-  // 与第九场（办公室门口的阴暗角落 / 赵灵与小女孩）内容不符，2026-09-17 摘除。
-  // 素材仍在 assets/video/cg/CG10.1.mp4，若确认属于「食堂前方 · 梦魇拦路」那几场，可改挂到 scene-27 / scene-28。
+  // CG9.1.mp4 原挂第八场（馆长办公室）开场，2026-09-20 摘除、改挂到第二十五场：
+  // 赵灵在宿舍门口拍门、台词说完之后（对应 009 该场末尾「门开……整座博物馆开始变了：
+  // 墙壁渗出污血，暗处有怪物蠕动」）。注意是接在场景**末尾**，不是当开场演出放。
+  var scene25 = scenes["scene-25"];
+  scene25.events = scene25.lines.map(function (l) { return dialogue(l); });
+  scene25.events.push({ type: "video", video: "CG9.1.mp4", label: "CG · 博物馆异变", action: "继续" });
+  // CG10.1.mp4 原挂第九场（办公室门口的阴暗角落），画面是「红色食堂 + 梦魇『我说过，你走不了』」，
+  // 内容不符，2026-09-17 摘除。2026-09-20 改挂到第二十七场：地图上「食堂前方」节点
+  // （wax-scene-29）进的就是这场，而该场第 2 句正是梦魇的「张天师，我说过，你走不了！」，
+  // 与画面描述逐字对上。点击「食堂前方」进入后开场播。
+  prependVideos("scene-27", [{video:"CG10.1.mp4",label:"CG · 梦魇拦路"}]);
   // 旧电视：只有玩家走到宿舍地图的「旧电视」（dorm-terminal）主动打开，才播兔子录像。
   // 2026-09-20 从 scene-03 末尾移过来——它原本是纸条流程的最后一步，等于"在柜子里"就播了。
   // scene-03-tv 自带 2 行录像旁白，chapter-finalize.js 会把它克隆成 terminal。
@@ -89,23 +94,33 @@
   // 009 的措辞是「照纸片的意思」（旧稿为「看纸片上的意思」），锚点跟着剧本走，否则这两件道具永远不发放。
   uniform.lines.forEach(function(l){uniform.events.push(dialogue(l));if(/纸片的意思/.test(l.text))uniform.events.push(itemEvent("银色的发卡.webp"),itemEvent("赵灵红色制服里的纸片2.webp"));});
   prepend("scene-26",[itemEvent("赵灵红色制服里的纸片.webp")]);
-  var perfect=scenes["ending-c"];
-  perfect.events=[];
-  var inRealHospital=false;
-  perfect.lines.forEach(function(l){
-    if(l.cue === "real-hospital")inRealHospital=true;
-    var event=dialogue(l);
-    if(inRealHospital)event.portraitVariants={hero:"portraits/hero-casual.png",zhaoling:"portraits/zhaoling-patient.png"};
-    // This CG already contains the revived Zhang Mingcheng: show it only at the farewell.
-    if(l.cue === "hospital-farewell"){
-      perfect.events.push({type:"cg",background:"hospital-farewell.png",backgroundFit:"contain",action:"继续"});
-      event.background="hospital-farewell.png";event.backgroundFit="contain";event.hidePortraits=true;
-    }
-    perfect.events.push(event);
-    if(l.cue === "contract-reveal")perfect.events.push(itemEvent("张明诚契约.webp"));
+  // 完美结局（C）的演出顺序（2026-09-20）：
+  //   结局 CG → 一页**可上下滑动**的完整对白 → 点「继续」进通关界面。
+  //
+  // 这一段原本是逐行推进的 27 页（25 行对白 + 告别 CG + 契约特写，带现实病房逐行换装）。
+  // 改成"一页读完"是因为这段的实质是"听赵灵把话说完"，逐页点会把一段连续的话切碎。
+  // 两个画面没有丢：告别 CG 与契约特写按原位内嵌在这一页里，顺序沿用旧实现——
+  // 告别 CG 在台词**之前**，契约特写在揭示台词**之后**（后者是用户确认过的）。
+  var perfect = scenes["ending-c"];
+  var perfectEntries = [];
+  perfect.lines.forEach(function (l) {
+    if (l.cue === "hospital-farewell") perfectEntries.push({image: "hospital-farewell.png", caption: "病房里的告别"});
+    perfectEntries.push({speaker: l.speaker, text: l.text});
+    if (l.cue === "contract-reveal") perfectEntries.push({image: "张明诚契约.webp", caption: "张明诚的契约"});
   });
+  perfect.events = [
+    {type: "video", video: "结局CG1.mp4", label: "CG · 完美结局", action: "继续"},
+    // `text` 是把这一页真正会显示的文字拼成一份，专门给 story-text-residue 的静态扫描看
+    // （它只读事件的 text 字段，读不到 entries）。渲染走 entries，两者必须同步维护。
+    // bgm: 从这一页起换成通关曲「C结局后的音乐.mp3」，并一直延续到它后面的通关菜单
+    // （结局页不再触发 loadScene，所以不会被切回去）。开场那段结局 CG 仍用主线曲。
+    {type: "letter", title: "完美结局", action: "继续", bgm: "cEnding", entries: perfectEntries,
+      text: perfectEntries.map(function (e) { return e.image ? "" : (e.speaker ? e.speaker + "：" : "") + e.text; }).join("\n")}
+  ];
   scenes["ending-a"].endArt="ending-a-card.png";
   scenes["ending-b"].endArt="ending-b-card.png";
+  // 通关海报：三张卡同规格（1454×1082），由 novel.js 的 showEndingScreen() 挂在结局页。
+  scenes["ending-c"].endArt="ending-c-card.png";
   // Repeat re-inspections (wardrobe-repeat / note-repeat / mirror) are wired to
   // the recorded inspection scenes in novel-prologue.js.  They are deliberately
   // not re-pointed here, because cloning scene-02 / scene-03 made "re-open the

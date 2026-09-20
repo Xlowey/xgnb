@@ -23,7 +23,7 @@ function check(label, ok, detail) {
     browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe' });
     const page = await browser.newPage({ viewport: { width: 1366, height: 768 } });
     const errors = [];
-    const newArt = /ending-[ab]-card|hero-casual|zhaoling-patient|hospital-farewell/;
+    const newArt = /ending-[ab]-card|ending-c-card|hospital-farewell/;
     page.on('pageerror', error => errors.push(error.message));
     page.on('requestfailed', request => { if (newArt.test(request.url())) errors.push('request failed: ' + request.url()); });
     page.on('response', response => { if (response.status() >= 400 && newArt.test(response.url())) errors.push(response.status() + ': ' + response.url()); });
@@ -57,89 +57,91 @@ function check(label, ok, detail) {
         backgroundSize: getComputedStyle(document.querySelector('.novel-background')).backgroundSize,
         portraitsHidden: document.querySelector('.novel-portraits').hidden,
         hero: document.querySelector('.portrait-hero').src,
-        zhaoling: document.querySelector('.portrait-zhaoling').src
+        zhaoling: document.querySelector('.portrait-zhaoling').src,
+        // 结局 C 的完整对白页：上下滑动是它的核心行为，所以把滚动尺寸一起取出来。
+        letterScroll: (() => { const sheet = document.querySelector('.ending-letter'); return sheet ? { scrollHeight: sheet.scrollHeight, clientHeight: sheet.clientHeight } : null; })()
         };
       });
     }
     async function advancePage() {
       const before = await frame();
       for (let attempt = 0; attempt < 3; attempt++) {
+        // 结局 CG 是原生 <video>，按 E 推不动（它要等 ended）。素材是 168 MB，
+        // 真放完整段会拖死这个测试，所以走它自己的「跳过动画」按钮。
+        const skip = page.locator('.video-cg-skip');
+        if (before.type === 'video' && await skip.count()) { await skip.click(); await page.waitForTimeout(150); }
         await page.keyboard.press('e');
         const after = await frame();
         if (after.end || after.progress !== before.progress) return after;
       }
       throw new Error('Cannot advance ending page: ' + JSON.stringify(before));
     }
+    // 2026-09-20：结局 C 改成「结局 CG → 一页可上下滑动的完整对白 → 通关界面」。
+    // 原来逐行推进的 31 页（带现实病房逐行换装）不再存在，所以这里改为断言新结构：
+    // 事件顺序、完整对白页逐条覆盖本场每一行、以及两个画面在长页里的位置。
     const authored = await page.evaluate(() => {
       const scene = MuseumStory.scenes['ending-c'];
       const events = scene.events || [];
-      const start = events.findIndex(event => event.text === '赵灵？');
-      const resurrection = events.findIndex(event => /^复活张明诚。/.test(event.text || ''));
-      const farewell = events.findIndex(event => /^有缘再见，/.test(event.text || ''));
-      const cgs = events.map((event, index) => ({ event, index })).filter(({ event }) => event.type === 'cg' && event.background === 'hospital-farewell.png');
+      const letter = events.find(event => event.type === 'letter');
+      const entries = (letter && letter.entries) || [];
+      const lineEntries = entries.filter(entry => !entry.image);
+      const at = predicate => entries.findIndex(predicate);
       return {
-        start, resurrection, farewell, cgs,
-        first: events[0], final: events[farewell],
-        hospital: events.slice(start, farewell).filter(event => event.type === 'dialogue'),
-        farewellCount: events.filter(event => /^有缘再见，/.test(event.text || '')).length,
+        kinds: events.map(event => event.type),
+        hasLetter: !!letter,
+        lineCount: lineEntries.length,
+        // 完整对白页必须逐条包含本场的每一行：顺序、正文、说话人三者都要对上，
+        // 否则「变成一封完整的对白」就是漏了内容。
+        linesMatch: lineEntries.length === scene.lines.length && scene.lines.every((line, index) => lineEntries[index].text === line.text && (lineEntries[index].speaker || '') === (line.speaker || '')),
+        missingSample: scene.lines.find((line, index) => !lineEntries[index] || lineEntries[index].text !== line.text) || null,
+        images: entries.filter(entry => entry.image).map(entry => entry.image),
+        farewell: at(entry => /^有缘再见，/.test(entry.text || '')),
+        cg: at(entry => entry.image === 'hospital-farewell.png'),
+        reveal: at(entry => /^这不是你的，是张明诚的/.test(entry.text || '')),
+        contract: at(entry => entry.image === '张明诚契约.webp'),
         cards: ['ending-a', 'ending-b', 'ending-c'].map(id => ({ id, art: MuseumStory.scenes[id].endArt }))
       };
     });
-    check('A and B cards match their actual endings', authored.cards[0].art === 'ending-a-card.png' && authored.cards[1].art === 'ending-b-card.png' && !/ending-[ab]-card/.test(authored.cards[2].art || ''), authored.cards);
-    check('C starts in the dream before the real hospital', authored.start > 0 && /她在等着你/.test(authored.first.text) && !authored.first.portraitVariants, authored.first);
-    check('real hospital dialogue has both costume variants', authored.hospital.length > 1 && authored.hospital.every(event => event.portraitVariants && event.portraitVariants.hero === 'portraits/hero-casual.png' && event.portraitVariants.zhaoling === 'portraits/zhaoling-patient.png'), authored.hospital.map(event => ({ text: event.text, variants: event.portraitVariants })));
-    check('one farewell CG appears after resurrection and before goodbye', authored.resurrection > authored.start && authored.cgs.length === 1 && authored.cgs[0].index > authored.resurrection && authored.cgs[0].index < authored.farewell && authored.cgs[0].event.backgroundFit === 'contain', { resurrection: authored.resurrection, farewell: authored.farewell, cgs: authored.cgs });
-    check('goodbye keeps the CG and suppresses duplicate portraits', authored.farewellCount === 1 && authored.final && authored.final.background === 'hospital-farewell.png' && authored.final.backgroundFit === 'contain' && authored.final.hidePortraits === true, authored.final);
+    check('三个结局各自对上自己的通关海报，没有借用别家的', authored.cards[0].art === 'ending-a-card.png' && authored.cards[1].art === 'ending-b-card.png' && authored.cards[2].art === 'ending-c-card.png', authored.cards);
+    check('C 先播结局 CG、再接完整对白页', authored.kinds.length === 2 && authored.kinds[0] === 'video' && authored.kinds[1] === 'letter', authored.kinds);
+    check('完整对白页逐条包含本场每一行（顺序与说话人一致）', authored.hasLetter && authored.linesMatch, { lineCount: authored.lineCount, missingSample: authored.missingSample });
+    check('告别 CG 只出现一次，紧接在告别台词之前', authored.cg >= 0 && authored.cg === authored.farewell - 1, { cg: authored.cg, farewell: authored.farewell });
+    check('张明诚契约只出现一次，紧接在揭示台词之后', authored.contract >= 0 && authored.contract === authored.reveal + 1, { contract: authored.contract, reveal: authored.reveal });
 
-    const costumes = await page.evaluate(async () => {
-      const scene = MuseumStory.scenes['ending-c'];
-      const first = scene.events[0];
-      const hospital = scene.events.find(event => event.text === '赵灵？');
-      const farewell = scene.events.find(event => /^有缘再见，/.test(event.text || ''));
-      function snapshot() {
-        return { hero: document.querySelector('.portrait-hero').src, zhaoling: document.querySelector('.portrait-zhaoling').src, hidden: document.querySelector('.novel-portraits').hidden };
-      }
-      MuseumPortraits.render(scene, first);
-      const initial = snapshot();
-      MuseumPortraits.render(scene, hospital);
-      const changed = snapshot();
-      const loaded = await Promise.all(['hero', 'zhaoling'].map(async id => {
-        const img = document.querySelector('.portrait-' + id);
-        try { await img.decode(); return img.naturalWidth > 0; } catch (error) { return false; }
-      }));
-      MuseumPortraits.render(scene, first);
-      const restored = snapshot();
-      MuseumPortraits.render(scene, farewell);
-      const goodbye = snapshot();
+    // 逐行换装（hero-casual / zhaoling-patient）随逐页对白一起取消了：一页读完没有"行"，
+    // 也就没有逐行的立绘状态。这里改为守住"长页隐藏立绘层、普通台词仍恢复立绘"。
+    const portraits = await page.evaluate(() => {
+      const snapshot = () => ({ hero: document.querySelector('.portrait-hero').src, zhaoling: document.querySelector('.portrait-zhaoling').src, hidden: document.querySelector('.novel-portraits').hidden });
+      const cScene = MuseumStory.scenes['ending-c'];
+      MuseumPortraits.render(cScene, cScene.events.find(event => event.type === 'letter'));
+      const onLetter = snapshot();
       const other = MuseumStory.scenes['ending-a'];
       MuseumPortraits.render(other, (other.events || other.lines).find(event => event.speaker === '主角'));
-      return { initial, changed, loaded, restored, goodbye, other: snapshot() };
+      const onDialogue = snapshot();
+      return { onLetter, onDialogue };
     });
     const defaults = state => /hero-portrait\.webp(?:\?|$)/.test(state.hero) && /zhaoling-portrait\.webp(?:\?|$)/.test(state.zhaoling);
-    check('dream uses normal costumes', defaults(costumes.initial) && !costumes.initial.hidden, costumes.initial);
-    check('hospital swaps to loaded casual and patient portraits', /hero-casual\.png(?:\?|$)/.test(costumes.changed.hero) && /zhaoling-patient\.png(?:\?|$)/.test(costumes.changed.zhaoling) && costumes.loaded.every(Boolean) && !costumes.changed.hidden, costumes);
-    check('revisiting the dream restores normal costumes', defaults(costumes.restored), costumes.restored);
-    check('farewell hides the portrait layer', costumes.goodbye.hidden, costumes.goodbye);
-    check('another ending restores normal costumes and portrait visibility', defaults(costumes.other) && !costumes.other.hidden, costumes.other);
+    check('完整对白页隐藏立绘层', portraits.onLetter.hidden, portraits.onLetter);
+    check('另一个结局的普通台词仍恢复立绘与可见性', defaults(portraits.onDialogue) && !portraits.onDialogue.hidden, portraits.onDialogue);
 
-    // Play the actual C pages once, exercising page splitting and metadata propagation.
+    // Play C once: 结局 CG → 完整对白页（可上下滑动）→ 通关界面。
     await openScene('ending-c');
     const observed = [];
-    for (let count = 0; count < 160; count++) {
+    for (let count = 0; count < 30; count++) {
       const current = await frame();
       if (current.end) break;
       observed.push(current);
       await advancePage();
     }
     check('C completes through the normal ending flow', (await frame()).end);
-    const hospitalPage = observed.find(item => item.text === '赵灵？');
-    check('real C hospital page preserves costume metadata through playback', !!hospitalPage && /hero-casual\.png/.test(hospitalPage.hero) && /zhaoling-patient\.png/.test(hospitalPage.zhaoling), hospitalPage);
-    const cgPages = observed.filter(item => item.type === 'cg' && /hospital-farewell\.png/.test(item.background));
-    const goodbyePages = observed.filter(item => /^有缘再见，/.test(item.text));
-    check('real C playback shows exactly one unobstructed farewell CG', cgPages.length === 1 && cgPages[0].portraitsHidden && /contain/.test(cgPages[0].backgroundSize), cgPages);
-    check('real final line retains the farewell art without portraits', goodbyePages.length === 1 && /hospital-farewell\.png/.test(goodbyePages[0].background) && goodbyePages[0].portraitsHidden && /contain/.test(goodbyePages[0].backgroundSize), goodbyePages);
+    const letterPage = observed.find(item => item.type === 'letter');
+    check('C 的演出顺序是结局 CG → 完整对白页', observed.length >= 1 && observed[0].type === 'video' && !!letterPage, observed.map(item => item.type));
+    // 「可以上下滑动」是这次改动的核心行为：内容高度必须超过容器高度，否则滑不动。
+    check('完整对白页内容高于容器，确实可以上下滑动', !!letterPage && !!letterPage.letterScroll && letterPage.letterScroll.scrollHeight > letterPage.letterScroll.clientHeight, letterPage && letterPage.letterScroll);
+    check('完整对白页不显示立绘层', !!letterPage && letterPage.portraitsHidden, letterPage && { portraitsHidden: letterPage.portraitsHidden });
 
-    for (const suffix of ['a', 'b']) {
+    // 2026-09-20：C 的通关海报到位，三张卡一起走同一套校验（能加载、不裁切、两档视口不溢出）。
+    for (const suffix of ['a', 'b', 'c']) {
       await openScene('ending-' + suffix);
       for (let count = 0; count < 100 && !(await frame()).end; count++) await advancePage();
       check('ending-' + suffix + ' reaches its overlay', (await frame()).end);

@@ -1024,6 +1024,20 @@ dialog::backdrop { background: rgba(2,4,3,.78); backdrop-filter: blur(5px); }
   // 不带参数时（老师双击直接打开这个文件）行为完全不变：用本页自己的 localStorage。
   // ---------------------------------------------------------------------------
   var bridge = { active: false, userId: null, returnTo: null, mainState: null };
+
+  /*
+   * 商店里已购的券机向道具（012 §5.6 的 12 赔付申请单 / 15 闭馆广播）。
+   *
+   * 券机本来就通过 bridge 读着主存档（余额走 MuseumPoints），所以直接看 shopOwned 就行，
+   * 不必像跑酷/地牢那样另传 URL 参数。
+   * 独立打开（不是从面板进来）时 bridge.mainState 是 null → 一律返回 false，
+   * 行为与接入前一模一样。
+   */
+  function ownsShopItem(id) {
+    var owned = bridge.mainState && bridge.mainState.shopOwned;
+    if (!owned) return false;
+    return Math.max(0, Math.round(Number(owned[id])) || 0) > 0;
+  }
   var DEMO_START_BALANCE = 200;
 
   function setupBridge() {
@@ -1352,7 +1366,13 @@ dialog::backdrop { background: rgba(2,4,3,.78); backdrop-filter: blur(5px); }
   }
 
   function getPurchaseTerms(tier, talent) {
-    var discountPercent = talent && talent.id === 'ticketDiscount' ? 30 : 0;
+    var talentDiscount = talent && talent.id === 'ticketDiscount' ? 30 : 0;
+    // 【闭馆广播】（012 §5.6 的 15）：券机全档票价 −20%。
+    // 与天赋折扣叠加——012 特意说过它「永远不回本」：打平要押 1250 点，而全周目
+    // 总可支配刚好是 1250，买完只剩 1000、最多省 200，最好的情况净亏 50。
+    // 那是**故意**的：这是 MOSS 会卖的东西。
+    var shopDiscount = ownsShopItem('siren') ? 20 : 0;
+    var discountPercent = talentDiscount + shopDiscount;
     // 012 §6.4 旋钮一：风险天赋的 NONE 减益。旧值 50 / 100 太小——四倍异常在 60 点档
     // 罚 60（票价的 100%）却赚 148（3 × 49.42），赌注和赔率差 2.5 倍，那不是赌博是捡钱。
     var penaltyPercent = talent && talent.id === 'tripleRisk' ? 250 : talent && talent.id === 'quadrupleRisk' ? 360 : 0;
@@ -1794,6 +1814,13 @@ dialog::backdrop { background: rgba(2,4,3,.78); backdrop-filter: blur(5px); }
       // 奖金和风险扣款分开两笔走，明细里才看得出哪一笔是中的、哪一笔是罚的。
       applyBalance(ticket.reward, '福利券机 · ' + tierName + ' 中奖');
       applyBalance(-ticket.extraPenalty, '福利券机 · ' + tierName + ' 风险扣款', { clamp: true });
+      // 【赔付申请单】（012 §5.6 的 12）：本券结算为 NONE 时返还票价的一半。
+      // 012 明说这是**纯保险、按各档算都是负期望**（回 2.75 / 9.05 / 20.85，售价 50）。
+      // 那不划算是对的——「保险本来就不该划算」，它只负责给大额券买安心。
+      if (ticket.reward <= 0 && ownsShopItem('claim')) {
+        var claimRefund = Math.round(ticket.paidPrice / 2);
+        if (claimRefund > 0) applyBalance(claimRefund, '福利券机 · 赔付申请单（未中奖返还）');
+      }
       recordMachine({ net: ticket.net });
       ticket.rewardApplied = true;
     }

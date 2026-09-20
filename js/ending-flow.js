@@ -10,11 +10,18 @@
     if (!choice.endingFromNightmareChoice) return choice;
     var flags = state.flags || {}, destination = "ending-a";
     if (flags.nightmareMinigameChoice === "enter") {
-      // Old successful saves predate the explicit win marker. Only accept a
-      // completed post-battle scene with no pending battle as legacy evidence.
-      var legacyWin = flags.nightmareMinigameWon == null && flags.scene28Seen &&
-        state.mode !== "battle" && !state.battleAttempt && !state.returnScene;
-      destination = flags.nightmareMinigameWon === true || legacyWin ? "ending-c" : "scene-27-boss";
+      // 2026-09-20：地牢 v4 有两条通关路线，**必须先判撤离**。
+      // 撤离试炼也会写 choice = "enter"（因为它确实进了小游戏），但它不是"打过梦魇"，
+      // 不该落到 C。它对应 A（回头结局）——放弃打梦魇。
+      if (flags.nightmareRoute === "evacuate") {
+        destination = "ending-a";
+      } else {
+        // Old successful saves predate the explicit win marker. Only accept a
+        // completed post-battle scene with no pending battle as legacy evidence.
+        var legacyWin = flags.nightmareMinigameWon == null && flags.scene28Seen &&
+          state.mode !== "battle" && !state.battleAttempt && !state.returnScene;
+        destination = flags.nightmareMinigameWon === true || legacyWin ? "ending-c" : "scene-27-boss";
+      }
     }
     return Object.assign({}, choice, { id: destination, nextScene: destination });
   }

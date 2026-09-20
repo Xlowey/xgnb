@@ -103,17 +103,22 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
       check(`「${label}」 ending has text`, body.length > 0 || (await page.evaluate(() => !document.getElementById('novel-end').hidden)), body.slice(0, 60));
     }
 
-    // A/C follows the saved minigame decision, regardless of the finale wording.
-    for (const decision of ['skip', 'enter']) {
+    // A/C 由「小游戏里走了哪条路」决定，与最终抉择的文案无关。
+    // 2026-09-20 起地牢 v4 有两条通关路线，所以这里从两档扩成三档。
+    for (const [name, flags, want] of [
+      ['老存档·根本没进小游戏', { nightmareMinigameChoice: 'skip' }, 'ending-a'],
+      ['v4·撤离试炼', { nightmareMinigameChoice: 'enter', nightmareRoute: 'evacuate', nightmareMinigameWon: false }, 'ending-a'],
+      ['v4·打了首领', { nightmareMinigameChoice: 'enter', nightmareRoute: 'boss', nightmareMinigameWon: true }, 'ending-c'],
+    ]) {
       for (const label of ['回头救赵灵', '追问真相']) {
-        await seed({ nightmareMinigameChoice: decision, nightmareMinigameWon: decision === 'enter' });
+        await seed(flags);
         await page.goto('http://127.0.0.1:8806/pages/novel.html?scene=ending-choice');
         for (let i = 0; i < 8 && !(await choices()).length; i++) {
           await page.keyboard.press('e');
           await page.waitForTimeout(150);
         }
         await page.getByRole('button', { name: new RegExp(label) }).click();
-        check(`${decision}: ${label} follows minigame decision`, page.url().includes(decision === 'enter' ? 'ending-c' : 'ending-a'), page.url());
+        check(`${name} + ${label} → ${want}`, page.url().includes(want), page.url());
       }
     }
     // Entering alone is not victory: an interrupted/legacy save must return to the fight decision.
@@ -127,20 +132,24 @@ const check = (l, ok, d) => { console.log((ok ? 'PASS ' : 'FAIL ') + l + (ok || 
     check('enter without victory returns to the battle decision', new URL(page.url()).searchParams.get('scene') === 'scene-27-boss', page.url());
     const unearned = await page.evaluate(() => MuseumState.load(MuseumAuth.getCurrentUser().id));
     check('interrupted minigame does not collect C', !unearned.endingHistory.includes('ending-c') && unearned.endingComplete !== true, unearned.endingHistory);
-    for (const enter of [false, true]) {
-      await seed({});
-      await page.goto('http://127.0.0.1:8806/pages/novel.html?scene=scene-27-boss');
-      for (let i = 0; i < 20 && !(await choices()).length; i++) {
-        await page.keyboard.press('e');
-        await page.waitForTimeout(150);
-      }
-      await page.getByRole('button', { name: enter ? '迎战梦魇（进入小游戏）' : '不进入小游戏，前往出口', exact: true }).click();
-      await page.waitForTimeout(500);
-      check('nightmare choice opens correct destination', page.url().includes(enter ? 'pixel-dungeon-html' : 'scene-28'), page.url());
-      await page.goto('http://127.0.0.1:8806/index.html');
-      const saved = await page.evaluate(() => MuseumState.load(MuseumAuth.getCurrentUser().id));
-      check('nightmare decision survives page navigation', saved.flags.nightmareMinigameChoice === (enter ? 'enter' : 'skip'), saved.flags.nightmareMinigameChoice);
+    // 2026-09-20：「不进入小游戏，前往出口」那个出口**已取消**——玩家必须进地牢，
+    // A/C 改在地牢**内部**的两条通关路线里分（打首领→C，撤离试炼→A）。
+    // 这里除了验证入口，还专门守住"那个跳过出口没有被加回来"。
+    await seed({});
+    await page.goto('http://127.0.0.1:8806/pages/novel.html?scene=scene-27-boss');
+    for (let i = 0; i < 20 && !(await choices()).length; i++) {
+      await page.keyboard.press('e');
+      await page.waitForTimeout(150);
     }
+    const finaleChoices = await choices();
+    check('最终战只剩「迎战梦魇」一个选项（必须进地牢，不许有待出口）',
+      finaleChoices.length === 1 && /迎战梦魇/.test(finaleChoices[0]), finaleChoices);
+    await page.getByRole('button', { name: '迎战梦魇（进入小游戏）', exact: true }).click();
+    await page.waitForTimeout(500);
+    check('nightmare choice opens the dungeon', page.url().includes('pixel-dungeon-html'), page.url());
+    await page.goto('http://127.0.0.1:8806/index.html');
+    const saved = await page.evaluate(() => MuseumState.load(MuseumAuth.getCurrentUser().id));
+    check('nightmare decision survives page navigation', saved.flags.nightmareMinigameChoice === 'enter', saved.flags.nightmareMinigameChoice);
 
     // ---- 4. the timeout still resolves to 死亡 ---------------------------
     await seed({});

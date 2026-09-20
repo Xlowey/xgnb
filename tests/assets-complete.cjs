@@ -48,6 +48,9 @@ for (const [id, sc] of Object.entries(S)) {
   for (const e of (sc.events || [])) {
     collect(id, e);
     for (const h of (e.hotspots || [])) collect(id, h);
+    // 长页对白（letter）把图片放在 entries 里，不在上面那张固定键表里。
+    // 不往下走一层，结局 C 里的告别 CG 与契约特写就没人看守了。
+    for (const entry of (e.entries || [])) collect(id, entry);
   }
 }
 check('事件/调查点引用的图片与录像都存在', missingMedia.length === 0, missingMedia.slice(0, 8));

@@ -9,6 +9,13 @@
   <link rel="icon" type="image/svg+xml" href="assets/museum/sigil.svg">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="museum.css">
+  <!-- 系统面板（012 §3.2）。从主线进来时可以在跑酷途中按 M 买道具；
+       把小游戏单独拷出去、或直接双击本文件时，这些脚本加载不到，
+       js/demo-shell.js 会静默退出，独立试玩不受影响。 -->
+  <link rel="stylesheet" href="../../css/points.css">
+  <link rel="stylesheet" href="../../css/humanity.css">
+  <link rel="stylesheet" href="../../css/shop.css">
+  <link rel="stylesheet" href="../../css/panel.css">
 </head>
 <body>
   <main id="gameShell" aria-label="森林极速跑游戏">
@@ -23,6 +30,11 @@
         <div><span>时间</span><strong id="timeValue">0 s/180s</strong></div>
       </div>
       <div id="powerStatus" class="power-status" aria-label="当前道具"></div>
+      <!-- 系统面板入口。从主线进来时由 js/demo-shell.js 取消 hidden 并接线；
+           独立游玩 / 课堂预览时保持 hidden（那时没有账号，也没有存档可花）。
+           用内联样式是因为这页的 .icon-button 是绝对定位的（会跟暂停按钮重叠）。 -->
+      <button id="systemPanelButton" type="button" hidden
+        style="cursor:pointer;font:inherit;font-size:12px;line-height:1;padding:6px 10px;border:1px solid rgba(255,255,255,.35);border-radius:6px;background:rgba(0,0,0,.45);color:#fff;white-space:nowrap">系统 · M</button>
       <button id="pauseButton" class="icon-button" type="button" aria-label="暂停游戏">Ⅱ</button>
     </section>
 
@@ -123,7 +135,18 @@
     </aside>
     <p id="bridgeStatus" class="bridge-status" role="status" aria-live="polite"></p>
   </main>
-  <script src="museum-bridge.js"></script>
-  <script src="game.js"></script>
+  <script src="../../js/sfx.js?v=1"></script>
+  <script src="../../js/state.js?v=62"></script>
+  <script src="../../js/points.js?v=2"></script>
+  <script src="../../js/humanity-data.js?v=1"></script>
+  <script src="../../js/humanity.js?v=1"></script>
+  <script src="../../js/shop-data.js?v=4"></script>
+  <script src="../../js/shop.js?v=1"></script>
+  <script src="../../js/panel.js?v=4"></script>
+  <script src="museum-bridge.js?v=3"></script>
+  <!-- 加 ?v= 是因为这个文件的缓存问题踩过两次（改了没生效，看起来像 bug）。
+       独立游玩时它只是个本地查询串，无副作用。改内容记得同步升号。 -->
+  <script src="game.js?v=2"></script>
+  <script src="../../js/demo-shell.js?v=4"></script>
 </body>
 </html>

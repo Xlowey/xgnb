@@ -76,7 +76,13 @@ function check(label, ok, detail) { console.log((ok ? 'PASS ' : 'FAIL ') + label
       ['待结算战斗不能按旧档完成处理', {mode:'novel',returnScene:'scene-28',flags:{nightmareMinigameChoice:'enter',scene28Seen:true}}, 'scene-27-boss'],
       ['进行中的战斗记录不能按旧档完成处理', {mode:'novel',battleAttempt:{id:'pending'},flags:{nightmareMinigameChoice:'enter',scene28Seen:true}}, 'scene-27-boss'],
       ['Boss 阶段标志不能替代小游戏通关', {mode:'novel',flags:{nightmareMinigameChoice:'enter',boss_defeated:true,finalPhaseCompleted:true}}, 'scene-27-boss'],
-      ['主动跳过仍为 A，不受旧 Boss 标志影响', {mode:'novel',flags:{nightmareMinigameChoice:'skip',boss_defeated:true,nightmareMinigameWon:true}}, 'ending-a']
+      ['主动跳过仍为 A，不受旧 Boss 标志影响', {mode:'novel',flags:{nightmareMinigameChoice:'skip',boss_defeated:true,nightmareMinigameWon:true}}, 'ending-a'],
+      // 2026-09-20：地牢换成 v4 后有两条通关路线，A/C 在这里分。
+      // 撤离试炼也写 choice='enter'（它确实进了小游戏），所以**必须先判 route**——
+      // 下面第三条专门守这个优先级：即使撤离被误标了 won=true，也必须走 A。
+      ['v4 撤离试炼 → A（放弃打梦魇）', {mode:'novel',flags:{nightmareMinigameChoice:'enter',nightmareRoute:'evacuate',nightmareMinigameWon:false}}, 'ending-a'],
+      ['v4 打完首领 → C', {mode:'novel',flags:{nightmareMinigameChoice:'enter',nightmareRoute:'boss',nightmareMinigameWon:true}}, 'ending-c'],
+      ['route=evacuate 的优先级高于 won（撤离即使被标 won 也走 A）', {mode:'novel',flags:{nightmareMinigameChoice:'enter',nightmareRoute:'evacuate',nightmareMinigameWon:true}}, 'ending-a']
     ];
     for (const [label, fixture, expected] of cases) {
       const resolved = await page.evaluate(fixture => MuseumEndingFlow.resolveChoice(fixture,{id:'ending-c',nextScene:'ending-c',endingFromNightmareChoice:true}).nextScene, fixture);

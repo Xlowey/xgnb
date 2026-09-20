@@ -33,6 +33,7 @@
   Object.assign(paths, {
   "ending-a-card.png": "cg/endings/ending-a-card.png",
   "ending-b-card.png": "cg/endings/ending-b-card.png",
+  "ending-c-card.png": "cg/endings/ending-c-card.png",
   "hospital-farewell.png": "cg/endings/hospital-farewell.png",
   "hero-casual.png": "characters/portraits/hero-casual.png",
   "zhaoling-patient.png": "characters/portraits/zhaoling-patient.png",
@@ -89,7 +90,8 @@
     "CG9.1.mp4": "cg/CG9.1.mp4",
     "CG10.1.mp4": "cg/CG10.1.mp4",
     "CG11.mp4": "cg/CG11.mp4",
-    "CG11.2.mp4": "cg/CG11.2.mp4"
+    "CG11.2.mp4": "cg/CG11.2.mp4",
+    "结局CG1.mp4": "cg/结局CG1.mp4"
   };
   function video(name) {
     return new URL(videoPaths[name] || ("cg/" + name), videoRoot).href;

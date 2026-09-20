@@ -1,6 +1,6 @@
 "use strict";
 
-const CONFIG = Object.freeze({
+const DEFAULTS = Object.freeze({
   VIEW_DISTANCE: 220,
   BASE_SPEED: 75,
   SPEED_STEP_SECONDS: 30,
@@ -29,9 +29,103 @@ const CONFIG = Object.freeze({
   MAX_PARTICLES: 130,
   STORAGE_SCORE: "forestRushBestScore",
   STORAGE_DISTANCE: "forestRushBestDistance",
+  // 冲刺撞碎障碍的得分。原本硬写在 game.js 的碰撞分支里（+=180），
+  // 提出来是因为商店的【纸人的腿】要把它改成 360（012 §5.6）。
+  DASH_SMASH_SCORE: 180,
 });
 
+/*
+ * 接入主线时由 URL 覆盖这些值（2026-09-20）。
+ *
+ * **不带参数时与独立试玩完全一致**：180 秒、无任何商品加成。独立入口
+ * （双击 index.html）因此不受主线影响，这一条有测试守着。
+ *
+ * 参数名与主线侧 js/museum-runner.js 发出来的一致：
+ *   target=90        主线版时长
+ *   magnet=14        【红制服】磁铁 8s → 14s
+ *   stunImmunity=1   【保安哨】本局免一次撞墙眩晕
+ *   stumble=2         【蜡像的膝盖】踉跄 5s → 2s
+ *   slide=0.9         【蜡像的膝盖】滑铲 0.7s → 0.9s
+ *   dash=8            【纸人的腿】冲刺 4s → 8s
+ *   smash=360         【纸人的腿】撞碎障碍得分 180 → 360
+ */
+const QUERY = (function () {
+  try {
+    if (typeof URLSearchParams === "function" && typeof location !== "undefined") {
+      return new URLSearchParams(location.search || "");
+    }
+  } catch (error) { /* 落到下面的兜底 */ }
+  // 非浏览器环境（tests/ 的 vm 沙箱）没有 location / URLSearchParams。
+  // 这时所有参数都退回默认值 —— 也就是"独立试玩"的那一套。
+  return null;
+})();
+function queryNumber(key, fallback) {
+  if (!QUERY) return fallback;
+  const raw = QUERY.get(key);
+  // ⚠️ 必须先挡掉 null / 空串：URLSearchParams.get() 对"参数不在"返回 null，
+  //    而 Number(null) === 0 且 0 是有限数 —— 直接 Number() 会让"没传参数"
+  //    被当成"传了 0"，于是滑铲时长变 0、通关条件变 0 秒。
+  //    （2026-09-20 踩过：测试跑在没有 URLSearchParams 的 vm 沙箱里，正好把这条遮住了。）
+  if (raw === null || raw === "") return fallback;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : fallback;
+}
+const CONFIG = Object.freeze(Object.assign({}, DEFAULTS, {
+  SURVIVAL_TARGET: queryNumber("target", DEFAULTS.SURVIVAL_TARGET),
+  MAGNET_DURATION: queryNumber("magnet", DEFAULTS.MAGNET_DURATION),
+  DASH_DURATION: queryNumber("dash", DEFAULTS.DASH_DURATION),
+  DASH_SMASH_SCORE: queryNumber("smash", DEFAULTS.DASH_SMASH_SCORE),
+  STUMBLE_DURATION: queryNumber("stumble", DEFAULTS.STUMBLE_DURATION),
+  SLIDE_DURATION: queryNumber("slide", DEFAULTS.SLIDE_DURATION),
+  WALL_STUN_IMMUNITY: Math.max(0, Math.floor(queryNumber("stunImmunity", 0))),
+}));
+
+/*
+ * 这一局带了哪几件商店道具 —— 写进 HUD。
+ *
+ * 追逐向那 4 件（012 §5.6 的 07/08/09/10）是**买断**的，进图时被折算进 CONFIG，
+ * 属于**被动**加成。不写出来的话，玩家花了 60~180 点完全看不出来生效没有
+ * （2026-09-20 补）。反推方式：跟 DEFAULTS 比，被改过的就是买了的。
+ */
+const SHOP_SUMMARY = (function () {
+  const owned = [];
+  if (CONFIG.MAGNET_DURATION > DEFAULTS.MAGNET_DURATION) owned.push('红制服');
+  if (CONFIG.WALL_STUN_IMMUNITY > 0) owned.push('保安哨');
+  if (CONFIG.STUMBLE_DURATION < DEFAULTS.STUMBLE_DURATION || CONFIG.SLIDE_DURATION > DEFAULTS.SLIDE_DURATION) owned.push('护膝');
+  if (CONFIG.DASH_DURATION > DEFAULTS.DASH_DURATION) owned.push('纸腿');
+  return owned.length ? '🛒 ' + owned.join(' ') : '';
+}());
+
 const GameState = Object.freeze({ MENU: "MENU", PLAYING: "PLAYING", PAUSED: "PAUSED", GAME_OVER: "GAME_OVER", SUCCESS: "SUCCESS" });
+
+/*
+ * 主角立绘（背视角跑步，单帧）。
+ *
+ * 2026-09-20 从「程序绘制的原创小浣熊栗栗」换成这张图——小动物主角与主线
+ * （保安 / 纸人 / 规则调查）不一致，接入时一并换掉。
+ *
+ * 源图 1230×1278 但透明边很大，这里是量出来的**内容外框**；height / footY 沿用
+ * 原小浣熊的比例（头顶 −103、脚底 +23，以 unit 计），保证落地位置和碰撞观感不变。
+ */
+const HERO = Object.freeze({
+  // 四帧都放在本目录的 assets/hero/ 下，而不是引用仓库里的原图 —— 这个 demo 要保持
+  // 「双击 index.html 即可独立游玩」，不能依赖仓库目录结构。
+  //
+  // 生成方式：用 Seedream 4.5 的图生图，拿同一张参考立绘出一张 2×2 四宫格动作分解
+  // （跑步×2 / 跳跃 / 滑铲）。一次生成保证四格的画风、服装、视角、光照天然一致；
+  // 滑铲那一格出坏了，单独重生成后按「非透明像素量相等」配平。
+  // **所以四帧可以共用同一个缩放系数**（HEIGHT / BASE_HEIGHT），否则播放时会忽大忽小。
+  // 素材与管线：网站开发/_素材/跑酷主角/
+  BASE_HEIGHT: 900,   // run-a 归一后的像素高度，用来算那个共用系数
+  HEIGHT: 126,        // 游戏里画多高（单位是 unit）
+  FOOT_Y: 23,
+  FRAMES: {
+    runA: "assets/hero/run-a.png",
+    runB: "assets/hero/run-b.png",
+    jump: "assets/hero/jump.png",
+    slide: "assets/hero/slide.png"
+  }
+});
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const lerp = (a, b, t) => a + (b - a) * t;
 const smoothstep = (a, b, n) => { const t = clamp((n - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
@@ -123,6 +217,8 @@ class Player {
     this.wallBumpTimer = 0;
     this.wallBumpDirection = 0;
     this.landingPulse = 0;
+    // 【保安哨】的免眩晕次数，每局重置（012 §5.6）。0 = 没买，行为与原来一致。
+    this.wallImmunity = CONFIG.WALL_STUN_IMMUNITY;
   }
 
   move(direction) {
@@ -386,6 +482,12 @@ class Renderer {
     }
     this.museumBackground = new Image();
     this.museumBackground.src = "assets/museum/corridor.webp";
+    this.heroImages = {};
+    for (const key of Object.keys(HERO.FRAMES)) {
+      const texture = new Image();
+      texture.src = HERO.FRAMES[key];
+      this.heroImages[key] = texture;
+    }
     this.resize();
   }
 
@@ -764,34 +866,17 @@ class Renderer {
       ctx.beginPath();ctx.arc(side*35*unit,5*unit,2.5*unit,0,Math.PI*2);ctx.fill();
     }
 
-    // 环纹尾巴沿地面拖在身体侧面。
-    ctx.strokeStyle="#5a3a28";ctx.lineWidth=12*unit;ctx.lineCap="round";
-    ctx.beginPath();ctx.moveTo(18*unit,-20*unit);ctx.quadraticCurveTo(48*unit,-12*unit,43*unit,8*unit);ctx.stroke();
-    ctx.strokeStyle="#d4a36f";ctx.lineWidth=4.5*unit;
-    ctx.beginPath();ctx.moveTo(29*unit,-12*unit);ctx.lineTo(43*unit,-7*unit);ctx.moveTo(32*unit,0);ctx.lineTo(42*unit,4*unit);ctx.stroke();
-
-    // 双腿朝前并抬膝，脚掌位于画面上方，形成仰面、脚先行的姿态。
-    ctx.strokeStyle="#493122";ctx.lineWidth=9*unit;
-    for(const side of [-1,1]){
-      ctx.beginPath();ctx.moveTo(side*10*unit,-30*unit);ctx.lineTo(side*20*unit,-48*unit);ctx.lineTo(side*14*unit,-66*unit);ctx.stroke();
-      ctx.fillStyle="#33251d";ctx.beginPath();ctx.ellipse(side*14*unit,-69*unit,9*unit,5.5*unit,side*.12,0,Math.PI*2);ctx.fill();
+    // 滑铲用专门的滑铲帧（横躺、前腿伸展），不再拿站姿立绘压扁凑。
+    //
+    // scale 1.2 是**比出来的**：滑铲那张是横躺的，按"非透明像素量相等"归一之后
+    // 身体本身偏小（因为它还摊开了手臂和膝盖）。用 PIL 按游戏里的缩放把四帧并排画出来，
+    // 逐档比对头部大小，1.2 与跑步帧最接近。
+    // ⚠️ 本机没有浏览器，这个数只在离线对比图上验过——实机若看着偏大/偏小就调它。
+    // footY 取 6：这里的原点已经抬到 groundY-3*unit。
+    if (!this.drawHeroSprite("slide", unit, { scale: 1.2, footY: 6 })) {
+      ctx.fillStyle="#88583b";
+      ctx.beginPath();ctx.ellipse(0,-27*unit,24*unit,26*unit,0,0,Math.PI*2);ctx.fill();
     }
-
-    // 手臂张开支撑平衡，但胸腹朝上。
-    ctx.strokeStyle="#493122";ctx.lineWidth=8*unit;
-    ctx.beginPath();ctx.moveTo(-17*unit,-28*unit);ctx.lineTo(-33*unit,-15*unit);ctx.lineTo(-36*unit,-2*unit);
-    ctx.moveTo(17*unit,-28*unit);ctx.lineTo(33*unit,-15*unit);ctx.lineTo(36*unit,-2*unit);ctx.stroke();
-
-    ctx.fillStyle="#88583b";ctx.beginPath();ctx.ellipse(0,-27*unit,24*unit,28*unit,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle="#c18a5c";ctx.beginPath();ctx.ellipse(0,-25*unit,14*unit,20*unit,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle="#f0bd42";ctx.beginPath();ctx.roundRect(-19*unit,-45*unit,38*unit,8*unit,4*unit);ctx.fill();
-
-    // 镜头看到的是后脑与耳朵，脸部朝向天空；背部则明确压在道路上。
-    ctx.fillStyle="#6b4431";ctx.beginPath();ctx.arc(-17*unit,0,9*unit,0,Math.PI*2);ctx.arc(17*unit,0,9*unit,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle="#b17c52";ctx.beginPath();ctx.arc(-17*unit,0,4.5*unit,0,Math.PI*2);ctx.arc(17*unit,0,4.5*unit,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle="#845438";ctx.beginPath();ctx.ellipse(0,3*unit,24*unit,21*unit,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle="#684431";ctx.beginPath();ctx.ellipse(0,1*unit,16*unit,13*unit,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle="#5a3828";ctx.beginPath();ctx.moveTo(-5*unit,-13*unit);ctx.lineTo(0,-20*unit);ctx.lineTo(5*unit,-13*unit);ctx.closePath();ctx.fill();
 
     if(p.shield){
       ctx.strokeStyle="rgba(91,222,255,.82)";ctx.lineWidth=4*unit;ctx.shadowColor="#58dfff";ctx.shadowBlur=14;
@@ -806,6 +891,30 @@ class Renderer {
       for(let i=0;i<3;i++){const angle=game.ambientTime*4+i*Math.PI*2/3;ctx.beginPath();ctx.arc(Math.cos(angle)*31*unit,(-48+Math.sin(angle)*7)*unit,3.5*unit,0,Math.PI*2);ctx.fill();}
     }
     ctx.restore();
+  }
+
+  /*
+   * 画主角立绘。调用方负责 save/translate/rotate，这里只按 unit 定尺寸与落点。
+   *
+   * 默认是站姿：脚底落在 +footY*unit。滑铲那边传 rotate 与更小的 height，
+   * 把同一张图转成仰面滑行的样子（素材只有单帧，两种姿势共用）。
+   * 返回 false 表示图还没加载好，调用方自己兜底。
+   */
+  drawHeroSprite(frameKey, unit, options) {
+    const image = this.heroImages && this.heroImages[frameKey];
+    if (!image || !image.complete || !image.naturalWidth) return false;
+    const opts = options || {};
+    // 四帧归一过，共用这一个系数。opts.scale 只是给"压低"这类临时形变用。
+    const scale = (HERO.HEIGHT / HERO.BASE_HEIGHT) * unit * (opts.scale || 1);
+    const width = image.naturalWidth * scale;
+    const height = image.naturalHeight * scale;
+    const footY = (opts.footY === undefined ? HERO.FOOT_Y : opts.footY) * unit;
+    const ctx = this.ctx;
+    ctx.save();
+    if (opts.rotate) ctx.rotate(opts.rotate);
+    ctx.drawImage(image, -width / 2, footY - height, width, height);
+    ctx.restore();
+    return true;
   }
 
   drawPlayer(game) {
@@ -870,37 +979,16 @@ class Renderer {
       }
     }
 
-    // 原创小浣熊“栗栗”的背面：后脑、肩背、围巾结与环纹尾巴朝向赛道远方。
-    ctx.strokeStyle="#493122";ctx.lineWidth=8*unit;ctx.lineCap="round";
-    ctx.beginPath();
-    const armSwing=run*7*(1-airbornePose), armX=26+airbornePose*10, armY=lerp(-9,-25,airbornePose);
-    ctx.moveTo(-15*unit,-37*unit);ctx.lineTo((-armX-armSwing)*unit,(armY+Math.abs(run)*(1-airbornePose)*4)*unit);
-    ctx.moveTo(15*unit,-37*unit);ctx.lineTo((armX+armSwing)*unit,(armY+Math.abs(run)*(1-airbornePose)*4)*unit);
-    ctx.stroke();
-    ctx.beginPath();
-    const legSwing=run*9*(1-airbornePose), legX=lerp(12,20,airbornePose), footY=lerp(23,8,airbornePose);
-    ctx.moveTo(-10*unit,-7*unit);ctx.lineTo((-legX+legSwing)*unit,footY*unit);
-    ctx.moveTo(10*unit,-7*unit);ctx.lineTo((legX-legSwing)*unit,footY*unit);
-    ctx.stroke();
-
-    ctx.strokeStyle="#5a3a28";ctx.lineWidth=12*unit;ctx.beginPath();ctx.moveTo(18*unit,-31*unit);ctx.quadraticCurveTo(48*unit,-29*unit,38*unit,-4*unit);ctx.stroke();
-    ctx.strokeStyle="#d4a36f";ctx.lineWidth=5*unit;ctx.beginPath();ctx.moveTo(28*unit,-27*unit);ctx.lineTo(40*unit,-22*unit);ctx.moveTo(32*unit,-14*unit);ctx.lineTo(41*unit,-9*unit);ctx.stroke();
-
-    const fur=ctx.createRadialGradient(-9*unit,-48*unit,2*unit,0,-30*unit,36*unit);
-    fur.addColorStop(0,"#966845");fur.addColorStop(.6,"#88583b");fur.addColorStop(1,"#764e36");
-    ctx.fillStyle=fur;ctx.beginPath();ctx.ellipse(0,-32*unit,23*unit,34*unit,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle="#6b4431";ctx.beginPath();ctx.ellipse(0,-49*unit,18*unit,13*unit,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle="#a8734f";ctx.beginPath();ctx.ellipse(0,-28*unit,12*unit,22*unit,0,0,Math.PI*2);ctx.fill();
-
-    ctx.fillStyle="#f0bd42";ctx.beginPath();ctx.arc(-6*unit,-55*unit,5*unit,0,Math.PI*2);ctx.arc(6*unit,-55*unit,5*unit,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.moveTo(0,-53*unit);ctx.lineTo(-8*unit,-36*unit);ctx.lineTo(8*unit,-37*unit);ctx.closePath();ctx.fill();
-
-    ctx.fillStyle="#845438";ctx.beginPath();ctx.arc(0,-72*unit,24*unit,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle="#6b4431";ctx.beginPath();ctx.arc(-17*unit,-88*unit,9*unit,0,Math.PI*2);ctx.arc(17*unit,-88*unit,9*unit,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle="#b17c52";ctx.beginPath();ctx.arc(-17*unit,-88*unit,4.5*unit,0,Math.PI*2);ctx.arc(17*unit,-88*unit,4.5*unit,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle="#684431";ctx.beginPath();ctx.ellipse(0,-76*unit,17*unit,18*unit,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle="#9b6744";ctx.beginPath();ctx.ellipse(0,-71*unit,7*unit,15*unit,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle="#5a3828";ctx.beginPath();ctx.moveTo(-5*unit,-96*unit);ctx.lineTo(0,-103*unit);ctx.lineTo(5*unit,-96*unit);ctx.closePath();ctx.fill();
+    // 主角立绘（背视角跑步）。素材是单帧，跑动的起伏由上面的 bob 提供，
+    // 冲刺 / 踉跄等姿态由外层的 rotate 与特效表达。
+    // 选帧：腾空用跳跃帧；其余按 runTime 在两个跑步帧之间交替。
+    // 乘 6 是让整个跑步循环约每秒走 3 遍——步频和原来的程序动画（sin(runTime*15)）接近。
+    const frame = jumpRatio > .08 ? "jump" : ((Math.floor(p.runTime * 6) % 2) ? "runB" : "runA");
+    if (!this.drawHeroSprite(frame, unit)) {
+      // 图还没加载出来时退回一个色块——比"整个人消失"更容易排查。
+      ctx.fillStyle="#88583b";
+      ctx.beginPath();ctx.ellipse(0,-40*unit,23*unit,60*unit,0,0,Math.PI*2);ctx.fill();
+    }
     ctx.restore();
   }
 
@@ -926,6 +1014,9 @@ class Game {
     this.bestDistance=Number(safeStoreGet(CONFIG.STORAGE_DISTANCE,0))||0;
     this.hudAccumulator=0;
     this.bindUI();
+    // 交给 js/demo-shell.js：面板开合时暂停/恢复本局（只有从主线进来时才接得上）。
+    // 面板开合走**静默暂停**（不是 pause()）——见 pauseForPanel 的注释。
+    if (window.MuseumDemoShell) window.MuseumDemoShell.attach({ pause: () => this.pauseForPanel(), resume: () => this.resumeFromPanel() });
     this.input=new InputManager(this.canvas,action=>this.handleAction(action));
     this.resetWorld();
     this.updateMenuStats();
@@ -984,17 +1075,42 @@ class Game {
     this.updateMenuStats();
   }
 
+  // pause / resume 返回布尔值：js/demo-shell.js 靠它判断"是不是面板把它暂停的"，
+  // 只有是才在关面板时恢复，免得把玩家自己的暂停菜单一起关掉。
   pause() {
-    if(this.state!==GameState.PLAYING)return;
+    if(this.state!==GameState.PLAYING)return false;
     this.state=GameState.PAUSED;this.showOnly("pauseScreen");
     document.getElementById("touchControls").classList.add("hidden");
+    return true;
   }
 
   resume() {
-    if(this.state!==GameState.PAUSED)return;
+    if(this.state!==GameState.PAUSED)return false;
     this.state=GameState.PLAYING;this.showOnly();
     document.getElementById("touchControls").classList.remove("hidden");
     this.lastTime=performance.now();
+    return true;
+  }
+
+  // 面板（M 键）打开时的**静默暂停**：只冻结游戏，不显示游戏自己的暂停屏。
+  //
+  // 为什么不能直接用 pause()：那会把 pauseScreen 也铺出来，和面板叠在一起；
+  // 而那张屏上有「返回主菜单」按钮（homePauseButton）——面板一关，点击/焦点落到
+  // 它上面就直接**回到游戏开始**。2026-09-20 的 bug 就是这个。
+  // 主循环只在 PLAYING 时推进，所以把 state 设成 PAUSED 就足够冻住画面。
+  pauseForPanel() {
+    if(this.state!==GameState.PLAYING)return false;
+    this.state=GameState.PAUSED;   // 刻意不调 showOnly：保持"正在玩"的那一屏
+    document.getElementById("touchControls").classList.add("hidden");
+    return true;
+  }
+  resumeFromPanel() {
+    if(this.state!==GameState.PAUSED)return false;
+    this.state=GameState.PLAYING;
+    document.getElementById("touchControls").classList.remove("hidden");
+    this.lastTime=performance.now();
+    this.updateHUD(true);
+    return true;
   }
 
   handleAction(action) {
@@ -1081,7 +1197,7 @@ class Game {
       else if(obstacle.type==="animal")avoided=p.height>4;
       else if(obstacle.type==="bulldozer")avoided=false; // 推土机无论跳多高都不能越过。
       if(avoided){obstacle.resolved=true;this.bonusScore+=25;continue;}
-      if(p.dashTimer>0){obstacle.dead=true;this.bonusScore+=180;this.burstAtPlayer("#ffd94f","dust",9);continue;}
+      if(p.dashTimer>0){obstacle.dead=true;this.bonusScore+=CONFIG.DASH_SMASH_SCORE;this.burstAtPlayer("#ffd94f","dust",9);continue;}
       // 绊倒后的 5 秒危险窗口内，任何再次碰撞都会直接结束游戏。
       if(p.stumbleTimer>0){
         // 第二次撞到小动物时先将其移除，再进入失败慢动作，避免小动物留在画面中。
@@ -1098,6 +1214,9 @@ class Game {
     coin.dead=true;
     const value=this.player.doubleTimer>0?2:1;
     this.coinCount+=value;this.coinScore+=CONFIG.COIN_VALUE*value;
+    // 金币**实时**换生存点（js/demo-shell.js 的 earnCoins）。独立游玩时 shell 不存在，
+    // 这一句无副作用；从主线进来时捡到就进账，不必等打完结算。
+    if (window.MuseumDemoShell) window.MuseumDemoShell.earnCoins(value, "追逐金币");
     const pt=this.renderer.project(coin.lane,CONFIG.PLAYER_WORLD_Z,25);this.spawnParticles(pt.x,pt.y,"#ffd344","spark",7);
   }
 
@@ -1123,9 +1242,18 @@ class Game {
 
   hitWall(direction) {
     const p=this.player;
-    p.wallHits+=1;
     p.wallBumpDirection=direction;
     p.wallBumpTimer=.25;
+    // 【保安哨】本局免一次撞墙眩晕，而这一次**完全不计入 3 次上限**（012 §5.6）。
+    // 所以在 wallHits+=1 之前就返回——不是"少一次眩晕"，是这次碰撞当作没发生。
+    if(p.wallImmunity>0){
+      p.wallImmunity-=1;
+      this.shake=3;
+      this.burstAtPlayer("#6ce5ff","spark",10);
+      this.updateHUD(true);
+      return;
+    }
+    p.wallHits+=1;
     if(p.wallHits>=CONFIG.WALL_HIT_LIMIT){
       this.crash();
     }else{
@@ -1176,11 +1304,14 @@ class Game {
     document.getElementById("coinValue").textContent=this.coinCount;
     document.getElementById("timeValue").textContent=`${Math.floor(clamp(this.survivalTime,0,CONFIG.SURVIVAL_TARGET))} s/${CONFIG.SURVIVAL_TARGET}s`;
     const pills=[];
+    // 商店道具整局不变，固定排在最前，好和临时状态（磁铁/护盾…）区分开。
+    if (SHOP_SUMMARY) pills.push(SHOP_SUMMARY);
     if(this.player.magnetTimer>0)pills.push(`🧲 ${this.player.magnetTimer.toFixed(1)}s`);
     if(this.player.shield)pills.push("⛑️ 安全帽 1次");
     if(this.player.doubleTimer>0)pills.push(`×2 ${this.player.doubleTimer.toFixed(1)}s`);
     if(this.player.dashTimer>0)pills.push(`⚡ ${this.player.dashTimer.toFixed(1)}s`);
     if(this.player.stumbleTimer>0)pills.push(`💫 踉跄 ${this.player.stumbleTimer.toFixed(1)}s`);
+    if(this.player.wallImmunity>0)pills.push(`🛡️ 免眩晕 ${this.player.wallImmunity}次`);
     if(this.player.wallHits>0)pills.push(`🧱 撞墙 ${this.player.wallHits}/${CONFIG.WALL_HIT_LIMIT}`);
     if(this.player.wallStunTimer>0)pills.push(`💫 眩晕 ${this.player.wallStunTimer.toFixed(1)}s`);
     document.getElementById("powerStatus").innerHTML=pills.map(text=>`<span class="power-pill">${text}</span>`).join("");

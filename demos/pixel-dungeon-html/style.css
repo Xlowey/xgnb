@@ -406,8 +406,6 @@ input:where([type='button'], [type='reset'], [type='submit']),
 .touch-hint{position:absolute;bottom:4%;width:112px;height:112px;border:2px dashed #ffffff20;border-radius:50%;display:none;place-items:center;color:#ffffff3b;font-size:10px}.left-hint{left:7%}.right-hint{right:7%}.skill-button{position:absolute;right:2.4%;bottom:3.5%;width:56px;height:56px;border-radius:50%;border:3px solid #9daeb7;background:#304653dc;box-shadow:inset 0 0 0 4px #54707b,2px 4px #071016;display:grid;place-items:center;cursor:pointer}.skill-button svg{width:22px;height:22px;fill:#f4e9ff}.skill-button small{font-size:8px;margin-top:-7px}.skill-button:disabled{opacity:.45}
 .result-card,.pause-card{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#100d18d9;backdrop-filter:blur(4px);z-index:10;text-align:center}.result-card>svg{width:42px;height:42px;color:#ffd45e}.result-card h1,.pause-card h1{font-size:clamp(24px,4vw,46px);margin:12px 0 5px;text-shadow:4px 4px #4f2840}.result-card p,.pause-card p{color:#c7b8ca;margin:0 0 20px;font-size:14px}.result-card button,.pause-card button{border:3px solid #6f5d43;background:#d49e45;color:#251a18;padding:10px 17px;display:flex;align-items:center;gap:8px;box-shadow:4px 5px #0a080d;cursor:pointer;font-weight:800}.result-card button svg,.pause-card button svg{width:18px}
 .pause-actions{display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap}
-/* 接入怪谈博物馆当最终 boss 战时，结算卡上会出现"返回剧情"（可能和"重新开始"并排）。 */
-.result-card{row-gap:12px}.result-card button{margin:0 6px}
 footer{position:fixed;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:25px;color:#8f8294;font-size:12px}.portrait-note{display:none}
 @media (pointer:coarse){.touch-hint{display:grid}.mode-tools{top:3.5%;bottom:auto;left:42%;transform:translateX(-50%)}.mode kbd{display:none}footer{display:none}.game-page{padding-bottom:14px}.skill-button{right:2.5%;bottom:4%}}
 @media (max-width:760px){.hud-panel{width:112px;padding:3px;border-width:2px}.meter{height:12px}.meter b{font-size:6px}.top-tools{transform:scale(.78);transform-origin:top right}.mode{padding:6px;font-size:10px}.mini-wrap{display:none}.coin{font-size:14px;height:32px}.pixel-button{height:42px;width:42px}.skill-button{width:58px;height:58px}.touch-hint{width:100px;height:100px}.game-shell{width:calc(100vw - 16px)}}
@@ -419,3 +417,6 @@ footer{position:fixed;bottom:12px;left:0;right:0;display:flex;justify-content:ce
 @media(max-width:760px){.meter{height:15px}.meter b{font-size:7px}.mini-wrap{display:block}.mini-wrap canvas{width:108px;height:69px}.mini-wrap span{font-size:8px}}
 
 :root{--font-geist-mono:"Geist Mono"}
+
+/* 接入怪谈博物馆当最终 boss 战时，结算卡上会出现"返回剧情"（可能和"重新开始"并排）。 */
+.result-card{row-gap:12px}.result-card button{margin:0 6px}

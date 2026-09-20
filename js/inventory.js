@@ -86,7 +86,9 @@
       if(e.key==="Escape" || e.key.toLowerCase()==="b"){e.preventDefault();if(!e.repeat){if(e.key==="Escape"&&!zoom.hidden)closeZoom();else close();}}
       return;
     }
-    if(e.key.toLowerCase()!=="b" || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.target.closest("input,textarea,select,[contenteditable=true]"))return;
+    // 单字母快捷键一律不认 Shift——`Shift + 字母` 是留给开发者跳结局的命名空间，
+    // 这里吃掉了 Shift+B，玩家就按不出 ending-b 了（2026-09-20 修）。
+    if(e.key.toLowerCase()!=="b" || e.repeat || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || e.target.closest("input,textarea,select,[contenteditable=true]"))return;
     if(context && context.getState() && (!context.canOpen || context.canOpen())){e.preventDefault();e.stopImmediatePropagation();open();}
   },true);
   window.MuseumInventory={bind:bind,open:open,close:close,isOpen:isOpen,acquire:acquire,normalize:normalize,refresh:refresh};

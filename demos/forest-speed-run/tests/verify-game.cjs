@@ -198,3 +198,42 @@ for (const match of source.matchAll(/getElementById\("([^\"]+)"\)/g)) assert.ok(
 console.log('PASS: silence, unchanged forward speed, 0.7s jump/slide durations, 0.25s vertical interval, independent 0.1s lane cooldown / unchanged 0.25s lane motion, both walls three-hit limit/reset, independent stun, four-row HUD timer, obstacle clearance, collisions, coin route, assets and size ratios.');
 console.log('Initial speed:', CONFIG.BASE_SPEED, 'Action:', CONFIG.ACTION_DURATION, 'Vertical interval:', CONFIG.ACTION_SWITCH_MIN, 'Lane interval:', CONFIG.LANE_SWITCH_MIN);
 console.log('Textures:', textures);
+
+// ---------------------------------------------------------------------------
+// URL 参数覆盖（2026-09-20 补）
+//
+// 接入主线后 CONFIG 会从 URL 覆盖。这里必须**在带 URLSearchParams 的环境里**测：
+// 上面那个沙箱没有这个 API，走的是 game.js 的兜底分支，正好会把
+// 「URLSearchParams.get() 对缺省参数返回 null → Number(null) === 0」这条 bug 遮住。
+// 症状是滑铲时长变 0（按 S 没反应）、通关条件变 0 秒（开局即通关）。
+// ---------------------------------------------------------------------------
+function configUnder(search) {
+  const box = { window: { addEventListener() {} }, location: { search }, URLSearchParams: global.URLSearchParams };
+  vm.runInNewContext(source + '\n;globalThis.__C = CONFIG;', box);
+  return box.__C;
+}
+const standalone = configUnder('');
+close(standalone.SURVIVAL_TARGET, 180);
+close(standalone.SLIDE_DURATION, .7);
+close(standalone.MAGNET_DURATION, 8);
+close(standalone.STUMBLE_DURATION, 5);
+close(standalone.DASH_DURATION, 4);
+assert.equal(standalone.DASH_SMASH_SCORE, 180);
+assert.equal(standalone.WALL_STUN_IMMUNITY, 0);
+const mainline = configUnder('?target=90&magnet=14&slide=0.9&dash=8&smash=360&stumble=2&stunImmunity=1');
+close(mainline.SURVIVAL_TARGET, 90);
+close(mainline.SLIDE_DURATION, .9);
+close(mainline.MAGNET_DURATION, 14);
+assert.equal(mainline.DASH_SMASH_SCORE, 360);
+assert.equal(mainline.WALL_STUN_IMMUNITY, 1);
+// 只传一部分时，缺的那些必须仍是默认值 —— 这条就是那个 bug 的护栏
+const partial = configUnder('?target=90');
+close(partial.SURVIVAL_TARGET, 90);
+close(partial.SLIDE_DURATION, .7);
+close(partial.STUMBLE_DURATION, 5);
+assert.equal(partial.DASH_SMASH_SCORE, 180);
+// 买了道具之后滑铲要真的变长（【蜡像的膝盖】012 §5.6 的 09）
+const p2 = new Player();
+assert.equal(p2.slide(), true);
+assert.equal(p2.sliding, true, 'SLIDE_DURATION 为 0 时这里会是 false —— 滑铲等于没有');
+console.log('PASS: URL 参数覆盖 —— 无参数时全部退回默认（180s / 滑铲 0.7s），带参数时按参数生效，缺省项不归零。');

@@ -169,6 +169,12 @@
     battleContext: null,
     battleAttempt: null,
     lastBattleResultId: null,
+    // 森林极速跑（第二十六场纸人追击）的与战斗同构的一套。**必须登记在这里**：
+    // hydrate 的白名单只回填 DEFAULT_STATE 里有的键，漏了的话读盘时会被丢掉，
+    // 于是 consumeRunnerResult 拿不到 attempt、每次结果都判非法。
+    runnerAttempt: null,
+    lastRunnerResultId: null,
+    runnerRecord: null,
     returnScene: null,
     ending: null,
     endingComplete: false,
@@ -261,9 +267,29 @@
       };
       state.returnScene = attempt.returnScene;
     } else state.battleAttempt = null;
+    // 森林极速跑的尝试记录与战斗同构，只是没有 source 分支（目前只有这一个跑酷 demo）。
+    var runner = state.runnerAttempt;
+    if (runner && typeof runner === "object" && typeof runner.id === "string" && runner.id &&
+        typeof runner.retryScene === "string" && runner.retryScene &&
+        typeof runner.returnScene === "string" && runner.returnScene) {
+      state.runnerAttempt = {
+        id: runner.id, retryScene: runner.retryScene,
+        retryIndex: Number.isFinite(runner.retryIndex) ? Math.max(0, Math.floor(runner.retryIndex)) : 0,
+        returnScene: runner.returnScene
+      };
+      state.returnScene = runner.returnScene;
+    } else state.runnerAttempt = null;
+    var record = state.runnerRecord;
+    state.runnerRecord = (record && typeof record === "object") ? {
+      score: Math.max(0, Number(record.score) || 0),
+      coins: Math.max(0, Number(record.coins) || 0),
+      elapsed: Math.max(0, Number(record.elapsed) || 0)
+    } : null;
+    state.lastRunnerResultId = typeof state.lastRunnerResultId === "string" ? state.lastRunnerResultId : null;
     // A battle snapshot is a suspended story, not an exploration save. Keeping
     // its return contract lets the entry page resume/retry instead of skipping it.
-    if (state.mode === "battle" && !(typeof state.returnScene === "string" && state.returnScene)) state.mode = "explore";
+    // 追逐跑同理：它也是"被挂起的剧情"，不能因为 mode 不认识就被打回 explore。
+    if ((state.mode === "battle" || state.mode === "runner") && !(typeof state.returnScene === "string" && state.returnScene)) state.mode = "explore";
     if (state.mode === "dialogue" || state.mode === "mini" || state.mode === "paused") state.mode = "explore";
     if (loaded.currentNode && !loaded.roomId) state.roomId = loaded.currentNode;
     if (!Number.isFinite(state.playerX)) state.playerX = state.roomId === "hall" ? 260 : 300;

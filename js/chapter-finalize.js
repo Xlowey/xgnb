@@ -267,6 +267,32 @@
   }
 
   // ---------------------------------------------------------------------------
+  // 2a. 纸人追击 · 森林极速跑（第二十六场）
+  //
+  // 009 这一场只有两条 △ 画面说明 + 主角一句 + MOSS 一句，而 △ 行会被本文件的
+  // visibleLines/过滤清掉——玩家实际只看到一张道具页和两句台词，剧本里那场追逐
+  // 在游戏里等于不存在。这里补上真正的入口，接 demos/forest-speed-run。
+  //
+  // 位置是评估文档定的：第二十六场「反复穿越」之后接第二十七场「食堂前方 · 梦魇拦路」，
+  // 009 第二十七场开头那句作者注「△（CG）赵灵拉着主角沿特定道路奔跑。（或许也可以
+  // 设计一个游戏？）」正好说明跑酷插在这里是原稿意图。
+  //
+  // 与 scene-11 的战斗选项同理：**点击不能立刻完成本场**。完成标记由追逐结果记录，
+  // 所以要把本场自己的 flag 摘掉（否则一点选项就发 scene26Seen，失败了也算通关）。
+  // 追逐成功时由 game.js 的结算补回 scene26Seen 与独立的 chaseCompleted。
+  // ---------------------------------------------------------------------------
+  if (scenes["scene-26"]) {
+    var chase = scenes["scene-26"];
+    chase.flag = null;
+    chase.returnToMap = false;
+    chase.choices = [
+      // 标签是自拟的——009 原文没有「进入追逐」的措辞。
+      { id: "chase-runner", label: "跟着赵灵冲出去", action: "runner",
+        afterRunner: "scene-27", completionFlag: "chaseCompleted" }
+    ];
+  }
+
+  // ---------------------------------------------------------------------------
   // 2b. 最终 boss 战（在第三十场之前）
   //
   // 剧本第二十九场「出口之前」里梦魇自己下了战书：
@@ -290,9 +316,12 @@
       { speaker: "梦魇", text: "来吧，张天师。让我看看你这一趟，到底学会了什么。" }
     ],
     returnToMap: false,
+    // 2026-09-20：**取消「不进入小游戏，前往出口」那个出口**。
+    // 设计改成：玩家必须进地牢，A / C 在地牢**内部**的两条通关路线里分——
+    //   打首领 → C 完美结局；撤离试炼 → A 回头结局（见 js/game.js 的 settleBattleWin
+    //   与 js/ending-flow.js 的 resolveChoice）。
     choices: [
-      { id: "boss-fight", label: "迎战梦魇（进入小游戏）", action: "battle", demo: "pixel-dungeon", battleContext: "final-boss", afterBattle: "scene-28" },
-      { id: "boss-skip", label: "不进入小游戏，前往出口", effect: "skip-nightmare", nextScene: "scene-28" }
+      { id: "boss-fight", label: "迎战梦魇（进入小游戏）", action: "battle", demo: "pixel-dungeon", battleContext: "final-boss", afterBattle: "scene-28" }
     ]
   };
   if (scenes["scene-27"]) scenes["scene-27"].nextScene = "scene-27-boss";
