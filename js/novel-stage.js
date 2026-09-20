@@ -72,7 +72,13 @@
     player.setAttribute("aria-label", opts.label || "剧情动画");
     var footer = node("div", "video-cg-footer");
     var hint = node("span", "video-cg-hint", "动画播放中 · 可用控件调整音量");
-    var skip = button("跳过动画", finish, "video-cg-skip");
+    // 跳过按钮：第一次点走 finish()，而 finish() 会**自动推进**到下一页（2026-09-20）。
+    // `finished` 那一支是组员在远端加的——自动推进若被挡下（有弹窗开着、或后面没有下一页），
+    // 按钮这时已变成「继续」，再点一次就真的推进。两支不冲突，留着当兜底。
+    var skip = button("跳过动画", function () {
+      if (finished) hooks.advance();
+      else finish();
+    }, "video-cg-skip");
     footer.appendChild(hint); footer.appendChild(skip);
     videoEvent.appendChild(title); videoEvent.appendChild(player); videoEvent.appendChild(footer);
     root.appendChild(videoEvent);

@@ -33,6 +33,11 @@ const expect = (label, ok, detail) => { check(label, ok, detail); if (!ok) failu
         progress: (document.getElementById('novel-progress') || {}).textContent || ''
       }));
       if (/MOSS|系统/.test(state.speaker) || state.event === 'system') return Object.assign(state, { speaker: state.speaker.trim() });
+      if (state.event === 'video') {
+        await page.locator('.video-cg-skip').click();
+        await page.waitForTimeout(100);
+        continue;
+      }
       if (await page.locator('#novel-choices:not([hidden])').count()) break;
       await page.keyboard.press('e');
       await page.waitForTimeout(65);
@@ -41,7 +46,7 @@ const expect = (label, ok, detail) => { check(label, ok, detail); if (!ok) failu
   }
   try {
     await open('scene-01');
-    const first = await advanceUntilSystem(8);
+    const first = await advanceUntilSystem(100);
     first.label = await page.evaluate(() => { const label = document.querySelector('.system-message small'); return label ? label.textContent.trim() : null; });
     first.bottomText = await page.evaluate(() => (document.getElementById('novel-text') || {}).textContent || '');
     expect('event-based system line uses the top panel', first.event === 'system' && first.panel && first.label === '系统', first);
