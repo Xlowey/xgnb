@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>地图标注工具 · 怪谈博物馆</title><link rel="stylesheet" href="../css/map-editor.css"></head>
 <body>
-<header><h1>地图标注工具</h1><span id="dirty">已保存</span><button id="save">保存到本机</button><button id="export">导出 JSON</button><button id="publish">导出项目配置</button><label class="button">导入 JSON<input id="import" type="file" accept=".json" hidden></label><a href="../index.html" target="_blank" rel="noopener">打开游戏 ↗</a></header>
+<header><h1>地图标注工具</h1><span id="dirty">已保存</span><button id="save">保存到本机</button><button id="export-room">导出当前地图</button><button id="export">导出全部地图 JSON</button><button id="publish">导出项目配置</button><label class="button">导入 JSON<input id="import" type="file" accept=".json" hidden></label><a href="../index.html" target="_blank" rel="noopener">打开游戏 ↗</a></header>
 <main>
 <aside><label>当前地图<select id="room"></select></label><p class="hint">编辑正式探索的 8 张地图。第二场剧情播放器内的宿舍调查是独立场景，不使用这份配置。</p>
 <fieldset><legend>工具</legend><div id="tools"><button data-tool="select" aria-pressed="true">选择 / 拖动</button><button data-tool="colliders">画碰撞区域</button><button data-tool="walkable">画可走区域</button><button data-tool="spawn">设置出生点</button><button data-tool="travel">添加出口</button><button data-tool="scene">添加剧情点</button><button data-tool="test">试玩碰撞</button></div></fieldset>
