@@ -28,6 +28,7 @@
   var rooms = window.MuseumMapData.create();
   if (window.MuseumMapArt) window.MuseumMapArt(rooms);
   window.MuseumChapterMaps(rooms);
+  if (window.MuseumMapLayout) window.MuseumMapLayout.applySaved(rooms);
   if (state && rooms[state.roomId] && rooms[state.roomId].art && blocked(rooms[state.roomId], state.playerX, state.playerY, rooms[state.roomId].id === "museum" ? 10 : 22)) {
     state.playerX=rooms[state.roomId].spawn.x;state.playerY=rooms[state.roomId].spawn.y;
   }
