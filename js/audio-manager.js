@@ -27,6 +27,7 @@
   var DEFAULT_TRACK = "main";
   var trackDir = new URL("../assets/audio/music/", script && script.src || document.baseURI).href;
   var currentTrack = DEFAULT_TRACK;
+  var trackGeneration = 0;
   var audio = new Audio(new URL(TRACKS[DEFAULT_TRACK], trackDir).href);
   function trackSrc(name) { return new URL(TRACKS[name] || TRACKS[DEFAULT_TRACK], trackDir).href; }
   var settings = { enabled: true, volume: DEFAULT_VOLUME, volumeRev: VOLUME_REV, position: 0 };
@@ -64,7 +65,9 @@
       positionRestored = true;
       return;
     }
+    var generation = trackGeneration;
     var apply = function () {
+      if (generation !== trackGeneration || currentTrack !== DEFAULT_TRACK) return;
       if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
       // 循环音乐到尾部时从头继续，但不会因为换页面而从头开始。
       resumeTarget = Number(settings.position) % audio.duration;
@@ -79,11 +82,15 @@
     }
   }
 
+  function saveSettings() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); } catch (error) { /* storage optional */ }
+  }
+
   function persist(force) {
     // 位置记忆**只服务默认曲**。settings.position 是一个全局字段（切页不重播全靠它），
     // 两首曲子共用会互相串：在结局 C 那首上记的位置，会被拿来当主线音乐的续播点。
     // 所以非默认曲一律不写盘——那首用完即弃，主线已存下的进度原样保留。
-    if (currentTrack !== DEFAULT_TRACK) return;
+    if (currentTrack !== DEFAULT_TRACK) { if (force) saveSettings(); return; }
     // 新页面的 Audio 元数据加载前 currentTime 通常是 0。此时不能把上一页
     // 已保存的播放位置覆盖掉，否则切页后 BGM 会被重置到开头。
     if (settings.position > 0 && !positionRestored) return;
@@ -136,11 +143,15 @@
   function play(name) {
     var next = TRACKS[name] ? name : DEFAULT_TRACK;
     if (next === currentTrack) return;
+    persist(true);
+    trackGeneration++;
+    positionRestorePending = false;
     currentTrack = next;
-    positionRestored = true;
+    positionRestored = next !== DEFAULT_TRACK;
     resumeTarget = null;
     audio.src = trackSrc(next);
     try { audio.currentTime = 0; } catch (error) { /* 元数据未就绪时忽略 */ }
+    if (next === DEFAULT_TRACK) restorePosition();
     // 这里直接调 audio.play()，不走 start()：start() 会因为 playPending
     // （自动播放重试还在飞）而直接返回，把新曲晾在那儿不出声。
     if (!settings.enabled) return;
@@ -159,6 +170,7 @@
 
   function toggle() {
     settings.enabled = !settings.enabled;
+    saveSettings();
     if (settings.enabled) start();
     else stop();
     persist(true);
@@ -171,6 +183,8 @@
     // 表里没有的名字忽略，仍用默认曲。
     var requested = document.body && document.body.dataset ? document.body.dataset.bgm : "";
     if (requested && TRACKS[requested] && requested !== currentTrack) {
+      trackGeneration++;
+      positionRestorePending = false;
       currentTrack = requested;
       positionRestored = true;   // 别的曲子不套用主线的续播位置
       resumeTarget = null;
