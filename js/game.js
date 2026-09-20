@@ -786,15 +786,31 @@
       // 013 §3.2：**不按剩余血量折算**。地牢的护甲会先把伤害整块吃掉（见
       // demos/pixel-dungeon-html/game.js 的 applyDamage），所以「掉了多少血」反推不出
       // 「挨了几下」——地牢那边单独记了 hitsTaken 一起回传。
+      //
+      // 2026-09-20：地牢回传的 hitsTaken **只记真的掉血的次数**（护甲吸掉的不算），
+      // 那个 ×6 才和回合制那场是同一个量纲。此前它把弹幕地牢里每一次擦碰都算进去
+      // （一局几十次很正常），于是「打完首领 → 被这一笔损耗扣到 0 → 结局 D」，
+      // 打赢了反而进死亡结局。收窄后这个数天然 ≤ 6（地牢只有 7 点血、没有回血），
+      // 损耗封顶 14 + 6×6 = 50，带着 100 或 70 打完首领都活得下来。
       var hits = Number(result.hitsTaken);
       if (!Number.isFinite(hits) || hits < 0) hits = 0;
       if (window.MuseumHumanity) {
         var drain = knob("battleBaseDrain", 14) + hits * knob("battleHitDrain", 6);
-        window.MuseumHumanity.damage(drain, finalBoss ? "首领战损耗" : "馆长战损耗");
+        // 最终战**不许被结算扣死**（2026-09-20 拍板：「打完首领一定 C」）。
+        // 规则：这一笔会扣到 0 时——身上有【回滚】就照常让它消耗（013 §四：回满 100，
+        // 那件东西在最终战里仍然值它的价）；**没有**就把这一笔夹到「至少留 1 点」。
+        // 赢就是赢：不再因为一笔损耗把 destination 改成 ending-d。
+        // 013 §5.2「硬拼 −88 → 归零」照旧由**馆长战**承担（见下面的 `!finalBoss`）。
+        if (finalBoss) {
+          var alive = window.MuseumHumanity.value();
+          if (drain >= alive && window.MuseumHumanity.rollbackHeld(state) <= 0) drain = Math.max(0, alive - 1);
+        }
+        if (drain > 0) window.MuseumHumanity.damage(drain, finalBoss ? "首领战损耗" : "馆长战损耗");
         // 损耗有可能直接把人打死（013 §5.2 那张表的「硬拼」一行：−88 → 归零）。
         // damage() 内部已经结算过了——消耗【回滚】回满、或走结局 D。回满的话值是 100，
         // 所以这里 `<= 0` 只可能是结局 D，此时**不发战绩也不发钱**：赢了，但没活着回来。
-        if (window.MuseumHumanity.value() <= 0) return;
+        // 2026-09-20：这一条现在只对馆长战成立；最终战由函数尾部的兜底改成「一定活」。
+        if (window.MuseumHumanity.value() <= 0 && !finalBoss) return;
       }
       // 012 §4.1 / §4.2：战斗胜利是收入来源之一，第十一场（馆长）+50、第二十九场（BOSS）+70。
       // 第二十九场是「出口前（最终抉择）」——三选一之后才分出结局 A / C 的战斗；
@@ -845,7 +861,17 @@
       // 否则下面设置 returnScene 的那几行会把结局 D 的跳转**覆盖掉**。
       if (window.MuseumHumanity) {
         window.MuseumHumanity.settle(state);
-        if (window.MuseumHumanity.value() <= 0) return;
+        if (window.MuseumHumanity.value() <= 0 && !finalBoss) return;
+      }
+      // 最终战的兜底：从这条结算里出去时人性值必须是活的。
+      // 上面两道只管住了战场损耗与旗标扫描这两笔账，可归零结算**一旦真的跑过**，
+      // goEndingD 就已经把 destination 写成 ending-d 了（见它的哨兵分支）——包括
+      // 「进来时就已经是 0」这种旧档（那种情况下面的钳制连 damage() 都不会调，
+      // 更不会有人去把它救回来）。所以这里统一收口：最终战不允许 0 点人性值离开本函数，
+      // 否则剧情页一绑定人性值就会再判一次定点结局 D，把「打完首领 → C」又掐断。
+      if (finalBoss && window.MuseumHumanity && window.MuseumHumanity.value() <= 0) {
+        window.MuseumHumanity.set(1);
+        if (battleSettlement && battleSettlement.destination === "ending-d") battleSettlement.destination = null;
       }
       battlePosition(finalBoss);
       state.narrativeNode = finalBoss ? "scene-28" : state.returnScene || "guard-after-battle";

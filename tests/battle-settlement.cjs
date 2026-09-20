@@ -97,9 +97,13 @@ function check(label, ok, detail) { console.log((ok ? 'PASS ' : 'FAIL ') + label
     after = await returned(page);
     check('loss without a checkpoint still returns to a playable retry', /scene-27-boss/.test(after.url) && after.state.points === 200 && after.state.battleAttempt === null && !after.state.flags.nightmareMinigameWon, after);
 
+    // 2026-09-20：最终战的契约改过——**打赢首领一定 C**，不许被结算里那笔人性值损耗
+    // 扣死改道去结局 D（此前这条用例断言的是相反的旧行为，被实测 bug 顶翻）。
+    // 规则：会扣到 0 时，有【回滚】照常消耗（下一条用例），没有就夹到「至少留 1 点」。
+    // 013 §5.2「硬拼 → 归零」现在由**馆长战**承担。
     ({ page } = await setup({ hp: 10 }));
     after = await returned(page);
-    check('zero humanity without rollback reaches D without a win reward', /ending-d/.test(after.url) && after.state.hp === 0 && after.state.points === 500 && after.state.minigamePlays.dungeon === 0 && !after.state.flags.nightmareMinigameWon && after.pending === null, after);
+    check('打赢首领不许被结算扣死：没有回滚就停在 1 点，落 scene-28 而不是 ending-d', /scene-28/.test(after.url) && after.state.hp === 1 && after.state.flags.nightmareMinigameWon === true && after.state.flags.boss_defeated === true && after.state.minigamePlays.dungeon === 1 && after.state.points === 570 && after.pending === null, after);
 
     ({ page } = await setup({ hp: 10, rollback: true }));
     after = await returned(page);

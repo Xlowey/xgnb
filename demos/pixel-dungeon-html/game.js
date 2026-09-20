@@ -1117,6 +1117,14 @@ function makeUltimateMeteors(target, gates = [], random = Math.random) {
     });
 }
 function initialState() {
+    // 2026-09-20：每局开始清掉三个**跨局镜像**。
+    // 它们是底部接入段（另一个 IIFE）唯一的读数来源（report() 读 hitsTaken / coins / route），
+    // 却只在被触发时才写（hurtPlayer / 捡金币 / 开宝箱）。而「重新开始」走的是页面内的
+    // reset()，**不刷新页面**，于是上一局的数会原样留在 window 上——最坏的情况是
+    // 「零命中通关」按上一局的命中数回去扣人性值（上一局挨了 25 下 → 这次结算 −164）。
+    window.__dungeonHits = 0;
+    window.__dungeonCoins = 0;
+    window.__dungeonRoute = null;
     return {
         player: {
             x: 200,
@@ -1790,18 +1798,33 @@ function startDungeon() {
             const gates = activeGates(g.activeRoom);
             const hurtPlayer = (damage)=>{
                 if (p.invincible > 0 || p.hp <= 0) return false;
+                const hpBefore = p.hp;
                 applyDamage(p, damage);
                 // 013 §3.2：主游戏按「基础 14 + 挨打次数 ×6」算人性值损耗，所以要把这一场
-                // 挨了几下**单独**带回去。**不能**拿 PLAYER_MAX_HP - hp 反推——这个文件的
-                // applyDamage 是护甲先整块吸收、护甲破了才掉血，掉血量 ≠ 挨打次数。
-                // 挂在 window 上是因为底部的接入段（另一个 IIFE）拿不到这里的 game.current。
-                p.hitsTaken = (p.hitsTaken || 0) + 1;
-                window.__dungeonHits = p.hitsTaken;
+                // 挨了几下**单独**带回去。挂在 window 上是因为底部的接入段（另一个 IIFE）
+                // 拿不到这里的 game.current。
+                //
+                // ⚠️ 2026-09-20：这里的「挨打」只算**真的掉血**的那些，护甲整块吸掉的不算。
+                // 那个 ×6 是按回合制那场战斗定的（013 §8.1：「被击中 3—4 次算死亡临界点」），
+                // 一次挨打是一个大事件；而地牢是弹幕，蹭到一颗子弹就算一次，护甲还会边挨边回
+                // （applyDamage 是护甲先整块吸收、护甲归零才动 hp），一局几十次很正常。
+                // 全记的话**打赢首领反而必被扣死**——主游戏那边扣到 0 就走结局 D，
+                // 「打首领 → C 完美结局」这条线就断在结算里（2026-09-20 实测踩到）。
+                //
+                // 收窄之后还有个白拿的好处：地牢只有 7 点血、**没有任何回血手段**，
+                // 能活着走出去的局，这个数天然 ≤ 6，损耗封顶 14 + 6×6 = 50。
+                if (p.hp < hpBefore) {
+                    p.hitsTaken = (p.hitsTaken || 0) + 1;
+                    window.__dungeonHits = p.hitsTaken;
+                }
                 p.hurt = 240;
                 g.shake = 6;
                 burst(p.x, p.y, '#ff6e72', 10);
                 return true;
             };
+            // 给自动化测试用：只有在这条路径上打一下，才能验出「护甲吸掉的那些不计数」。
+            // 每帧都会被重新赋成当帧的 hurtPlayer，所以它永远指向当前这一局。
+            window.__dungeonHurt = hurtPlayer;
             const knockPlayer = (origin, distance)=>{
                 let angle = Math.atan2(p.y - origin.y, p.x - origin.x);
                 if (dist(origin, p) < 1) angle = Math.random() * Math.PI * 2;
