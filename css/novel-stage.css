@@ -95,7 +95,16 @@ body:has(.wake) .novel-background { animation:wake .8s ease-out both; }
 body[data-event="video"] .novel-dialogue { pointer-events:none; visibility:hidden; height:54px; min-height:54px; padding:0; bottom:10px; width:calc(100% - 48px); max-width:1450px; border:0; box-shadow:none; background:#10191ee8; }
 body[data-event="video"].video-ready .novel-dialogue { visibility:visible; }
 body[data-event="video"].video-ready #event-next { pointer-events:auto; }
-body[data-event="video"] .scene-events { z-index:6; pointer-events:auto; }
+/* 剧情动画铺满整屏（2026-09-20 按需求改）。
+   原来 .video-cg 是 1180×680 的带边框卡片、视频在里头 contain，四周全是底色。
+   ⚠️ 只改 .video-cg 是没用的 —— 它爹 .scene-events 本身就带着一圈
+   `inset: 80px 24px var(--stage-bottom)`，得一起放开才能真的铺满。 */
+body[data-event="video"] .scene-events { inset:0; z-index:6; pointer-events:auto; }
+body[data-event="video"] .video-cg { width:100%; height:100%; padding:0; border:0; background:#000; display:block; }
+body[data-event="video"] .video-cg-player { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+body[data-event="video"] .video-cg-title { position:absolute; top:16px; left:20px; z-index:2; text-shadow:0 2px 8px #000; }
+/* 页脚抬到 56px：视频用的是原生控件，那一排就在画面最底部，压在它上面会点不到。 */
+body[data-event="video"] .video-cg-footer { position:absolute; left:20px; right:20px; bottom:56px; z-index:2; text-shadow:0 2px 8px #000; }
 body[data-event="video"] { --stage-bottom:82px; }
 /* 调查反馈与进度分成两行，描述不再被进度文字覆盖。 */
 .investigation-bar { display:flex; flex-direction:column; align-items:center; gap:6px; margin-top:8px; flex-shrink:0; }
@@ -170,24 +179,42 @@ body[data-event="explore"] #novel-skip-button { display:none; }
 .item-caption h2 { margin:0 0 10px;font-size:16px;line-height:1.6;font-weight:500;color:#e4c99e; }
 .item-caption p { margin:0;font-size:14px;line-height:1.9; }
 .zoom-panel>.focused-picture { width:min(760px,100%);flex-shrink:0; }
-body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) { --stage-bottom:82px; }
-body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) .novel-dialogue { height:54px;min-height:54px;padding:0;bottom:10px;width:calc(100% - 48px);max-width:1450px;border:0;box-shadow:none;background:#10191ee8; }
-body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) .novel-dialogue::before { display:none; }
-body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) #event-next { left:14px;top:8px;padding:8px 16px;min-width:120px;font-size:14px; }
+body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"],[data-event="letter"]) { --stage-bottom:82px; }
+body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"],[data-event="letter"]) .novel-dialogue { height:54px;min-height:54px;padding:0;bottom:10px;width:calc(100% - 48px);max-width:1450px;border:0;box-shadow:none;background:#10191ee8; }
+body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"],[data-event="letter"]) .novel-dialogue::before { display:none; }
+body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"],[data-event="letter"]) #event-next { left:14px;top:8px;padding:8px 16px;min-width:120px;font-size:14px; }
+
+/* 结局 C 的完整对白长页（letter 事件）。
+   播完结局 CG 后出现，整场台词铺在一页里**上下滑动**读完，读完点「继续」进通关界面。
+   滚动容器高度取满事件层，底部那格对话条（只剩 #event-next）始终可见，
+   所以「继续」不会随内容滚出屏幕。 */
+.ending-letter { width:min(880px,100%); height:100%; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:26px 32px 36px; background:linear-gradient(160deg,#0c1720f2,#0b1116ee); border:1px solid #c6ac7d55; border-radius:8px; box-shadow:0 22px 80px #000b; scrollbar-color:#917a55 #182125; }
+.ending-letter:focus-visible { outline:1px solid #c8b18755; outline-offset:3px; }
+.ending-letter-head { margin:0 0 20px; padding-bottom:14px; border-bottom:1px solid #c6ac7d33; }
+.ending-letter-head h2 { margin:0; font-size:clamp(17px,1.6vw,22px); color:#e7c98e; letter-spacing:.12em; }
+.ending-letter-hint { margin:6px 0 0; font-size:12px; color:#919c9f; }
+.ending-letter-line { margin:0 0 15px; font-size:clamp(15px,1.35vw,19px); line-height:1.9; color:#eee5d3; white-space:pre-wrap; }
+.ending-letter-speaker { color:#e7c98e; font-weight:600; }
+/* 无说话人的行是舞台提示（`画面：△ …`），压暗并左缩进，读起来不会和台词混在一起。 */
+.ending-letter-line.is-stage { margin-left:2px; padding-left:14px; border-left:2px solid #c6ac7d44; color:#9fadb2; }
+.ending-letter-figure { margin:0 0 18px; }
+.ending-letter-figure img { display:block; width:100%; max-height:46dvh; object-fit:contain; background:#050607; border:1px solid #e6bc6244; border-radius:4px; }
+.ending-letter-figure figcaption { margin-top:8px; font-size:12px; color:#919c9f; text-align:center; }
+@media(max-width:947px) { .ending-letter { padding:18px 18px 26px; } .ending-letter-line { font-size:15px; line-height:1.8; } .ending-letter-figure img { max-height:34dvh; } }
 @media(max-width:947px) {
  .item-caption { position:static;transform:none;width:min(520px,100%);margin:16px auto 0;text-align:center; }
  .item-caption h2 { font-size:15px;margin-bottom:5px; }.item-caption p { font-size:13px;line-height:1.7; }
- body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) { --stage-bottom:136px; }
- body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) .novel-dialogue { height:112px;min-height:112px;width:calc(100% - 24px); }
- body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) .novel-toolbar-actions { left:10px;right:10px;bottom:8px; }
+ body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"],[data-event="letter"]) { --stage-bottom:136px; }
+ body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"],[data-event="letter"]) .novel-dialogue { height:112px;min-height:112px;width:calc(100% - 24px); }
+ body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"],[data-event="letter"]) .novel-toolbar-actions { left:10px;right:10px;bottom:8px; }
 }
 @media(max-width:850px) { .investigation-backdrop { inset:55px 12px 95px; } }
 @media(max-height:550px) and (min-width:650px) and (max-width:947px) {
  .item-caption { position:absolute;left:calc(100% + 22px);top:50%;transform:translateY(-50%);width:200px;margin:0;text-align:left; }
- body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) { --stage-bottom:82px; }
- body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) .novel-dialogue { height:54px;min-height:54px; }
- body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) .novel-toolbar-actions { left:auto;right:10px; }
- body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"]) .novel-tool { font-size:11px;padding:7px 6px; }
+ body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"],[data-event="letter"]) { --stage-bottom:82px; }
+ body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"],[data-event="letter"]) .novel-dialogue { height:54px;min-height:54px; }
+ body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"],[data-event="letter"]) .novel-toolbar-actions { left:auto;right:10px; }
+ body:is([data-event="item"],[data-event="document"],[data-event="cg"],[data-event="system"],[data-event="television"],[data-event="letter"]) .novel-tool { font-size:11px;padding:7px 6px; }
 }
 
 body[data-event="investigate"] .novel-background,body[data-event="investigate"] .novel-vignette{display:none;}

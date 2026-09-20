@@ -5,7 +5,13 @@
   var state = currentUser ? (MuseumState.load(currentUser.id) || MuseumState.create(currentUser)) : null;
   var BATTLE_RESULT_KEY = "museum_pending_battle_v1";
   var BATTLE_RECEIPTS_PREFIX = "museum_battle_receipts_v1_";
+  // 森林极速跑的结果通道，与战斗**分开**：战斗的胜利分支会发无脸面具、解锁蜡像馆，
+  // 追逐不该拿到那些东西（见 settleBattleWin）。回执也另存一份，两边的防重放互不干扰。
+  var RUNNER_RESULT_KEY = "museum_pending_runner_v1";
+  var RUNNER_RECEIPTS_PREFIX = "museum_runner_receipts_v1_";
   var battleSettlement = null;
+  // 追逐结算的哨兵，作用与 battleSettlement 完全一样（见 save() 与 goEndingD()）。
+  var runnerSettlement = null;
   var canvas = document.getElementById("explore-canvas");
   var ctx = canvas ? canvas.getContext("2d") : null;
   var miniCanvas = document.getElementById("mini-map");
@@ -103,7 +109,8 @@
     if (!currentUser || !state) return false;
     // Points, humanity and inventory share this callback. Commit a battle once,
     // after all of them have finished, instead of saving half a result.
-    if (battleSettlement) return true;
+    // 追逐走的是同一套回调，所以也要一起挡。
+    if (battleSettlement || runnerSettlement) return true;
     var result = window.MuseumState.saveGuarded ? MuseumState.saveGuarded(state, currentUser.id) : MuseumState.save(state, currentUser.id);
     // "stale" 表示另一个窗口写了更新的进度，本页故意不覆盖它——这是设计行为，不是错误。
     // 以前这里统一按失败处理，于是每 6 秒弹一次"检查浏览器存储空间"，把玩家吓一跳，
@@ -659,7 +666,10 @@
     state.ending = "ending-d";
     state.endingComplete = false;
     state.flags.endingCause = "humanity";
+    // 结算进行中（战斗或追逐）时不能自己跳转——否则会和结算尾部那次跳转打架。
+    // 只把目标场次改成 ending-d，交给 applyBattleResult / applyRunnerResult 统一执行。
     if (battleSettlement) { battleSettlement.destination = "ending-d"; return; }
+    if (runnerSettlement) { runnerSettlement.destination = "ending-d"; return; }
     // 013 §8.2：结局 D 必须是「正确的失败」，不是惩罚——所以这里先存盘再跳，
     // 存不下就不能假装已经进了结局（沿用 startNovel / finishToMap 的写法）。
     if (save()) { window.location.href = "pages/novel.html?scene=ending-d"; return; }
@@ -678,6 +688,30 @@
   // 013 §3.2 修正后的口径（2026-09-19 拍板）：战斗失败**不扣人性值**，改扣生存点 300
   // ——与【回滚】同价，也就是 013 §6.3 那句「一次死亡 = 一次道具钱」里的「道具钱」。
   function battleFailPenalty() { return knob("battleFailPenalty", 300); }
+
+  /*
+   * 小游戏金币 → 生存点（2026-09-20）。
+   *
+   * 两个小游戏的结算都回传 `coins`（森林极速跑是 `coinCount`，暗影地牢是拾取 +3 /
+   * 宝箱累加），但在此之前**主游戏一处都没消费过它**——打了一路的金币等于白捡。
+   *
+   * 定这个汇率时对着商城价格反推：最便宜的商品是 25 点（单次提示），券机最低档 10 点。
+   * 一次好成绩的跑酷大约收 30—40 枚金币，所以取 **1 金币 = 1 点** 时，正好是
+   * 「跑一趟够买一件便宜货，但买不起 180 点的高战力道具」——金币有意义，又不至于
+   * 让商城失去约束。
+   *
+   * **上限 40 点**是防刷钱：金币可以靠反复跑刷，无上限的话跑几十趟就能把商城搬空，
+   * 012「货币不能超发」那条就废了。而 40 也正好压在单件最贵道具（180）的四分之一以内。
+   *
+   * 只在小游戏**成功**时结算（失败/中退不换算）——与战斗胜利才发奖同一口径。
+   */
+  function coinsToPoints(coins) {
+    var per = Math.max(1, knob("coinPerPoint", 1));
+    var cap = Math.max(0, knob("coinPointCap", 0));   // 0 = 不设上限（2026-09-20 起）
+    var count = Math.max(0, Math.floor(Number(coins) || 0));
+    var points = Math.floor(count / per);
+    return cap > 0 ? Math.min(cap, points) : points;
+  }
 
   function applyBattleResult(result) {
     if (!result || !state) return;
@@ -764,15 +798,39 @@
       // 第二十九场是「出口前（最终抉择）」——三选一之后才分出结局 A / C 的战斗；
       // 第二十八场「出口前（决战）」只是 BOSS 发起攻击、赵灵挡下致命一击。
       window.MuseumPoints.add(finalBoss ? 70 : 50, finalBoss ? "首领战胜利" : "馆长战胜利");
+      // 地牢的金币同样换生存点（见 coinsToPoints）。此前主游戏只接它回传的
+      // remainingHp / hitsTaken，coins 一路都是白捡的。
+      //
+      // ⚠️ 2026-09-20 起金币改成**局内实时换算**（js/demo-shell.js 的 earnCoins），
+      //    小游戏会用 liveCoins 标记告诉这边"已经换过了"，这时**不能再换一次**。
+      //    只有在标记缺席时才兜底换算 —— 覆盖"shell 没接上"的老路径，避免金币凭空消失。
+      if (!result.liveCoins) {
+        var battleCoins = Math.max(0, Math.floor(Number(result.coins) || 0));
+        var battleCoinPoints = coinsToPoints(battleCoins);
+        if (battleCoinPoints > 0) window.MuseumPoints.add(battleCoinPoints, (finalBoss ? "首领战" : "馆长战") + "金币 ×" + battleCoins);
+      }
       if (!finalBoss) {
         state.flags.battleDemoCompleted = true; state.flags.waxDoorUnlocked = true; addClue("director-account"); addUnique(state.unlockedRooms, "wax"); syncAchievementProgress(); unlockAchievement("first-battle", false);
       } else {
         // 接上一处断链：地牢一直在回传 `flags: ['boss_defeated']`，而这里原先的
         // `if (!finalBoss)` 把整块旗标跳过了——**那个旗标从来没被消费过**。
         // 012 §4.1 的「暗影地牢」要认它，所以最终战也写下来。
-        state.flags.boss_defeated = true;
+        //
+        // 2026-09-20：地牢换成 v4 之后有**两条通关路线**，A/C 就在这里分：
+        //   打首领（route 'boss'）      → 打倒梦魇 = 没把判断交出去 → **C 完美结局**
+        //   撤离试炼（route 'evacuate'）→ 放弃打梦魇 → **A 回头结局**
+        // 撤离那条**不记 boss_defeated**（没打首领），也不把 nightmareMinigameWon 置真，
+        // 改用一个独立的 nightmareRoute 交给 ending-flow 分流。**奖励照发**——
+        // 撤离也结结实实打了三波敌人，人性值损耗与战斗收入都该照算。
         state.flags.nightmareMinigameChoice = "enter";
-        state.flags.nightmareMinigameWon = true;
+        if (result.route === "evacuate") {
+          state.flags.nightmareRoute = "evacuate";
+          state.flags.nightmareMinigameWon = false;
+        } else {
+          state.flags.nightmareRoute = "boss";
+          state.flags.boss_defeated = true;
+          state.flags.nightmareMinigameWon = true;
+        }
       }
       // 012 §4.2：小游戏的复玩按次数发钱（首通 +10，复玩累计封顶再 +30）。
       // 011 把馆长战与 BOSS 战都算作「暗影地牢」，所以每打赢一场就记一次。
@@ -820,6 +878,123 @@
     if (!valid) { localStorage.removeItem(BATTLE_RESULT_KEY); return null; }
     var receipt = attempt && attempt.id || "legacy:" + state.savedAt + ":" + state.returnScene;
     return Object.assign({}, result, { raw: raw, receipt: receipt, duplicate: state.lastBattleResultId === receipt || battleReceipts().indexOf(receipt) !== -1 });
+  }
+
+  // ---------------------------------------------------------------------------
+  // 森林极速跑（第二十六场纸人追击）
+  //
+  // 与上面那套逐条对应，只是换了 key、attempt 字段与 mode。**刻意不抽公共函数**：
+  // 两边的失败处置与奖励本来就不同（战斗发无脸面具/开蜡像馆，追逐只记完成），
+  // 合起来反而要在参数里塞分支。
+  // ---------------------------------------------------------------------------
+  function runnerReceipts() {
+    try { var value = JSON.parse(localStorage.getItem(RUNNER_RECEIPTS_PREFIX + currentUser.id) || "[]"); return Array.isArray(value) ? value : []; }
+    catch (error) { return []; }
+  }
+  function rememberRunnerReceipt(id) {
+    var receipts = runnerReceipts();
+    if (receipts.indexOf(id) !== -1) return;
+    receipts.push(id);
+    try { localStorage.setItem(RUNNER_RECEIPTS_PREFIX + currentUser.id, JSON.stringify(receipts)); }
+    catch (error) { console.warn("追逐记录暂未写入，当前存档已完成结算。", error); }
+  }
+  // 追逐失败的代价。与战斗失败同为 300（013 §3.2「一次死亡 = 一次道具钱」），
+  // 但用独立的旋钮，以后想单独调不用动战斗。
+  function runnerFailPenalty() { return knob("runnerFailPenalty", 300); }
+
+  function consumeRunnerResult() {
+    // 同样挡住 fromSave / newGame：读档或开新档时绝不该把上一次的追逐结果结算进去。
+    if (query.get("fromRunner") !== "1" || query.get("fromSave") === "1" || query.get("newGame") === "1") return null;
+    var raw = localStorage.getItem(RUNNER_RESULT_KEY);
+    if (!raw) return null;
+    var result;
+    try { result = JSON.parse(raw); } catch (error) { localStorage.removeItem(RUNNER_RESULT_KEY); return null; }
+    if (!result || result.userId !== currentUser.id) return null;
+    var attempt = state.runnerAttempt;
+    var active = state.mode === "runner" && state.returnScene && state.narrativeNode === state.returnScene;
+    var valid = active && ["win", "lose", "cancel"].indexOf(result.status) !== -1;
+    if (attempt && attempt.id) valid = valid && result.runId === attempt.id;
+    else valid = valid && !result.runId;
+    if (!valid) { localStorage.removeItem(RUNNER_RESULT_KEY); return null; }
+    var receipt = attempt && attempt.id || "legacy:" + state.savedAt + ":" + state.returnScene;
+    return Object.assign({}, result, { raw: raw, receipt: receipt, duplicate: state.lastRunnerResultId === receipt || runnerReceipts().indexOf(receipt) !== -1 });
+  }
+
+  function applyRunnerResult(result) {
+    if (!result || !state) return;
+    var before = JSON.parse(JSON.stringify(state));
+    var attempt = state.runnerAttempt;
+    // 与 prepareBattleRetry 同一语义：只退场次，**不**还原钱包/旗标/背包。
+    var retryScene = (attempt && attempt.retryScene) || "scene-26";
+    var retryIndex = attempt && Number(attempt.retryIndex);
+    // 哨兵：结算期间 save() 直接返回 true 不落盘，避免把"发了一半的奖励"写进存档
+    // （MuseumPoints.add / Humanity 都共用同一个 save 回调）。同时给 goEndingD
+    // 一个改写目标场次的机会，而不是让它自己再跳一次页面。
+    runnerSettlement = { destination: null };
+    try {
+      if (!result.duplicate && result.status === "win") {
+        // 补上小游戏复玩计数。milestones 的「森林极速跑 · 复玩」按 minigamePlays.forest
+        // 计数，而在此之前**全项目没有一处给它 +1**（只有 dungeon 被加过），
+        // 所以那条奖励一直是死的；这也是「收入缺口 220」里的 30 点。
+        if (!state.minigamePlays || typeof state.minigamePlays !== "object") state.minigamePlays = { forest: 0, dungeon: 0 };
+        state.minigamePlays.forest = Math.max(0, Number(state.minigamePlays.forest) || 0) + 1;
+        state.flags.chaseCompleted = true;
+        // scene26Seen 是地图节点 wax-scene-29「食堂前方」的显形条件，也是第九幕结算
+        // 与小游戏首通的触发条件——所以追逐成功时必须补上（chapter-finalize 里
+        // 已经把 scene-26 自己的 flag 摘掉了，免得点一下选项就算通关）。
+        state.flags.scene26Seen = true;
+        if (window.MuseumState && window.MuseumState.completeScene) window.MuseumState.completeScene(state, "scene-26");
+        var coins = Math.max(0, Math.floor(Number(result.coins) || 0));
+        state.runnerRecord = {
+          score: Math.max(0, Number(result.score) || 0),
+          coins: coins,
+          elapsed: Math.max(0, Number(result.elapsed) || 0)
+        };
+        // 金币换生存点（见 coinsToPoints 的汇率说明）。
+        // ⚠️ 已经改成**局内实时换算**（js/demo-shell.js 的 earnCoins），小游戏会用
+        //    liveCoins 标记说"换过了"，这时不能再换一次。只有标记缺席时才兜底——
+        //    覆盖"shell 没接上"的老路径，避免金币凭空消失。
+        if (window.MuseumPoints && !result.liveCoins) {
+          var coinPoints = coinsToPoints(coins);
+          if (coinPoints > 0) window.MuseumPoints.add(coinPoints, "追逐金币 ×" + coins);
+        }
+        battlePosition(false);
+        runnerSettlement.destination = (attempt && attempt.returnScene) || "scene-27";
+      } else {
+        // 中退与失败都退回发起追逐的那一场；失败再扣一笔。
+        state.narrativeIndex = Number.isFinite(retryIndex) && retryIndex >= 0 ? retryIndex : 0;
+        battlePosition(false);
+        runnerSettlement.destination = retryScene;
+        if (!result.duplicate && result.status === "lose") {
+          if (window.MuseumPoints) window.MuseumPoints.penalize(runnerFailPenalty(), "追逐失败");
+          // 人性值归零可能把 destination 改成 ending-d（见 goEndingD 的哨兵分支）。
+          if (window.MuseumHumanity) window.MuseumHumanity.settleZero(state);
+        }
+      }
+      if (!runnerSettlement.destination) runnerSettlement.destination = state.narrativeNode;
+      var destination = runnerSettlement.destination;
+      state.mode = "novel";
+      state.narrativeNode = destination;
+      state.narrativeChoice = destination === "ending-d" ? "ending-d" : null;
+      state.returnScene = null;
+      state.runnerAttempt = null;
+      if (result.receipt) state.lastRunnerResultId = result.receipt;
+      runnerSettlement = null; // 用后即焚，save() 才会真的落盘
+      if (!save()) {
+        Object.assign(state, before);
+        showCover("追逐结果无法写入存档，结果已保留。请刷新页面后重试。");
+        return;
+      }
+      if (result.receipt) rememberRunnerReceipt(result.receipt);
+      // 别的标签页可能已经提交过自己的结果。只删自己那一条。
+      if (result.raw && localStorage.getItem(RUNNER_RESULT_KEY) === result.raw) localStorage.removeItem(RUNNER_RESULT_KEY);
+      window.location.href = "pages/novel.html?scene=" + encodeURIComponent(destination);
+    } catch (error) {
+      runnerSettlement = null;
+      Object.assign(state, before);
+      showCover("追逐结果暂未保存，结果已保留。请刷新页面后重试。");
+      console.warn("追逐结算未完成：", error);
+    }
   }
 
   function frame(timestamp) {
@@ -949,15 +1124,25 @@
   document.getElementById("map-panel-button").addEventListener("click",function(){window.MuseumPanel.open();});
   var query = new URLSearchParams(window.location.search);
   var pendingResult = currentUser ? consumeBattleResult() : null;
+  var pendingRunner = currentUser ? consumeRunnerResult() : null;
   var openSavedGame = query.get("fromSave") === "1";
   var openNewGame = query.get("newGame") === "1";
   var openStoryReturn = query.get("fromStory") === "1";
   var openMenuReturn = query.get("fromMenu") === "1";
   var openEndingReturn = query.get("fromEnding") === "1";
   var recoveredBattle = false;
-  if (currentUser && pendingResult) {
+  var recoveredRunner = false;
+  if (currentUser && pendingRunner) {
+    showGame();
+    applyRunnerResult(pendingRunner);
+  } else if (currentUser && pendingResult) {
     showGame();
     applyBattleResult(pendingResult);
+  } else if (currentUser && state && state.mode === "runner" && (openSavedGame || query.get("fromRunner") === "1") && !openNewGame) {
+    // 追逐跑没跑完就回来了（关标签页、写结果失败、手动点回来）。当作中退处理：
+    // 退回发起追逐的那一场，不扣不罚——与战斗的 recoveredBattle 同一套路。
+    recoveredRunner = true;
+    applyRunnerResult({ status: "cancel" });
   } else if (currentUser && state && state.mode === "battle" && (openSavedGame || query.get("fromBattle") === "1") && !openNewGame) {
     recoveredBattle = true;
     applyBattleResult({ status: "retry" });
@@ -986,8 +1171,8 @@
   }
   // 回到地图时结算一次里程碑。玩家的成就条件可能在别处刚被满足——最典型的是券机：
   // 它是另一个页面，累计购券数和单张最高净收益都在那边增长，回到这里才扫得到。
-  var canSettleProgress = !pendingResult && !recoveredBattle && currentUser && state &&
-    state.mode !== "battle" && state.mode !== "ending" && !/^ending-[a-e]$/.test(state.narrativeNode || "");
+  var canSettleProgress = !pendingResult && !recoveredBattle && !pendingRunner && !recoveredRunner && currentUser && state &&
+    state.mode !== "battle" && state.mode !== "runner" && state.mode !== "ending" && !/^ending-[a-e]$/.test(state.narrativeNode || "");
   if (canSettleProgress && window.MuseumMilestones) window.MuseumMilestones.settle(state);
   // 人性值那边同理：时间流逝（scene12/23/25Seen）与线索回血都在这张表上。
   if (canSettleProgress && window.MuseumHumanity) window.MuseumHumanity.settle(state);

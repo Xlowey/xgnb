@@ -9,6 +9,34 @@
   var returnScene = query.get("returnScene") || "guard-after-battle";
   var enemyPatterns = ["observe", "attack", "attack", "heavyAttack"];
   var enemyActionLabels = { observe: "观察", attack: "攻击", heavyAttack: "重击" };
+
+  /*
+   * 商店的战斗类道具（012 §5.1）。
+   *
+   * ⚠️ 这一组的定位**不是"变强"，是"把判断交出去"**：012 §5.1 的铁律点名——
+   *    买过任何一件系统商品（系统助战 / 破绽分析 / 高战力道具）就等于「选择系统」，
+   *    在第二十九场直接走结局 A。所以数值是按这个基调拟的（012 只给了概念、没给数）：
+   *      基础补给   使用一次回复 8 点血（买几份有几份）
+   *      破绽分析   使用一次，下一次攻击伤害 ×2
+   *      系统助战   **一场必援**：使用即由系统代打，直接取胜
+   *      高战力道具 被动：敌方开局 −10 血、你每次攻击 +3
+   *
+   * ⚠️ 另一处口径不一致：shop-data.js 把这一组标成「只作用于暗影地牢」，
+   *    而 012 §5.1 自己写的是【系统助战】对应**第十一场**——就是这一场回合制。
+   *    以 012 为准，所以落在这里。（地牢那边只有 §5.6 的 01/02/05。）
+   */
+  var SHOP_ITEMS = (function () {
+    function count(key, cap) {
+      var raw = query.get(key);
+      // ⚠️ 必须先挡 null / 空串：URLSearchParams.get() 对"参数不在"返回 null，而
+      //    Number(null) === 0 是有限数 —— 这里默认值恰好是 0 所以没出事，但默认值
+      //    一旦改成非零，同一条路就会静默失效（2026-09-20 在跑酷那边踩过）。
+      if (raw === null || raw === "") return 0;
+      var value = Number(raw);
+      return Number.isFinite(value) ? Math.max(0, Math.min(cap, Math.floor(value))) : 0;
+    }
+    return { supply: count("supply", 5), weakness: count("weakness", 3), assist: count("assist", 2), power: count("power", 1) };
+  }());
   var state;
   var elements = {
     turn: document.getElementById("turn-value"), enemyHpText: document.getElementById("enemy-hp-text"), playerHpText: document.getElementById("player-hp-text"),
@@ -18,7 +46,18 @@
   // hitsTaken：013 §3.2 的战斗损耗是「基础 14 + 每被击中一次 ×6」，所以要把挨打次数单独记下来
   // 一起回传（见 makeResult）。不能拿 MAX_PLAYER_HP - playerHp 反推——观察回合不掉血、
   // 防御回合伤害减半，掉血量与挨打次数不是一回事。
-  function initialState() { return { playerHp:MAX_PLAYER_HP, enemyHp:MAX_ENEMY_HP, turn:1, defending:false, observed:false, ruleSolved:false, finished:false, hitsTaken:0 }; }
+  function initialState() {
+    return {
+      playerHp:MAX_PLAYER_HP,
+      // 【高战力道具】是**被动**的：买了就开局生效（敌方少 10 血、你每次攻击 +3）。
+      enemyHp:Math.max(1, MAX_ENEMY_HP - (SHOP_ITEMS.power > 0 ? 10 : 0)),
+      damageBonus:SHOP_ITEMS.power > 0 ? 3 : 0,
+      turn:1, defending:false, observed:false, ruleSolved:false, finished:false, hitsTaken:0,
+      // 可主动使用的三件，件数就是能用的次数
+      supplies:SHOP_ITEMS.supply, weaknesses:SHOP_ITEMS.weakness, assists:SHOP_ITEMS.assist,
+      weaknessArmed:false
+    };
+  }
   function addLog(message) { var line=document.createElement("p"); line.textContent="· "+message; elements.log.appendChild(line); elements.log.scrollTop=elements.log.scrollHeight; }
   function setButtonsDisabled(disabled) { document.querySelectorAll(".action-button").forEach(function (button) { button.disabled=disabled; }); }
   function updateView() {
@@ -72,7 +111,34 @@
   }
   function takeAction(action) {
     if (state.finished) return; state.defending=false;
-    if (action === "attack") { var damage=4+Math.floor(Math.random()*4); state.enemyHp=Math.max(0,state.enemyHp-damage); addLog("你发动攻击，造成 "+damage+" 点伤害。"); }
+    if (action === "attack") {
+      var damage=4+Math.floor(Math.random()*4)+(state.damageBonus||0);
+      // 【破绽分析】：用掉一次，下一次攻击伤害 ×2。
+      if (state.weaknessArmed) { damage*=2; state.weaknessArmed=false; addLog("破绽已现形，这一击打出了双倍伤害。"); }
+      state.enemyHp=Math.max(0,state.enemyHp-damage); addLog("你发动攻击，造成 "+damage+" 点伤害。");
+    }
+    // 三件可主动使用的系统道具。**不消耗回合**——它们不是你的行动，是系统替你做的，
+    // 所以用完之后馆长那一回合照常走（见函数尾部的 enemyTurn）。
+    else if (action === "use-supply") {
+      if (state.supplies <= 0) return;
+      state.supplies-=1; state.playerHp=MAX_PLAYER_HP;
+      addLog("你启用了基础补给，生命值回满。（剩余 "+state.supplies+" 份）");
+      updateView(); renderItemButtons(); return;
+    }
+    else if (action === "use-weakness") {
+      if (state.weaknesses <= 0) return;
+      state.weaknesses-=1; state.weaknessArmed=true;
+      addLog("系统标出了馆长的破绽，下一次攻击伤害翻倍。（剩余 "+state.weaknesses+" 份）");
+      updateView(); renderItemButtons(); return;
+    }
+    else if (action === "use-assist") {
+      if (state.assists <= 0) return;
+      state.assists-=1;
+      addLog("系统判断：此战已无必要。它替你结束了这场对峙。");
+      state.enemyHp=0; updateView(); renderItemButtons();
+      finish("win","系统助战：你甚至没有出手，交涉就结束了。");
+      return;
+    }
     else if (action === "defend") { state.defending=true; addLog("你摆出防御姿态，本回合受到的伤害减半。"); }
     else if (action === "observe") { state.observed=true; elements.playerStatus.textContent="你看见了它的行动规律。"; addLog("观察结果：它每四回合会发动一次重击。"); }
     else if (action === "smile") {
@@ -87,8 +153,41 @@
     window.setTimeout(function () { enemyTurn(); state.turn+=1; updateView(); setButtonsDisabled(state.finished); if (state.playerHp <= 0) finish("lose","你的生存点归零，战斗结束。"); },260);
     updateView();
   }
+  /*
+   * 把已购的战斗类道具做成额外的行动按钮。
+   * 复用 .action-grid / .action-button 的样式，**不改 HTML 也不加 CSS**；一件都没买时
+   * 一个按钮都不加，页面与接入前完全一样（独立试玩、课堂预览都走这条）。
+   */
+  function renderItemButtons() {
+    var grid = document.querySelector(".action-grid");
+    if (!grid) return;
+    // 记下当前的禁用态：敌人回合里按钮是禁用的，重建时不能把它们变回可点。
+    var existing = grid.querySelector(".action-button");
+    var wasDisabled = Boolean(existing && existing.disabled);
+    grid.querySelectorAll("[data-shop-item]").forEach(function (button) { button.remove(); });
+    if (state.finished) return;
+    [["use-supply", state.supplies, "基础补给", "回复生命"],
+     ["use-weakness", state.weaknesses, "破绽分析", "下击翻倍"],
+     ["use-assist", state.assists, "系统助战", "直接取胜"]
+    ].forEach(function (def) {
+      if (def[1] <= 0) return;
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "action-button";
+      button.setAttribute("data-action", def[0]);
+      button.setAttribute("data-shop-item", "");
+      button.disabled = wasDisabled;
+      button.textContent = def[2] + " ×" + def[1];
+      var small = document.createElement("small");
+      small.textContent = def[3];
+      button.appendChild(small);
+      button.addEventListener("click", function () { takeAction(def[0]); });
+      grid.appendChild(button);
+    });
+  }
+
   function restart() {
-    state=initialState(); elements.log.textContent=""; elements.playerStatus.textContent="等待你的行动。"; setButtonsDisabled(false); addLog("战斗开始。系统建议：先观察目标。"); updateView(); window.lastBattleResult=null;
+    state=initialState(); elements.log.textContent=""; elements.playerStatus.textContent="等待你的行动。"; setButtonsDisabled(false); addLog("战斗开始。系统建议：先观察目标。"); updateView(); renderItemButtons(); window.lastBattleResult=null;
     resultStorage.removeItem(RESULT_KEY);
     if (elements.returnLink) {
       elements.returnLink.href = preview ? "../../pages/novel.html?scene=" + encodeURIComponent(returnScene) + "&preview=1&resume=1" : "../../index.html";

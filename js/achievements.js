@@ -81,7 +81,8 @@
   function bind(options){context=options;refresh();}
   document.addEventListener("keydown",function(e){
     if(isOpen()){e.stopImmediatePropagation();if(e.key==="Escape" || e.key.toLowerCase()==="j"){e.preventDefault();if(!e.repeat)close();}return;}
-    if(e.key.toLowerCase()!=="j" || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.target.closest("input,textarea,select,[contenteditable=true]"))return;
+    // 同 inventory：单字母键不认 Shift，Shift + 字母留给开发者跳结局。
+    if(e.key.toLowerCase()!=="j" || e.repeat || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || e.target.closest("input,textarea,select,[contenteditable=true]"))return;
     if(context && context.getState() && (!context.canOpen || context.canOpen())){e.preventDefault();e.stopImmediatePropagation();open();}
   },true);
   (window.MuseumAchievementDefinitions || []).forEach(register);

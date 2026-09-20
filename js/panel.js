@@ -49,6 +49,8 @@
   var dialog = null, closeButton = null;
   var levelCell = null, pointsCell = null, humanCell = null, trustCell = null;
   var ledgerBox = null, ledgerList = null, taskList = null, machineLine = null;
+  // 跑酷的复玩入口（通关一次后解锁）。见 openForestRun。
+  var runButton = null, runLine = null;
   // 面板有两个视图：概览（012 §3.2 那张草图）和商城。商城点入口切过去，
   // 不另开一个 dialog —— 012 的草图上 商城 就是面板上的一个入口。
   var overviewView = null, shopView = null, shopContainer = null, currentView = "overview";
@@ -59,6 +61,22 @@
 
   // 012 §3.2 的福利券机入口。券机是高频反复的，不塞进这个 dialog（它的票面比面板大得多），
   // 走小游戏那套跳转：带着 userId 和回跳地址过去，余额由它直接读写主游戏的 points。
+  /*
+   * 从面板直接开一局跑酷（复玩赚金币）。
+   *
+   * 与剧情里的追逐段**共用同一个小游戏**，只是换成 `from=panel`：
+   * 小游戏那边的 bridge 会认这个参数，不打结果、不动剧情，退出时回到本页面。
+   * 道具参数照旧带过去（js/shop-data.js 的 runnerParams），买过的加成照样生效。
+   */
+  function openForestRun() {
+    var state = current();
+    if (!state || !state.userId) return;
+    var search = "from=panel&user=" + encodeURIComponent(state.userId) +
+      "&returnTo=" + encodeURIComponent(window.location.href);
+    if (window.MuseumShopData) search += "&" + window.MuseumShopData.runnerParams(state.shopOwned);
+    window.location.href = ROOT_URL + "demos/forest-speed-run/index.html?" + search;
+  }
+
   function openScratchMachine() {
     var state = current();
     if (!state || !state.userId) return;
@@ -147,6 +165,13 @@
     var shopButton = button("商　城", function () { showView("shop"); }, "panel-entry");
     shopButton.setAttribute("data-shop-open", "");
     entries.appendChild(shopButton);
+    // 跑酷复玩入口：通关一次之后才出现，让玩家能回去赚金币。
+    // 上限是**全程累计**的（见 shop-data 的 COIN_POINT_CAP），所以刷不出天量。
+    runButton = button("森林极速跑", function () { openForestRun(); }, "panel-entry");
+    runButton.setAttribute("data-runner-open", "");
+    entries.appendChild(runButton);
+    runLine = node("p", "panel-machine");
+    entries.appendChild(runLine);
     vitals.appendChild(entries);
     overviewView.appendChild(vitals);
 
@@ -254,6 +279,18 @@
     var machine = state.machine || { tickets: 0, spent: 0 };
     machineLine.textContent = "已购 " + machine.tickets + " 张 · 累计 " + (machine.spent > 0 ? "−" + machine.spent : "0") + " 点";
 
+    // 跑酷复玩入口：通关过才出现。文案带上"已兑多少 / 上限"，让玩家一眼看出还能不能继续赚
+    // ——上限是**全程累计**的，不是每局重来。
+    var chaseDone = Boolean(state.flags && (state.flags.chaseCompleted || state.flags.scene26Seen));
+    if (runButton) { runButton.hidden = !chaseDone; runButton.disabled = !chaseDone; }
+    if (runLine) {
+      runLine.hidden = !chaseDone;
+      var cap = (window.MuseumShopData && Number(window.MuseumShopData.COIN_POINT_CAP)) || 0;
+      var earned = Math.max(0, Number(state.flags && state.flags.liveCoinsEarned) || 0);
+      // 上限为 0 = 不设限：这时不显示 "/ N"，否则会让人以为封顶了。
+      runLine.textContent = cap > 0 ? "金币已兑 " + earned + " / " + cap + " 点" : "金币已兑 " + earned + " 点";
+    }
+
     renderLedger();
     renderTasks(state);
     // 商城开着的时候也要跟着刷新：买完一件余额就变了。
@@ -318,7 +355,8 @@
       }
       return;
     }
-    if (event.key.toLowerCase() !== "m" || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+    // 同 inventory：单字母键不认 Shift，Shift + 字母留给开发者跳结局。
+    if (event.key.toLowerCase() !== "m" || event.repeat || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return;
     if (event.target.closest && event.target.closest("input,textarea,select,[contenteditable=true]")) return;
     if (context && current() && (!context.canOpen || context.canOpen())) {
       event.preventDefault();

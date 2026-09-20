@@ -4,6 +4,69 @@
   var params = new URLSearchParams(window.location.search);
   var preview = params.get("preview") === "1";
   var previewResume = preview && params.get("resume") === "1";
+
+  /*
+   * 【剧情测试开关】用 URL 参数打开，跳过战斗 / 追逐直接看后面的戏。
+   *
+   *   pages/novel.html?scene=scene-27-boss&autoWin=boss       最终战按「打倒首领」结算 → C 结局
+   *   pages/novel.html?scene=scene-27-boss&autoWin=evacuate   最终战按「撤离试炼」结算 → A 结局
+   *   pages/novel.html?scene=scene-11&autoWin=1               普通战斗也直接判胜
+   *   pages/novel.html?scene=scene-26&autoWin=1               森林极速跑也直接判胜
+   *
+   * 做法与 `xgnb-无BOSS战` 那个测试副本一致：**不打开任何小游戏**，直接写一份「打赢」的
+   * 结果再跳回主页面，走 game.js 原有的 applyBattleResult / applyRunnerResult ——
+   * 所以旗标、生存点、接哪一场都和真打赢一模一样，不会出现「测试档和真档不一样」。
+   *
+   * **刻意用 URL 参数、不改源码常量**：常量迟早有人把它留在 true 上提交进去
+   * （那个测试副本就是这么来的）。参数不会有这个问题。
+   */
+  var autoWin = String(params.get("autoWin") || "");
+
+  // 控制台开关：已经玩到一半才想跳过时，改 URL 要重新加载，不方便。
+  // 在剧情页的 DevTools 里敲一句 `MuseumDebug.autoWin()`，然后**照常点「迎战梦魇」**即可
+  // ——和 URL 参数走的是同一条路（见下面 autoWinMode 的用法）。
+  // 传 'evacuate' 就是按撤离试炼结算（→ A 结局）。
+  var devAutoWin = "";
+  function autoWinMode() { return devAutoWin || autoWin; }
+  window.MuseumDebug = {
+    autoWin: function (route) {
+      devAutoWin = String(route || "boss");
+      console.log("[dev] 下一场战斗 / 追逐将直接判胜：" + (devAutoWin === "evacuate" ? "最终战按「撤离试炼」→ A 结局" : "按「打倒首领」→ C 结局"));
+      return devAutoWin;
+    },
+    off: function () { devAutoWin = ""; console.log("[dev] 已关闭直接判胜"); },
+  };
+
+  /*
+   * 【开发快捷键】Shift + A / B / C / D → 直接跳到对应结局，方便逐段看结局文本。
+   *
+   * 和 MuseumDebug.autoWin 的分工：
+   *   autoWin      跳过战斗，但**保持剧情流程**（旗标、生存点都按真打赢算）
+   *   这个快捷键    直接跳结局场景，**不写存档**，纯看文本
+   *
+   * 为什么不用 Ctrl+Shift：Ctrl+Shift+B（书签栏）、+C（检查元素）、+D（把所有标签页
+   * 加书签）都是 Chrome 的**浏览器级**快捷键，页面拦不住，按下去浏览器先响应。
+   * Shift + 字母没有这个冲突。代价是"正在输入框里打字"时会误触，所以下面挡掉了输入框。
+   *
+   * E 没放进来：009 里 E 是预留的、没有成稿路线，跳过去只会看到空场景。
+   */
+  document.addEventListener("keydown", function (event) {
+    if (!event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return;
+    var target = event.target;
+    if (target && (/INPUT|TEXTAREA|SELECT/.test(target.tagName) || target.isContentEditable)) return;
+    // 探索场里 Shift 是"1.5 倍疾跑"的修饰键（Shift + WASD）。这个监听在捕获阶段，
+    // 一旦吃掉 Shift+A / Shift+D，探索那边（冒泡阶段）就收不到、疾跑时没法左右走。
+    // 所以探索进行中直接让路。
+    if (document.body.dataset.event === "explore") return;
+    // 有弹窗挡着时也不跳，否则会在背包 / 系统面板 / 成就 / 存档框中途换页。
+    if (window.MuseumStage && window.MuseumStage.isOpen()) return;
+    var key = String(event.key || "").toLowerCase();
+    if (key.length !== 1 || "abcd".indexOf(key) < 0) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    console.log("[dev] 跳到 ending-" + key);
+    window.location.href = "novel.html?scene=ending-" + key;
+  }, true);
   var user = preview ? { id: "class-preview", username: "体验者" } : MuseumAuth.getCurrentUser();
   if (!user) {
     window.location.href = "login.html?next=novel";
@@ -587,16 +650,10 @@
 
   function applyChoice(choice) {
     endingChoice = choice.id;
-    if (choice.effect === "skip-nightmare") {
-      state.flags.nightmareMinigameChoice = "skip";
-      state.flags.nightmareMinigameWon = false;
-      state.returnRoom = "museum";
-      state.returnX = 610;
-      state.returnY = 620;
-      state.battleContext = null;
-      state.returnScene = null;
-      state.battleAttempt = null;
-    }
+    // skip-nightmare（不进入小游戏，直接去出口）已于 2026-09-20 取消：
+    // 玩家现在**必须**进地牢，A/C 在地牢内部的两条路线里分。这里原来的处理器
+    // 一并删掉，避免留下死代码。老存档里已有的 nightmareMinigameChoice === "skip"
+    // 不受影响——resolveChoice 只对 "enter" 分支特判，其余一律落到 ending-a。
     if (choice.effect === "read-note") {
       state.flags.readNote = true;
       state.systemTrust += 3;
@@ -633,6 +690,9 @@
     lineIndex = 0;
     endingChoice = currentScene.endingId || endingChoice;
     els.end.hidden = true;
+    // 场次级默认曲（没标 bgm 的场一律回默认曲）。放在这里是为了兜住"从结局页读旧档"
+    // 那条路：否则在结局 C 的曲子下读一份中场存档，那首会一直播下去。
+    if (window.MuseumAudio && window.MuseumAudio.play) window.MuseumAudio.play(currentScene.bgm || "main");
     window.history.replaceState({}, "", "?scene=" + encodeURIComponent(sceneId) + (preview ? "&preview=1&resume=1" : ""));
     render();
   }
@@ -663,14 +723,90 @@
     state.mode = "battle";
     state.narrativeNode = state.returnScene;
     if (!persist()) { Object.assign(state,beforeBattle); render(); showToast("保存失败，暂未进入战斗，请重试。"); return; }
+    // 【剧情测试开关】跳过战斗：直接写一份「打赢」的结果，剩下的交给主页面原有结算。
+    // 放在 persist() 之后是**故意的**：state.battleAttempt 已经落盘，结算校验才认得这份结果。
+    if (autoWinMode()) {
+      var auto = {
+        status: "win",
+        remainingHp: state.hp,   // 没打，血是满的
+        hitsTaken: 0,            // 一次没挨打；但 013 的公式仍会按「基础 14」扣一场正常损耗
+        coins: 0,
+        liveCoins: true,         // 跳过战斗自然没有金币；标成"已处理"，结算端不会再算一遍
+        battleAttempt: state.battleAttempt.id,
+        source: choice.demo === "pixel-dungeon" ? "pixel-dungeon" : "battle",
+        userId: user.id
+      };
+      // 最终战有两条通关路线，用参数挑一条——A / C 两个结局要分别试。
+      if (choice.battleContext === "final-boss") auto.route = autoWinMode() === "evacuate" ? "evacuate" : "boss";
+      try { (preview ? sessionStorage : localStorage).setItem("museum_pending_battle_v1", JSON.stringify(auto)); } catch (error) { /* 存储不可用也不能卡住 */ }
+      window.location.href = preview
+        ? "novel.html?scene=" + encodeURIComponent(state.returnScene) + "&preview=1&resume=1"
+        : "../index.html?fromBattle=1";
+      return;
+    }
     // 最终 boss 战走像素地牢（demos/pixel-dungeon-html），普通交涉走回合制 demo。
     // 两边与主游戏的约定完全一样（写法相同：写 museum_pending_battle_v1 后回
     // index.html?fromBattle=1），所以 game.js 的结算逻辑不用分叉。
     var demo = choice.demo === "pixel-dungeon" ? "pixel-dungeon-html" : "battle";
     var battleUrl = "../demos/" + demo + "/index.html?from=novel&user=" + encodeURIComponent(user.id) + "&returnScene=" + encodeURIComponent(state.returnScene);
     battleUrl += "&battleAttempt=" + encodeURIComponent(state.battleAttempt.id);
+    // 暗影地牢的叠加式道具（012 §5.6 的 01/02/05）把已购件数带过去，由地牢自己乘上单份效果。
+    // 回合制 demo（demos/battle）不用这套参数。
+    if (choice.demo === "pixel-dungeon" && window.MuseumShopData) {
+      var dungeonParams = window.MuseumShopData.dungeonParams(state.shopOwned);
+      if (dungeonParams) battleUrl += "&" + dungeonParams;
+    }
+    // 战斗类（012 §5.1）作用于回合制那场，同样把已购件数带过去。
+    if (choice.demo !== "pixel-dungeon" && window.MuseumShopData) {
+      var battleParams = window.MuseumShopData.battleParams(state.shopOwned);
+      if (battleParams) battleUrl += "&" + battleParams;
+    }
     if (preview) battleUrl += "&preview=1&resume=1";
     window.location.href = battleUrl;
+  }
+
+  /*
+   * 森林极速跑（demos/forest-speed-run）的发起。与 startBattle 走**完全相同的一套**：
+   * 深拷贝快照 → 写 attempt → 落盘（失败就回滚并中止跳转）→ 跳转到 demo。
+   *
+   * 两处不同：
+   *   1. 结果通道是 museum_pending_runner_v1，不是战斗那个 key —— 战斗的胜利分支
+   *      会发无脸面具、解锁蜡像馆，追逐不该拿到那些东西（见 game.js 的 settleBattleWin）。
+   *   2. 带上商店那 4 件追逐向道具折算出的参数（012 §5.6 的 07/08/09/10）。
+   */
+  function startRunner(choice) {
+    var before = JSON.parse(JSON.stringify(state));
+    state.returnRoom = state.returnRoom || state.roomId;
+    state.returnX = state.returnX == null ? state.playerX : state.returnX;
+    state.returnY = state.returnY == null ? state.playerY : state.returnY;
+    state.returnScene = choice.afterRunner || "scene-27";
+    state.runnerAttempt = {
+      id: Date.now().toString(36) + "-" + Math.random().toString(36).slice(2),
+      retryScene: currentSceneId, retryIndex: lineIndex, returnScene: state.returnScene
+    };
+    state.mode = "runner";
+    state.narrativeNode = state.returnScene;
+    if (!persist()) { Object.assign(state, before); render(); showToast("保存失败，暂未进入追逐，请重试。"); return; }
+    // 【剧情测试开关】跳过追逐，同 startBattle —— 走主页面原有的 applyRunnerResult。
+    if (autoWinMode()) {
+      var autoRun = {
+        status: "win", elapsed: 0, score: 0, distance: 0, coins: 0, wallHits: 0,
+        liveCoins: true,   // 跳过追逐没有金币，标成"已处理"
+        userId: user.id, runId: state.runnerAttempt.id, kind: "museum-runner", version: 1
+      };
+      try { (preview ? sessionStorage : localStorage).setItem("museum_pending_runner_v1", JSON.stringify(autoRun)); } catch (error) { /* 存储不可用也不能卡住 */ }
+      window.location.href = preview
+        ? "novel.html?scene=" + encodeURIComponent(state.returnScene) + "&preview=1&resume=1"
+        : "../index.html?fromRunner=1";
+      return;
+    }
+    var runnerUrl = "../demos/forest-speed-run/index.html?from=novel&user=" + encodeURIComponent(user.id)
+      + "&runId=" + encodeURIComponent(state.runnerAttempt.id)
+      + "&returnScene=" + encodeURIComponent(state.returnScene)
+      + "&cancelScene=" + encodeURIComponent(currentSceneId)
+      + "&" + window.MuseumShopData.runnerParams(state.shopOwned);
+    if (preview) runnerUrl += "&preview=1&resume=1";
+    window.location.href = runnerUrl;
   }
 
   function choose(choice) {
@@ -686,12 +822,16 @@
     // completed:scene-11 the moment 战斗 was clicked, so losing the fight still unlocked
     // scene-10. The outcome is decided by the battle itself, and the after-battle scene
     // (scene-11-after / guard-after-battle) is what records the completion.
-    if (choice.action !== "battle" && !completeCurrentScene()) return;
+    if (choice.action !== "battle" && choice.action !== "runner" && !completeCurrentScene()) return;
     applyChoice(choice);
     clearChoices();
     if (choice.effect === "take-key") { persist(); render(); showToast("获得物品：宿舍钥匙"); return; }
     if (choice.action === "battle") {
       startBattle(choice);
+      return;
+    }
+    if (choice.action === "runner") {
+      startRunner(choice);
       return;
     }
     if (choice.nextScene) {

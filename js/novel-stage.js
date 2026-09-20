@@ -57,7 +57,9 @@
   }
 
   // 独立 CG 视频：与录像浮层分开，避免把剧情动画误当作调查录像。
-  // 视频默认静音以绕过浏览器自动播放限制，玩家可用原生控件打开声音。
+  // 2026-09-20 改为**默认有声**（此前默认静音）。六个 CG 素材都带 AAC 音轨，
+  // 静音等于白做。风险是浏览器会以"没有用户手势"为由拒绝**有声**自动播放，
+  // 所以下面保留了"被拒就退回静音再播一次"的兜底：画面照样能看，只是要玩家自己开声音。
   function playCutscene(options, hooks) {
     var opts = options || {};
     document.body.classList.remove("video-ready");
@@ -66,10 +68,10 @@
     var player = document.createElement("video");
     player.className = "video-cg-player";
     player.src = window.MuseumAssets.video(opts.video);
-    player.autoplay = true; player.muted = true; player.controls = true; player.playsInline = true;
+    player.autoplay = true; player.muted = false; player.controls = true; player.playsInline = true;
     player.setAttribute("aria-label", opts.label || "剧情动画");
     var footer = node("div", "video-cg-footer");
-    var hint = node("span", "video-cg-hint", "动画播放中 · 可用控件打开声音");
+    var hint = node("span", "video-cg-hint", "动画播放中 · 可用控件调整音量");
     var skip = button("跳过动画", finish, "video-cg-skip");
     footer.appendChild(hint); footer.appendChild(skip);
     videoEvent.appendChild(title); videoEvent.appendChild(player); videoEvent.appendChild(footer);
@@ -83,16 +85,27 @@
       videoEvent.classList.add("is-finished");
       hint.textContent = "动画已结束";
       document.body.classList.add("video-ready");
+      // 2026-09-20：CG 一结束就**直接翻到下一页**，不再让玩家点一次「继续」。
+      // 顺序是先把「继续」摆好、再推进——自动推进万一被挡下（有弹窗开着，或后面
+      // 没有下一页），按钮还在，玩家仍能手动继续，不会卡在最后一帧。
+      // 「跳过动画」走的也是这里，所以跳过同样是一次点击到位。
       hooks.setAdvance(true, opts.action || "继续");
       skip.textContent = "继续";
+      if (typeof hooks.advance === "function") hooks.advance();
     }
     player.addEventListener("ended", finish);
     player.addEventListener("error", function () {
       hint.textContent = "动画素材暂时无法播放，可直接继续";
       finish();
     });
-    player.play().catch(function () {
-      hint.textContent = "点击播放动画；也可以直接跳过";
+    // 默认有声；被自动播放策略拦下时退回静音再播一次，不让画面卡死。
+    var playback = player.play();
+    if (playback && playback.catch) playback.catch(function () {
+      player.muted = true;
+      hint.textContent = "浏览器拦下了自动播放 · 可用控件打开声音";
+      player.play().catch(function () {
+        hint.textContent = "点击播放动画；也可以直接跳过";
+      });
     });
     skip.focus();
   }
@@ -134,12 +147,48 @@
     window.MuseumInventory.open();
   }
   function setBackground(name, category) { document.querySelector(".novel-background").style.setProperty("--scene-background", 'url("'+asset(name,category || "storyBackgrounds")+'")'); }
+  // 长页对白（目前只有结局 C 用）：把整场台词铺在一页里上下滑动读完，
+  // 读完点「继续」推进到下一页（结局 C 的下一页是通关界面）。
+  // 之所以不逐行点过去：这一段是"听赵灵把话说完"，逐页点会把一段连续的话切碎。
+  // 无说话人的行（`画面：△ …`）按舞台提示样式渲染，不去改作者的措辞。
+  function renderEndingLetter(event, hooks) {
+    var sheet = node("article", "ending-letter");
+    sheet.setAttribute("role", "document");
+    sheet.setAttribute("aria-label", event.title || "完整对白");
+    sheet.tabIndex = 0;
+    var head = node("header", "ending-letter-head");
+    head.appendChild(node("h2", "", event.title || "完整对白"));
+    head.appendChild(node("p", "ending-letter-hint", "上下滑动读完 · 读完点「继续」"));
+    sheet.appendChild(head);
+    (event.entries || []).forEach(function (entry) {
+      if (entry.image) {
+        var figure = node("figure", "ending-letter-figure");
+        var img = document.createElement("img");
+        img.src = asset(entry.image);
+        img.alt = entry.caption || "";
+        img.loading = "lazy";
+        figure.appendChild(img);
+        if (entry.caption) figure.appendChild(node("figcaption", "", entry.caption));
+        sheet.appendChild(figure);
+        return;
+      }
+      var paragraph = node("p", "ending-letter-line" + (entry.speaker ? "" : " is-stage"));
+      if (entry.speaker) paragraph.appendChild(node("strong", "ending-letter-speaker", entry.speaker + "："));
+      paragraph.appendChild(document.createTextNode(String(entry.text || "")));
+      sheet.appendChild(paragraph);
+    });
+    root.appendChild(sheet);
+    hooks.setAdvance(true, event.action || "继续");
+  }
   function render(event, hooks) {
     syncRoomBackdrop(event,hooks);
     if (previewObserver) { previewObserver.disconnect(); previewObserver=null; }
     if (disposeExploration) { disposeExploration(); disposeExploration = null; }
     currentHooks = hooks;currentEvent = event;root.textContent = "";root.hidden = !event;
     document.body.dataset.event = event ? event.type : "dialogue";
+    // 事件级换曲：只有标了 bgm 的事件才切（目前只有结局 C 的完整对白页用 cEnding）。
+    // 没标就维持当前曲子——场次级的默认由 novel.js 的 loadScene() 负责。
+    if (event && event.bgm && window.MuseumAudio && window.MuseumAudio.play) window.MuseumAudio.play(event.bgm);
     root.className = "scene-events";
     var background = event && event.background || hooks.scene && hooks.scene.background;
     document.querySelector(".novel-background").style.backgroundSize=event && event.backgroundFit === "contain" ? "contain" : "";
@@ -168,6 +217,7 @@
     }
     if (event.type === "system") {var system=node("section","system-message");system.setAttribute("role","status");system.appendChild(node("small","","系统"));system.appendChild(node("p","",event.text));root.appendChild(system);return;}
     if (event.type === "video") {root.className="scene-events video-event";playCutscene(event,hooks);return;}
+    if (event.type === "letter") {root.className="scene-events letter-event";renderEndingLetter(event,hooks);return;}
     if (event.type === "cg") {root.className="scene-events "+(event.effect || "");return;}
     root.className="scene-events";
     if (event.type === "document") {
