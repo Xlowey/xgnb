@@ -44,6 +44,8 @@
     };
   }
   function finish(status,message) {
+    if (state.finished) return;
+    if(status === "win" && window.MuseumSfx)window.MuseumSfx.play("victory");
     state.finished=true;
     setButtonsDisabled(true);
     elements.playerStatus.textContent=status === "win" ? "战斗胜利。" : "战斗失败。";

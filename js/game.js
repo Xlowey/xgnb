@@ -250,6 +250,7 @@
     addUnique(state.unlockedRooms, id); syncAchievementProgress();
     if (id === "corridor") unlockAchievement("dorm-escape", true);
     renderAll(); save("已进入" + rooms[id].title + "。");
+    if(window.MuseumSfx)window.MuseumSfx.play("transition");
   }
 
   function switchRoomAt(id, entry) {
@@ -274,6 +275,7 @@
       showToast("进度保存失败，请检查浏览器存储空间后重试。");
       return;
     }
+    if(window.MuseumSfx)window.MuseumSfx.queueTransition();
     window.location.href = "pages/novel.html?scene=" + encodeURIComponent(sceneId);
   }
   function openNote() {
@@ -284,6 +286,7 @@
     markDiscovered("dorm-wardrobe");
     if (!state.flags.cabinetOpen) {
       state.flags.cabinetOpen = true;
+      if(window.MuseumSfx)window.MuseumSfx.play("cabinet");
       showToast("柜门发出轻响。再按 E 调查柜内。");
       save("衣柜已打开。");
       renderAll();

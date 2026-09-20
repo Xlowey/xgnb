@@ -4,7 +4,7 @@
   var layer=document.createElement("div");layer.className="novel-portraits";layer.hidden=true;layer.setAttribute("aria-hidden","true");document.querySelector(".novel-stage").appendChild(layer);
   var portraits={};
   // 立绘素材有独立缓存版本；更新立绘时必须同步递增，否则浏览器会继续显示旧图。
-  var assetVersion="50";
+  var assetVersion="51";
 
   // id, 图片, 无障碍名称, 是否作为"在场倾听者"显示（主角始终显示；其他人只在说话或本场有台词时出现）
   var CAST=[

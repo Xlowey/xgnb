@@ -24,7 +24,7 @@
     ids.push(id);state.flags["item-"+id]=true;
     if(id==="note"){state.flags.readNote=true;state.clues=Array.isArray(state.clues)?state.clues:[];if(!state.clues.includes("blood-note"))state.clues.push("blood-note");}
     if(options.save)options.save();refresh();
-    if(options.notify!==false){ensureUI();receipt.textContent=(id==="rules"?"已收录：":"已放入背包：")+definition(id).name;receipt.hidden=false;clearTimeout(receiptTimer);receiptTimer=setTimeout(function(){receipt.hidden=true;},2600);}
+    if(options.notify!==false){if(window.MuseumSfx)window.MuseumSfx.play("collect");ensureUI();receipt.textContent=(id==="rules"?"已收录：":"已放入背包：")+definition(id).name;receipt.hidden=false;clearTimeout(receiptTimer);receiptTimer=setTimeout(function(){receipt.hidden=true;},2600);}
     return true;
   }
   function art(item,back){

@@ -1787,6 +1787,7 @@ function startDungeon() {
                 g.roomBanner = 1500;
                 if (chest.roomId === 4) {
                     g.status = 'win';
+                    if(window.MuseumSfx)window.MuseumSfx.play('victory');
                     syncHud();
                 }
             }

@@ -514,11 +514,15 @@
     startFinalChoiceTimer();
   }
 
+  var sfxPage = null;
   function render() {
     pausePlayback();
     window.MuseumInventory.refresh();
     window.MuseumAchievements.refresh();
     var line = currentLine();
+    var soundPage = currentSceneId + ":" + lineIndex;
+    if (sfxPage !== soundPage && line.type === "system" && window.MuseumSfx) window.MuseumSfx.play("system");
+    sfxPage = soundPage;
     els.location.textContent = displayLocation(currentScene.location || currentScene.title);
     els.title.textContent = currentScene.title;
     els.subtitle.textContent = currentScene.subtitle || "";
@@ -621,6 +625,7 @@
 
   function loadScene(sceneId) {
     pausePlayback();clearChoices();
+    if(window.MuseumSfx)window.MuseumSfx.play("transition");
     endingFlow.enter(state, sceneId);
     currentSceneId = sceneId;
     currentScene = getScene(sceneId);
@@ -701,6 +706,7 @@
     var before=JSON.parse(JSON.stringify(state));
     window.MuseumTransition.leaveStory(state);
     if(!persist()){Object.assign(state,before);showToast("保存失败，请重试后再返回地图。");return;}
+    if(window.MuseumSfx)window.MuseumSfx.queueTransition();
     window.location.href = "../index.html?fromStory=1";
   }
 
@@ -731,6 +737,7 @@
 
   function advance() {
     if (pendingDeath || !els.pause.hidden || !els.review.hidden || !els.end.hidden || stage.isOpen() || !eventAdvance) return;
+    if (!automatic && els.choices.hidden && window.MuseumSfx) window.MuseumSfx.play("advance");
     if (!revealComplete) { finishTextReveal(); schedulePlayback(); return; }
     if (!els.choices.hidden) return;
     if ((!currentLine().type || currentLine().type === "dialogue") && !window.MuseumTutorial.isDone("dialogue")) window.MuseumTutorial.complete("dialogue");

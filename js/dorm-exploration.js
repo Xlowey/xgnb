@@ -52,7 +52,7 @@
       if(suspended() || !closest)return;
       var target=closest;stop();remember();hooks.save();
       if(window.MuseumTutorial && !window.MuseumTutorial.isDone("investigation")) window.MuseumTutorial.complete("investigation");
-      if(target.id==="wardrobe"){hooks.state.flags.cabinetOpen=true;hooks.setAdvance(true);hooks.advance();}
+      if(target.id==="wardrobe"){if(window.MuseumSfx)window.MuseumSfx.play("cabinet");hooks.state.flags.cabinetOpen=true;hooks.setAdvance(true);hooks.advance();}
       else inspect(target);
     }
     // A small floor grid gives pointer/touch movement the same collisions as the keyboard.
