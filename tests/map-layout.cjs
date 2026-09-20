@@ -11,3 +11,14 @@ assert(api.apply(rooms,{dorm:{walkable:[]}}));assert.equal(rooms.dorm.walkable,u
 for(const bad of [{dorm:{colliders:[null]}},{dorm:{spawn:{x:'bad',y:0}}},{dorm:{objects:null}},JSON.parse('{"__proto__":{}}'),{version:2,rooms:{dorm:{}}}]) assert.equal(api.normalize(bad),null);
 assert.equal(api.apply(rooms,{unknown:{spawn:{x:1,y:2}}}),false);
 console.log('PASS all eight map layouts round-trip without changing geometry; partial patches preserve interactions; empty floor regions remain movable; malformed imports rejected');
+// Project configuration works without local storage; local overrides take precedence.
+c.window.MuseumMapLayoutData={rooms:{dorm:{spawn:{x:450,y:700}}}};
+c.localStorage={getItem:()=>null};
+assert(api.applySaved(rooms));assert.equal(rooms.dorm.spawn.x,450);
+c.localStorage={getItem:()=>JSON.stringify({rooms:{dorm:{spawn:{x:460,y:710}}}})};
+assert(api.applySaved(rooms));assert.equal(rooms.dorm.spawn.x,460);
+vm.runInContext(fs.readFileSync('js/map-npc.js','utf8'),c);
+c.window.MuseumNpc.bindRooms(rooms);
+const npc=rooms.corridor.objects.find(o=>o.id==='corridor-zhaoling');npc.x+=20;
+assert.equal(c.window.MuseumNpc.placeFor('corridor',{flags:{}},npc.id).x,npc.x);
+console.log('PASS project/local precedence and NPC position follows edited interaction');

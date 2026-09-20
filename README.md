@@ -143,3 +143,11 @@ novel-data → novel-overrides → novel-presentation → novel-prologue
 ## 新增独立试玩：森林极速跑
 
 入口：`demos/forest-speed-run/index.html`。已收录全部文件，暂未接入主线。旧接入补丁仅供参考，不可直接应用；候选为纸人追逐段（内部 `scene-26`），详见 [接入评估](demos/forest-speed-run/INTEGRATION-STATUS.md)。
+
+## 地图标注工具
+
+打开 `pages/map-editor.html`，可在现有正式探索地图上绘制碰撞与可走区域，拖动交互点和出生点，配置双向出口各自的目标落点。提供撤销重做、缩放平移、碰撞试玩、配置检查和 JSON 导入导出。
+
+本机保存需要编辑器与游戏处于同一浏览器和同源网址；项目交付使用“导出项目配置”，将下载的 `map-layout-data.js` 替换 `js/map-layout-data.js`。工具不修改玩家存档。详细步骤见根目录 `地图标注工具使用说明.md`。第二场剧情播放器宿舍调查仍是独立配置，不属于本工具编辑范围。
+
+回归检查：`node tests/map-editor.cjs` 与 `node tests/map-layout.cjs`。

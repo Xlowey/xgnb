@@ -14,6 +14,13 @@
 (function () {
   "use strict";
   var NPC_CODE = "zhaoling-npc";
+  var boundRooms = null;
+  function placedData(s) {
+    if (!boundRooms) return s;
+    var room = boundRooms[s.room];
+    var object = room && room.objects.find(function (o) { return o.id === s.id; });
+    return object ? Object.assign({}, s, {x:object.x,y:object.y}) : null;
+  }
   var sheet = new Image();
   var ready = new Promise(function (resolve) { sheet.onload = function () { resolve(true); }; sheet.onerror = function () { resolve(false); }; });
   sheet.src = window.MuseumAssets ? window.MuseumAssets.url("zhaoling-walk-cycle.webp", "characters") : "assets/images/characters/walk/zhaoling-walk-cycle.webp";
@@ -66,7 +73,8 @@
     var list = sequencesFor(roomId, objectId);
     for (var i = 0; i < list.length; i += 1) {
       if (isPlaced(list[i], state)) {
-        var s = list[i];
+        var s = placedData(list[i]);
+        if (!s) continue;
         return { x: s.x, y: s.y, facing: s.facing, height: s.height };
       }
     }
@@ -75,7 +83,7 @@
   function placesFor(roomId, state) {
     if (!state) return [];
     return sequencesFor(roomId).filter(function (s) { return isPlaced(s, state); })
-      .map(function (s) { return { x: s.x, y: s.y, facing: s.facing, height: s.height }; });
+      .map(placedData).filter(Boolean).map(function (s) { return { x: s.x, y: s.y, facing: s.facing, height: s.height }; });
   }
   function visibleFor(roomId, state, objectId) {
     return !!placeFor(roomId, state, objectId);
@@ -115,5 +123,5 @@
   var readyResolved = false;
   ready.then(function (ok) { readyResolved = ok; if (!ok) console.warn("赵灵行走素材加载失败，地图上不显示该 NPC。"); });
 
-  window.MuseumNpc = { code: NPC_CODE, draw: draw, placeFor: placeFor, placesFor: placesFor, visibleFor: visibleFor, sequencesFor: sequencesFor, ready: ready, frames: FRAMES };
+  window.MuseumNpc = { bindRooms: function (rooms) { boundRooms = rooms; }, code: NPC_CODE, draw: draw, placeFor: placeFor, placesFor: placesFor, visibleFor: visibleFor, sequencesFor: sequencesFor, ready: ready, frames: FRAMES };
 }());

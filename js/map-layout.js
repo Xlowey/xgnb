@@ -49,7 +49,10 @@
 
   function capture(rooms) {
     var result = { version: 1, savedAt: new Date().toISOString(), rooms: {} };
-    Object.keys(rooms || {}).forEach(function (id) { result.rooms[id] = serializeRoom(rooms[id]); });
+    Object.keys(rooms || {}).forEach(function (id) {
+      result.rooms[id] = serializeRoom(rooms[id]);
+      if (!result.rooms[id].walkable) result.rooms[id].walkable = [];
+    });
     return result;
   }
 
@@ -130,8 +133,9 @@
   }
 
   function applySaved(rooms) {
+    var projectApplied = window.MuseumMapLayoutData ? apply(rooms, window.MuseumMapLayoutData) : false;
     var payload = read();
-    return payload ? apply(rooms, payload) : false;
+    return payload ? apply(rooms, payload) : projectApplied;
   }
 
   function download(payload, filename) {
